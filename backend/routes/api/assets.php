@@ -17,14 +17,30 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', 'active'])->group(function () {
     // Categories & subcategories
-    Route::apiResource('categories', CategoryController::class)->except(['edit', 'create']);
-    Route::apiResource('subcategories', SubcategoryController::class)->except(['edit', 'create']);
+    Route::get('categories', [CategoryController::class, 'index'])->middleware('permission:categories.view');
+    Route::post('categories', [CategoryController::class, 'store'])->middleware('permission:categories.create');
+    Route::get('categories/{category}', [CategoryController::class, 'show'])->middleware('permission:categories.view');
+    Route::put('categories/{category}', [CategoryController::class, 'update'])->middleware('permission:categories.update');
+    Route::patch('categories/{category}', [CategoryController::class, 'update'])->middleware('permission:categories.update');
+    Route::delete('categories/{category}', [CategoryController::class, 'destroy'])->middleware('permission:categories.delete');
+
+    Route::get('subcategories', [SubcategoryController::class, 'index'])->middleware('permission:categories.view');
+    Route::post('subcategories', [SubcategoryController::class, 'store'])->middleware('permission:categories.create');
+    Route::get('subcategories/{subcategory}', [SubcategoryController::class, 'show'])->middleware('permission:categories.view');
+    Route::put('subcategories/{subcategory}', [SubcategoryController::class, 'update'])->middleware('permission:categories.update');
+    Route::patch('subcategories/{subcategory}', [SubcategoryController::class, 'update'])->middleware('permission:categories.update');
+    Route::delete('subcategories/{subcategory}', [SubcategoryController::class, 'destroy'])->middleware('permission:categories.delete');
 
     // Assets (core module)
-    Route::get('assets/lookup', [AssetController::class, 'lookup']);
+    Route::get('assets/lookup', [AssetController::class, 'lookup'])->middleware('permission:assets.view');
     Route::get('assets/{asset}/timeline', [AssetController::class, 'timeline'])->middleware('permission:assets.view');
     Route::patch('assets/{asset}/status', [AssetController::class, 'changeStatus'])->middleware('permission:assets.update');
-    Route::apiResource('assets', AssetController::class)->except(['edit', 'create']);
+    Route::get('assets', [AssetController::class, 'index'])->middleware('permission:assets.view');
+    Route::post('assets', [AssetController::class, 'store'])->middleware('permission:assets.create');
+    Route::get('assets/{asset}', [AssetController::class, 'show'])->middleware('permission:assets.view');
+    Route::put('assets/{asset}', [AssetController::class, 'update'])->middleware('permission:assets.update');
+    Route::patch('assets/{asset}', [AssetController::class, 'update'])->middleware('permission:assets.update');
+    Route::delete('assets/{asset}', [AssetController::class, 'destroy'])->middleware('permission:assets.delete');
 
     // Asset files (images & documents)
     Route::get('assets/{asset}/images', [AssetFileController::class, 'images'])->middleware('permission:assets.view');

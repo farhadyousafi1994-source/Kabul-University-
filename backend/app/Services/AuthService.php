@@ -81,10 +81,18 @@ class AuthService
     /**
      * Change the authenticated user's password and revoke all other tokens.
      *
-     * @param  array{new_password: string}  $data
+     * @param  array{current_password: string, new_password: string}  $data
+     *
+     * @throws ValidationException When the current password does not match.
      */
     public function changePassword(User $user, array $data): void
     {
+        if (! Hash::check($data['current_password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['The current password is incorrect.'],
+            ]);
+        }
+
         DB::transaction(function () use ($user, $data) {
             $user->forceFill([
                 'password' => Hash::make($data['new_password']),

@@ -58,7 +58,13 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::patch('incidents/{incident}/status', [IncidentController::class, 'updateStatus'])->middleware('permission:incidents.update');
 
     // Suppliers
-    Route::apiResource('suppliers', SupplierController::class)->except(['edit', 'create']);
+    // Suppliers
+    Route::get('suppliers', [SupplierController::class, 'index'])->middleware('permission:suppliers.view');
+    Route::post('suppliers', [SupplierController::class, 'store'])->middleware('permission:suppliers.create');
+    Route::get('suppliers/{supplier}', [SupplierController::class, 'show'])->middleware('permission:suppliers.view');
+    Route::put('suppliers/{supplier}', [SupplierController::class, 'update'])->middleware('permission:suppliers.update');
+    Route::patch('suppliers/{supplier}', [SupplierController::class, 'update'])->middleware('permission:suppliers.update');
+    Route::delete('suppliers/{supplier}', [SupplierController::class, 'destroy'])->middleware('permission:suppliers.delete');
 
     // Procurement
     Route::get('purchase-requests', [ProcurementController::class, 'purchaseRequests'])->middleware('permission:procurement.view');
@@ -71,7 +77,13 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('purchase-orders/{purchaseOrder}/receive', [ProcurementController::class, 'receive'])->middleware('permission:procurement.update');
 
     // Warehouse
-    Route::apiResource('warehouses', WarehouseController::class)->except(['edit', 'create']);
+    // Warehouses
+    Route::get('warehouses', [WarehouseController::class, 'index'])->middleware('permission:warehouse.view');
+    Route::post('warehouses', [WarehouseController::class, 'store'])->middleware('permission:warehouse.create');
+    Route::get('warehouses/{warehouse}', [WarehouseController::class, 'show'])->middleware('permission:warehouse.view');
+    Route::put('warehouses/{warehouse}', [WarehouseController::class, 'update'])->middleware('permission:warehouse.update');
+    Route::patch('warehouses/{warehouse}', [WarehouseController::class, 'update'])->middleware('permission:warehouse.update');
+    Route::delete('warehouses/{warehouse}', [WarehouseController::class, 'destroy'])->middleware('permission:warehouse.delete');
     Route::get('warehouse-transactions', [WarehouseTransactionController::class, 'index'])->middleware('permission:warehouse.view');
     Route::post('warehouse-transactions', [WarehouseTransactionController::class, 'store'])->middleware('permission:warehouse.update');
     Route::post('warehouse-transactions/transfer', [WarehouseTransactionController::class, 'transfer'])->middleware('permission:warehouse.transfer');
