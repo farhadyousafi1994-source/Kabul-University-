@@ -178,7 +178,7 @@ pagination, filters, responsive layout, permission check**.
 | Phase | Module(s) | Key deliverables | Verification |
 |---|---|---|---|
 | **1** ✅ | Foundation | Skeleton backend (Laravel 13), Quasar 2 SPA, SQLite, API envelope, mock dev API, router+guards, layout, login | Dev server boots; login works; layout renders; docs complete |
-| **2** | Authentication | Sanctum auth, LoginRequest, AuthController/AuthService, change-password; frontend auth store/guard | Full login/logout/me/change-password flow |
+| **2** ✅ | Authentication | Sanctum auth, LoginRequest, AuthController/AuthService, change-password, password-reset broker + notification, rate limiting; frontend auth store/guard | Full login/logout/me/change-password flow verified against mock API |
 | **3** | Users & Roles | Users CRUD + role assignment; roles/permissions UI; policies; middleware | Permission matrix enforced in UI + API |
 | **4** | Organization | campuses→rooms CRUD (API+UI), hierarchical filters | Location tree usable across modules |
 | **5** | Categories & Assets | Categories/subcategories; full asset CRUD, code generator, advanced filters, detail page w/ timeline | Asset lifecycle from registration |

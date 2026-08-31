@@ -44,8 +44,8 @@ No frontend code changes are required to switch between mock and live API.
 | Phase | Module | Status |
 |---|---|---|
 | 1 | Project foundation (Laravel 13 + Quasar 2 + SQLite + API envelope + dev mock API) | ✅ |
-| 2 | Authentication (login/logout/me/change-password) | ✅ (mock) · backend in progress |
-| 3–15 | Users & Roles → Settings | ⏳ in progress (per `docs/IMPLEMENTATION_PLAN.md`) |
+| 2 | Authentication — login/logout/me/change-password + password-reset architecture, rate limiting (backend + frontend) | ✅ |
+| 3 | Users & Roles → Settings | ⏳ in progress (per `docs/IMPLEMENTATION_PLAN.md`) |
 
 ## Docs
 

@@ -27,6 +27,22 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+require __DIR__.'/api/auth.php';
+
+|   Phase 4  - Organization  routes/api/organization.php (campuses…rooms)
+|   Phase 5  - Assets        routes/api/assets.php      (categories, assets, files)
+|   Phase 6  - Operations    routes/api/operations.php  (assignments, transfers, requests)
+|   Phase 7  - Maintenance   routes/api/maintenance.php
+|   Phase 8  - Codes         routes/api/codes.php        (QR / barcode)
+|   Phase 9  - Incidents     routes/api/incidents.php
+|   Phase 10 - Procurement   routes/api/procurement.php  (suppliers, PR, PO, receipts)
+|   Phase 11 - Warehouse     routes/api/warehouse.php
+|   Phase 12 - Audit         routes/api/audit.php
+|   Phase 13 - Financial     routes/api/financial.php    (depreciation, disposal)
+|   Phase 14 - System        routes/api/system.php       (notifications, logs, reports, dashboard, settings)
+|
+*/
+
 Route::get('/', function () {
     return response()->json([
         'success' => true,
