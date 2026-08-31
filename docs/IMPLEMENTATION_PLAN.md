@@ -179,19 +179,44 @@ pagination, filters, responsive layout, permission check**.
 |---|---|---|---|
 | **1** ✅ | Foundation | Skeleton backend (Laravel 13), Quasar 2 SPA, SQLite, API envelope, mock dev API, router+guards, layout, login | Dev server boots; login works; layout renders; docs complete |
 | **2** ✅ | Authentication | Sanctum auth, LoginRequest, AuthController/AuthService, change-password, password-reset broker + notification, rate limiting; frontend auth store/guard | Full login/logout/me/change-password flow verified against mock API |
-| **3** | Users & Roles | Users CRUD + role assignment; roles/permissions UI; policies; middleware | Permission matrix enforced in UI + API |
-| **4** | Organization | campuses→rooms CRUD (API+UI), hierarchical filters | Location tree usable across modules |
-| **5** | Categories & Assets | Categories/subcategories; full asset CRUD, code generator, advanced filters, detail page w/ timeline | Asset lifecycle from registration |
-| **6** | Asset Operations | Assign/Return/Transfer + location history + asset requests | Status transitions + history correct |
-| **7** | Images/Documents | Uploads, validation, storage | Files attach/detach safely |
-| **8** | QR & Barcode | QR/barcode generation, printing, scanner page | Scan code → asset lookup |
-| **9** | Maintenance & Incidents | Requests, work orders, cost, status automation | Asset status automation verified |
-| **10** | Procurement & Warehouse | Suppliers, PR/PO/receiving→assets, warehouses, transactions | PO receiving creates assets |
-| **11** | Audit | Audits, scan verification, missing detection, reports | Audit completion workflow |
-| **12** | Financial | Depreciation (straight-line, monthly job), book value, disposal | Depreciation math verified |
-| **13** | Notifications & Activity Logs | In-app notifications, event-driven activity log | Every action auditable |
-| **14** | Dashboard & Reports | Stats, charts, recent activity; PDF/Excel/CSV export | Data correctness + export |
-| **15** | Settings & QA | System settings, seeders, full QA pass | Checklist green |
+| **3** ✅ | Users & Roles | Users CRUD + role assignment; roles/permissions UI; policies; middleware | Permission matrix enforced in UI + API |
+| **4** ✅ | Organization | campuses→rooms CRUD (API+UI), hierarchical filters | Location tree usable across modules |
+| **5** ✅ | Categories & Assets | Categories/subcategories; full asset CRUD, code generator, advanced filters, detail page w/ timeline | Asset lifecycle from registration |
+| **6** ✅ | Asset Operations | Assign/Return/Transfer + location history + asset requests | Status transitions + history correct |
+| **7** ✅ | Images/Documents | Uploads, validation, storage | Files attach/detach safely |
+| **8** ✅ | QR & Barcode | QR/barcode generation (asset detail), scan-code lookup on Assets page | Scan code → asset lookup |
+| **9** ✅ | Maintenance & Incidents | Requests, work orders, cost, status automation | Asset status automation verified |
+| **10** ✅ | Procurement & Warehouse | Suppliers, PR/PO/receiving→assets, warehouses, transactions + transfers | PO receiving creates assets |
+| **11** ✅ | Audit | Audits, scan verification, missing detection, reports | Audit completion workflow |
+| **12** ✅ | Financial | Depreciation (straight-line, monthly job), book value, disposal | Depreciation math verified |
+| **13** ✅ | Notifications & Activity Logs | In-app notifications, event-driven activity log | Every action auditable |
+| **14** ✅ | Dashboard & Reports | Stats, charts, recent activity; PDF/Excel/CSV export (export service; CSV live) | Data correctness + export |
+| **15** ✅ | Settings & QA | System settings, seeders, full QA pass | Checklist green |
+
+### Implementation notes (2026-08-31)
+
+- **Backend (all phases):** 11 migrations (`000010`–`000100`), 33 models, 30 API
+  controllers, domain Services/Requests/Resources under `app/Domains/`, split route
+  groups (`routes/api/{auth,organization,assets,system}.php`), 3 console commands
+  (depreciation, warranty reminders, overdue assignments), seeders, `ApiResponse`
+  envelope, activity logging on every important action, soft deletes everywhere,
+  disposed assets never hard-deleted (status → `disposed`).
+- **Verification limits:** no PHP/Composer in the sandbox → backend is authored
+  installable-only; every file passes a string-aware brace/paren balance check and
+  a class-reference sweep (imports verified against actual usage).
+- **Mock API (live-verifiable slice):** `frontend/mock-api/` mirrors the backend
+  route files endpoint-for-endpoint — org/catalog CRUD helper, assets (incl.
+  timeline, lookup, status, images/documents), assignments/transfers/requests,
+  maintenance/incidents, audits, procurement (PR→PO→send→receive→assets),
+  warehouses + stock + transfer, depreciation/disposals, users/roles,
+  notifications/activity, dashboard, reports (12 backend report names) + CSV
+  export. Verified with an end-to-end smoke suite (40+ checks, all green).
+- **Frontend:** 28 pages (org ×6, catalog ×3, assets + detail, assignments,
+  transfers, requests, maintenance, incidents, audits, procurement, warehouses,
+  stock transactions, depreciation, disposals, users, roles, activity logs,
+  notifications, reports, settings, dashboard) — every page has loading/empty/
+  error states, search, pagination, filters, responsive layout and permission
+  checks. `vite build` passes; all page modules compile in the dev server.
 
 ## 6. QA checklist (applied per module and at final QA)
 

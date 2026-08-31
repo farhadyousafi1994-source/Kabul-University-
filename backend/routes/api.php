@@ -28,6 +28,9 @@ use Illuminate\Support\Facades\Route;
 */
 
 require __DIR__.'/api/auth.php';
+require __DIR__.'/api/organization.php';
+require __DIR__.'/api/assets.php';
+require __DIR__.'/api/system.php';
 
 |   Phase 4  - Organization  routes/api/organization.php (campuses…rooms)
 |   Phase 5  - Assets        routes/api/assets.php      (categories, assets, files)
