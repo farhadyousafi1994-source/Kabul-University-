@@ -1,0 +1,65 @@
+// ---------------------------------------------------------------------------
+// KU-AMS global styles
+// ---------------------------------------------------------------------------
+
+html,
+body,
+#q-app
+  height: 100%
+
+body
+  font-family: 'Roboto', -apple-system, 'Segoe UI', sans-serif
+
+// Page containers -----------------------------------------------------------
+
+.page-container
+  max-width: 1400px
+  margin: 0 auto
+  width: 100%
+
+// Generic table / list polish -------------------------------------------------
+
+.kv-table .q-table__card
+  border-radius: 8px
+
+.clickable-row
+  cursor: pointer
+
+// Scrollable horizontal filter bars on small screens
+.filter-bar
+  display: flex
+  gap: 12px
+  flex-wrap: wrap
+  align-items: center
+
+  .q-field
+    min-width: 180px
+
+  @media (max-width: 599px)
+    .q-field
+      min-width: 100%
+
+// Stat cards
+.stat-card
+  border-radius: 10px
+  transition: transform .15s ease
+
+  &:hover
+    transform: translateY(-2px)
+
+// Auth pages
+.auth-bg
+  min-height: 100vh
+  display: flex
+  align-items: center
+  justify-content: center
+  background: linear-gradient(135deg, #1b5e20 0%, #0d47a1 100%)
+
+  .auth-card
+    width: 100%
+    max-width: 420px
+    border-radius: 14px
+
+// Timeline polish
+.asset-timeline .q-timeline__title
+  font-weight: 600
