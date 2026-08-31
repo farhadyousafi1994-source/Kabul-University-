@@ -41,7 +41,7 @@ const compilePath = (pattern) => {
     '^' +
       pattern
         .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        .replace(/\\:(\w+)/g, (_, name) => {
+        .replace(/:(\w+)/g, (_, name) => {
           names.push(name)
           return '([^/]+)'
         }) +

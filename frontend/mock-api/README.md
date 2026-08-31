@@ -10,8 +10,16 @@ Quasar SPA is fully usable without PHP. It is served by the Vite dev server from
 - `server.js` — tiny HTTP router with the standard KU-AMS envelope,
   Bearer-token sessions and permission checks
 - `db.js` — full database schema (mirrors the Laravel migrations 1:1) + seed data
-- `routes/*.js` — one route group per backend module
-  (`auth`, `dashboard`, `notifications`, `activity`, `users`, …)
+- `routes/*.js` — one route group per backend module:
+  `auth`, `dashboard`, `notifications`, `activity`, `users` (users/roles CRUD),
+  `organization` (campuses→rooms), `catalog` (categories/subcategories/suppliers),
+  `assets` (CRUD, lookup, timeline, images/documents, status),
+  `operations` (assignments, transfers, asset requests),
+  `maintenance` (requests, work orders, incidents),
+  `audit-procurement` (audits, purchase requests/orders),
+  `warehouse` (warehouses, stock, transactions, transfers),
+  `financial` (depreciation, disposals),
+  `system` (settings, reports + CSV export)
 
 ## Switching to the real Laravel API
 
