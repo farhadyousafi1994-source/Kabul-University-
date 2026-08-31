@@ -56,18 +56,30 @@ No frontend code changes are required to switch between mock and live API.
 | 18–19 | Depreciation (straight-line, monthly run, book value) & disposals (never hard-deleted) | ✅ |
 | 20–21 | Notifications & activity logs | ✅ |
 | 22–24 | Dashboard, reports with CSV export, system settings | ✅ |
+| 25 | Mobile optimization — viewport/theme meta, tap-highlight, focus outlines, compact ≤599px styles | ✅ |
+| 26 | Security & performance — security headers, API throttle, trusted proxies, envelope-consistent errors, per-action route permissions | ✅ |
+| 27 | Testing / QA — feature + unit test suite (auth, authorization, asset lifecycle, maintenance, procurement, disposal, depreciation, users/roles) | ✅ |
+| 28 | Deployment — nginx + PHP-FPM + Supervisor + cron guide (`docs/DEPLOYMENT.md`) | ✅ |
+| 29 | Backup / DR — 3-2-1 backups, restore runbook, RPO/RTO (`docs/OPERATIONS.md`) | ✅ |
+| 30 | Final documentation & review (`docs/FINAL_REVIEW.md`) | ✅ |
 
-**Verification status:** the Laravel backend slice (11 migrations, 33 models, 30
-controllers, domain services/requests/resources, routes, seeders, console commands)
-is fully authored and brace/lint-clean, but **cannot be executed in this sandbox**
+**Verification status:** the Laravel backend slice (11 migrations + Spatie
+permission tables, 33 models, 30 controllers, domain services/requests/resources,
+routes with per-action permissions, seeders, console commands, 17 test classes) is
+fully authored and statically verified, but **cannot be executed in this sandbox**
 (no PHP/Composer — see `docs/ANALYSIS.md`). The **mock API is contract-identical**
 to the backend routes and is verified end-to-end (40+ endpoint checks, all green);
 all 28 Quasar pages compile and run against it in the live preview. Deploy the
 backend anywhere with PHP 8.3+ and `composer install` to go live with zero frontend
-changes (`KU_AMS_USE_MOCK=false npm run dev`).
+changes (`KU_AMS_USE_MOCK=false npm run dev`); run `php artisan test` for the
+authored suite.
 
 ## Docs
 
 - `docs/ANALYSIS.md` — system analysis and environment decisions
 - `docs/IMPLEMENTATION_PLAN.md` — full plan: database architecture, API design,
-  module breakdown, QA checklist
+  module breakdown, QA checklist, all phases ✅
+- `docs/SECURITY.md` — security posture, implemented controls, hardening checklist
+- `docs/DEPLOYMENT.md` — production deployment (nginx, PHP-FPM, Supervisor, cron)
+- `docs/OPERATIONS.md` — backup & disaster-recovery runbook
+- `docs/FINAL_REVIEW.md` — final review: phase completion, limitations, go-live checklist

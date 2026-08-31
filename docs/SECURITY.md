@@ -17,21 +17,34 @@ Management System (backend + frontend).
 - Change-password revokes all other tokens.
 
 ### Authorization
-- **Spatie Permission** matrix: 30+ granular permissions seeded into 9 roles.
-- Every API route is guarded by `permission:X` middleware — no unauthenticated
-  or unauthorized mutation endpoints exist.
-- Route-level policies mirror the permission matrix; controllers stay thin and
-  delegate to domain services (no business logic bypass).
+- **Spatie Permission** matrix: 18 permission groups (30+ granular permissions)
+  seeded into 9 roles.
+- Every API route is guarded by `permission:X` middleware, **per action**: the
+  generic `apiResource` groups (categories, subcategories, assets, org
+  structure, suppliers, warehouses) were expanded into explicit routes so
+  `index/show` require `*.view`, `store` requires `*.create`, `update` requires
+  `*.update` and `destroy` requires `*.delete`. Lookup endpoints (e.g.
+  `assets/lookup`) are gated too. No unauthenticated or unauthorized mutation
+  endpoints exist.
+- Controllers stay thin and delegate to domain services (no business logic
+  bypass).
 
 ### Input validation & data integrity
 - Every write endpoint has a dedicated **Form Request** (required fields,
   formats, uniqueness, `exists:` FK checks, `in:` enums, numeric bounds).
-- Standardized envelope for validation failures: 422 with `errors`.
+- Standardized envelope for ALL failure modes: 401/403/404/422/429/500 all
+  return `{success:false, message, errors?}` (custom exception renders in
+  `bootstrap/app.php` — includes `ValidationException`, `AuthenticationException`
+  and `TooManyRequestsHttpException`, which Laravel would otherwise render in a
+  different shape).
 - **Soft deletes** on all master data (assets, categories, suppliers,
   warehouses, org structure, users). **Disposed assets are never hard-deleted**
   — their status becomes `disposed` and the record remains for audit.
 - All destructive/history paths write immutable rows
   (`asset_location_histories`, `activity_logs`, audit items).
+- Password change verifies the current password in `AuthService`
+  (`Hash::check`) — the stock `current_password` rule requires a stateful
+  guard and cannot work for a stateless Sanctum API.
 
 ### Response hardening (`SecurityHeaders` middleware)
 - `X-Content-Type-Options: nosniff`

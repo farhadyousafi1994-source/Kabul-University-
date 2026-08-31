@@ -192,6 +192,12 @@ pagination, filters, responsive layout, permission check**.
 | **13** ✅ | Notifications & Activity Logs | In-app notifications, event-driven activity log | Every action auditable |
 | **14** ✅ | Dashboard & Reports | Stats, charts, recent activity; PDF/Excel/CSV export (export service; CSV live) | Data correctness + export |
 | **15** ✅ | Settings & QA | System settings, seeders, full QA pass | Checklist green |
+| **16** ✅ | Mobile optimization | viewport/theme meta, tap-highlight, focus-visible outlines, compact ≤599px table/button/dialog/pagination/toolbar styles | Dev server + `vite build` compile clean |
+| **17** ✅ | Security & performance | SecurityHeaders middleware, global API throttle + login throttle, trustProxies behind LB, envelope-consistent 401/422/403/404/429/500, per-action `permission:` middleware on every route (incl. previously unguarded resources), Spatie permission-tables migration, stateless-safe current-password check, `docs/SECURITY.md` | Static verification of all touched files; mock contract keeps identical envelopes |
+| **18** ✅ | Testing / QA | `tests/Feature` (auth, authorization 401/403, campus CRUD, asset create→assign→return→transfer, asset-request workflow, maintenance request→work-order, procurement PR→PO→receive, disposal immutability, depreciation command, user/role CRUD) + `tests/Unit` (asset code generation, depreciation math); `tests/Concerns/SeedsPermissions` helper | Suite runs via `php artisan test` after deploy |
+| **19** ✅ | Deployment | `docs/DEPLOYMENT.md` — nginx + PHP-FPM + Supervisor + cron, SPA proxy, env matrix, zero-downtime release, post-deploy checklist | Reviewed against Laravel 13 defaults |
+| **20** ✅ | Backup / DR | `docs/OPERATIONS.md` — SQLite/MySQL backup scripts, 3-2-1 off-site, restore runbooks (same/new server), RPO/RTO, monthly drill | Restore procedure follows `sqlite3 .backup` semantics |
+| **21** ✅ | Final docs & review | `docs/FINAL_REVIEW.md` — phase completion table, verification summary, known limitations, go-live checklist; README + plan updated | All 30 phases marked complete |
 
 ### Implementation notes (2026-08-31)
 

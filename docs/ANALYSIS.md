@@ -108,12 +108,24 @@ Full schema design is in `docs/IMPLEMENTATION_PLAN.md` §Database Architecture.
 
 ## 7. Implementation status (2026-08-31)
 
-- **Backend slice — all modules authored:** 11 migrations (`000010`–`000100`),
-  33 models, 30 API controllers, domain services/requests/resources, split route
-  groups, 3 console commands, seeders, `ApiResponse`, activity logging, soft
-  deletes. Installable-only (no PHP in sandbox); 200 PHP files pass a
-  string-aware brace balance check, and a class-reference sweep found no
-  unqualified/unimported class usage across all controllers.
+- **Backend slice — all modules authored:** 11 migrations (`000010`–`000100`) +
+  Spatie permission tables (`000015`), 33 models, 30 API controllers, domain
+  services/requests/resources, split route groups, 3 console commands, seeders,
+  `ApiResponse`, activity logging, soft deletes. Installable-only (no PHP in
+  sandbox); every file passes a string-aware brace balance check, and a
+  class-reference sweep found no unqualified/unimported class usage across all
+  controllers.
+- **Security hardening (Phase 26):** `SecurityHeaders` middleware, global API
+  throttle (`API_THROTTLE_RATE`), conditional `trustProxies`, envelope-consistent
+  exception rendering (401/422/403/404/429/500), per-action `permission:`
+  middleware on every resource route (categories, subcategories, assets, org
+  structure, suppliers, warehouses) plus `assets.lookup` gating, stateless-safe
+  current-password verification, `docs/SECURITY.md`.
+- **Testing (Phase 27):** `tests/Concerns/SeedsPermissions` trait + 10 feature
+  test classes (auth, authorization, org CRUD, asset lifecycle incl.
+  request workflow, maintenance lifecycle, procurement PR→PO→receive, disposal
+  immutability, depreciation command, user/role CRUD) + 2 unit test classes
+  (asset code generation, depreciation math) — run with `php artisan test`.
 - **Mock API — contract-identical and verified:** `frontend/mock-api/` now
   mirrors every backend route group (users/roles, organization, catalog, assets,
   operations, maintenance, audit, procurement, warehouse, financial, system).
@@ -123,7 +135,12 @@ Full schema design is in `docs/IMPLEMENTATION_PLAN.md` §Database Architecture.
   checks with zero failures.
 - **Frontend — complete:** 28 routed pages, all with loading/empty/error states,
   search, pagination, filters, responsive layout and permission checks.
-  `vite build` is clean and every page module compiles in the dev server.
+  `vite build` is clean and every page module compiles in the dev server;
+  mobile polish (Phase 25) verified via dev-server recompile and production build.
+- **Phases 28–30:** `docs/DEPLOYMENT.md` (nginx + PHP-FPM + Supervisor + cron,
+  zero-downtime release), `docs/OPERATIONS.md` (backup/DR runbook with RPO/RTO
+  and restore drills), `docs/FINAL_REVIEW.md` (phase completion table, known
+  limitations, go-live checklist).
 
 ## Risks & mitigations
 
