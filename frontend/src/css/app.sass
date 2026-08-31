@@ -1,0 +1,95 @@
+// ---------------------------------------------------------------------------
+// KU-AMS global styles
+// ---------------------------------------------------------------------------
+
+html,
+body,
+#q-app
+  height: 100%
+
+html
+  -webkit-text-size-adjust: 100%
+  text-size-adjust: 100%
+
+body
+  font-family: 'Roboto', -apple-system, 'Segoe UI', sans-serif
+  -webkit-tap-highlight-color: rgba(27, 94, 32, .12)
+
+// Visible focus ring for keyboard users (a11y)
+:focus-visible
+  outline: 2px solid $primary
+  outline-offset: 2px
+
+// Page containers -----------------------------------------------------------
+
+.page-container
+  max-width: 1400px
+  margin: 0 auto
+  width: 100%
+
+// Generic table / list polish -------------------------------------------------
+
+.kv-table .q-table__card
+  border-radius: 8px
+
+.clickable-row
+  cursor: pointer
+
+// Scrollable horizontal filter bars on small screens
+.filter-bar
+  display: flex
+  gap: 12px
+  flex-wrap: wrap
+  align-items: center
+
+  .q-field
+    min-width: 180px
+
+  @media (max-width: 599px)
+    .q-field
+      min-width: 100%
+
+// Stat cards
+.stat-card
+  border-radius: 10px
+  transition: transform .15s ease
+
+  &:hover
+    transform: translateY(-2px)
+
+// Auth pages
+.auth-bg
+  min-height: 100vh
+  display: flex
+  align-items: center
+  justify-content: center
+  background: linear-gradient(135deg, #1b5e20 0%, #0d47a1 100%)
+
+  .auth-card
+    width: 100%
+    max-width: 420px
+    border-radius: 14px
+
+// Timeline polish
+.asset-timeline .q-timeline__title
+  font-weight: 600
+
+// Mobile polish ----------------------------------------------------------------
+
+@media (max-width: 599px)
+  .q-table
+    font-size: 12px
+
+  .q-table .q-btn
+    min-width: 28px
+    min-height: 28px
+
+  .q-dialog .q-card
+    width: 96vw !important
+
+  .q-pagination
+    flex-wrap: wrap
+
+  .q-toolbar__title
+    font-size: 16px
+

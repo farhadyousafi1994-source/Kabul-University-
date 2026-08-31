@@ -1,0 +1,228 @@
+<template>
+  <q-layout view="hHh Lpr lFf">
+    <!-- Header ---------------------------------------------------------->
+    <q-header elevated class="bg-primary text-white" height-hint="60">
+      <q-toolbar>
+        <q-btn flat dense round icon="menu" aria-label="Toggle sidebar" @click="drawerOpen = !drawerOpen" />
+        <q-toolbar-title class="row items-center no-wrap">
+          <q-icon name="account_balance" size="26px" class="q-mr-sm" />
+          <span class="text-subtitle1 text-weight-medium gt-xs">Kabul University</span>
+          <span class="text-caption q-ml-xs gt-sm text-white/70">Asset Management System</span>
+        </q-toolbar-title>
+
+        <q-btn flat round :icon="isDark ? 'light_mode' : 'dark_mode'" aria-label="Toggle dark mode" @click="toggleDark">
+          <q-tooltip>Toggle dark mode</q-tooltip>
+        </q-btn>
+
+        <!-- Notifications -->
+        <q-btn flat round icon="notifications" aria-label="Notifications">
+          <q-badge v-if="notificationStore.unreadCount > 0" color="red" floating>
+            {{ notificationStore.unreadCount > 9 ? '9+' : notificationStore.unreadCount }}
+          </q-badge>
+          <q-menu fit auto-close>
+            <q-list style="min-width: 340px; max-height: 420px" class="scroll">
+              <q-item class="bg-grey-2">
+                <q-item-section>
+                  <q-item-label class="text-subtitle2">Notifications</q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-btn flat dense size="sm" color="primary" label="Mark all read" @click="notificationStore.markAllRead" />
+                </q-item-section>
+              </q-item>
+              <template v-if="notificationStore.items.length">
+                <q-item
+                  v-for="n in notificationStore.items.slice(0, 8)"
+                  :key="n.id"
+                  clickable
+                  :class="{ 'bg-primary/5': !n.read_at }"
+                  @click="notificationStore.markRead(n.id)"
+                >
+                  <q-item-section avatar>
+                    <q-icon :name="notificationIcon(n)" color="primary" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label class="text-body2">{{ n.title }}</q-item-label>
+                    <q-item-label caption>{{ n.message }}</q-item-label>
+                    <q-item-label caption class="text-caption">{{ timeAgo(n.created_at) }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+              <q-item v-else>
+                <q-item-section class="text-center text-grey-6 q-py-md">
+                  <q-icon name="notifications_off" size="32px" class="q-mb-sm" />
+                  <div>No notifications</div>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </q-btn>
+
+        <!-- User menu -->
+        <q-btn round flat>
+          <q-avatar size="32px" color="white" text-color="primary">{{ authStore.initials }}</q-avatar>
+          <q-menu auto-close>
+            <q-list style="min-width: 220px">
+              <q-item class="bg-grey-2">
+                <q-item-section>
+                  <q-item-label>{{ authStore.fullName }}</q-item-label>
+                  <q-item-label caption>{{ authStore.user?.email || authStore.user?.username }}</q-item-label>
+                </q-item-section>
+              </q-item>
+              <q-separator />
+              <q-item clickable v-ripple to="/settings/profile" v-if="false">
+                <q-item-section avatar><q-icon name="person" /></q-item-section>
+                <q-item-section>Profile</q-item-section>
+              </q-item>
+              <q-item clickable v-ripple @click="changePasswordDialog = true">
+                <q-item-section avatar><q-icon name="lock" /></q-item-section>
+                <q-item-section>Change password</q-item-section>
+              </q-item>
+              <q-separator />
+              <q-item clickable v-ripple @click="logout">
+                <q-item-section avatar><q-icon name="logout" color="negative" /></q-item-section>
+                <q-item-section class="text-negative">Sign out</q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </q-btn>
+      </q-toolbar>
+    </q-header>
+
+    <!-- Sidebar ---------------------------------------------------------->
+    <q-drawer v-model="drawerOpen" show-if-above bordered :width="264" :breakpoint="1024" class="bg-grey-1">
+      <q-scroll-area class="fit">
+        <q-list padding class="menu-list">
+          <template v-for="section in menuSections" :key="section.label">
+            <div v-if="section.label" class="text-overline text-grey-6 q-pl-md q-mt-md q-mb-xs">
+              {{ section.label }}
+            </div>
+            <q-item
+              v-for="item in section.items"
+              :key="item.name"
+              :to="{ name: item.name }"
+              exact
+              clickable
+              v-ripple
+              class="q-mx-sm rounded-borders menu-item"
+            >
+              <q-item-section avatar class="q-pr-none">
+                <q-icon :name="item.icon" size="20px" />
+              </q-item-section>
+              <q-item-section>{{ item.title }}</q-item-section>
+            </q-item>
+          </template>
+        </q-list>
+      </q-scroll-area>
+    </q-drawer>
+
+    <!-- Page -------------------------------------------------------------->
+    <q-page-container>
+      <router-view v-slot="{ Component }">
+        <component :is="Component" />
+      </router-view>
+    </q-page-container>
+
+    <q-footer reveal bordered class="bg-white text-grey-8">
+      <q-toolbar class="justify-between">
+        <div class="text-caption">© {{ year }} Kabul University — Asset Management System</div>
+        <div class="text-caption gt-xs">KU-AMS v1.0.0</div>
+      </q-toolbar>
+    </q-footer>
+
+    <!-- Change password dialog -->
+    <q-dialog v-model="changePasswordDialog">
+      <ChangePasswordDialog @done="changePasswordDialog = false" />
+    </q-dialog>
+  </q-layout>
+</template>
+
+<script setup>
+import { computed, ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { Dark, useQuasar } from 'quasar'
+import { useAuthStore } from 'src/stores/auth'
+import { useNotificationStore } from 'src/stores/notifications'
+import ChangePasswordDialog from 'src/components/auth/ChangePasswordDialog.vue'
+
+const router = useRouter()
+const $q = useQuasar()
+const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
+
+const drawerOpen = ref(true)
+const changePasswordDialog = ref(false)
+const isDark = ref(Dark.isActive)
+
+const year = new Date().getFullYear()
+
+function toggleDark() {
+  isDark.value = !isDark.value
+  Dark.set(isDark.value)
+}
+
+// ---------------------------------------------------------------------------
+// Sidebar menu — derived from the router table of contents. Only routes the
+// current user is permitted to see are rendered, so the menu grows as modules
+// are added and stays permission-aware automatically.
+// ---------------------------------------------------------------------------
+const menuSections = computed(() => {
+  const toc = router.getRoutes()
+    .filter((r) => r.meta?.title && r.meta?.section && !r.meta?.hidden)
+    .filter((r) => !r.meta.permission || authStore.hasPermission(r.meta.permission))
+    .sort((a, b) => (a.meta.order || 0) - (b.meta.order || 0))
+
+  const sections = []
+  const index = new Map()
+  for (const route of toc) {
+    const label = route.meta.section
+    if (!index.has(label)) {
+      const entry = { label, items: [] }
+      index.set(label, entry)
+      sections.push(entry)
+    }
+    index.get(label).items.push({
+      name: route.name,
+      title: route.meta.title,
+      icon: route.meta.icon,
+    })
+  }
+  return sections
+})
+
+function notificationIcon(n) {
+  return n.icon || 'notifications'
+}
+
+function timeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
+
+async function logout() {
+  await authStore.logout()
+  router.push({ name: 'login' })
+}
+
+onMounted(() => {
+  if (authStore.isAuthenticated) {
+    notificationStore.fetchNotifications()
+  }
+})
+</script>
+
+<style lang="sass">
+.menu-list .menu-item
+  .q-item__section--avatar
+    min-width: 34px
+
+.menu-item.q-router-link--active
+  color: $primary
+  background: rgba(27, 94, 32, .08)
+  font-weight: 600
+</style>

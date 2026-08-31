@@ -1,0 +1,11 @@
+node_modules
+dist
+*.log
+.DS_Store
+.env
+mock-api/data/*.sqlite
+mock-api/data/*.sqlite-journal
+
+# SQLite WAL sidecar files (dev mock API)
+mock-api/data/*.sqlite-shm
+mock-api/data/*.sqlite-wal
