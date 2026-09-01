@@ -6,22 +6,25 @@
     dense
     :class="pill ? 'pill-badge' : ''"
   >
-    {{ label }}
+    {{ displayLabel }}
   </q-chip>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 /**
  * Colored status/condition badge. The color map is centralized here so all
- * modules render identical chips for identical statuses.
+ * modules render identical chips for identical statuses with dynamic i18n support.
  */
 const props = defineProps({
   value: { type: String, required: true },
   label: { type: String, default: '' },
   pill: { type: Boolean, default: false },
 })
+
+const { t, te } = useI18n()
 
 const MAP = {
   // Asset statuses
@@ -66,7 +69,15 @@ const MAP = {
 }
 
 const color = computed(() => MAP[props.value]?.[0] || 'grey-7')
-const label = computed(() => props.label || MAP[props.value]?.[1] || props.value.replace(/_/g, ' '))
+
+const displayLabel = computed(() => {
+  if (props.label) return props.label
+  const val = props.value
+  if (te(`status.${val}`)) return t(`status.${val}`)
+  if (te(`condition.${val}`)) return t(`condition.${val}`)
+  if (te(`common.${val}`)) return t(`common.${val}`)
+  return MAP[val]?.[1] || val.replace(/_/g, ' ')
+})
 </script>
 
 <style lang="sass">

@@ -1,16 +1,16 @@
 <template>
   <DataTablePage
-    title="Campuses"
-    subtitle="Kabul University campuses"
+    :title="t('organization.campuses.title')"
+    :subtitle="t('organization.campuses.subtitle')"
     icon="location_city"
-    entity-label="campus"
+    :entity-label="t('organization.campuses.entity')"
     :load="campusService.list"
     :columns="columns"
     perms="organization"
-    search-placeholder="Search by code or name…"
-    create-label="Add Campus"
-    empty-title="No campuses yet"
-    empty-message="Add your first campus to start structuring the university."
+    :search-placeholder="`${t('common.search')}…`"
+    :create-label="t('organization.campuses.add')"
+    :empty-title="t('common.nothingHere')"
+    :empty-message="t('common.noDataDesc')"
     :create-form="form"
     :submit="submit"
     :destroy="destroy"
@@ -18,26 +18,30 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { campusService } from 'src/services/organization.service'
 import DataTablePage from 'src/components/common/DataTablePage.vue'
 
-const columns = [
-  { name: 'code', label: 'Code', field: 'code', align: 'left' },
-  { name: 'name', label: 'Name', field: 'name', align: 'left' },
-  { name: 'address', label: 'Address', field: 'address', align: 'left' },
-  { name: 'status', label: 'Status', field: 'status', align: 'left' },
-]
+const { t } = useI18n()
 
-const form = {
+const columns = computed(() => [
+  { name: 'code', label: t('common.code'), field: 'code', align: 'left' },
+  { name: 'name', label: t('common.name'), field: 'name', align: 'left' },
+  { name: 'address', label: t('common.address'), field: 'address', align: 'left' },
+  { name: 'status', label: t('common.status'), field: 'status', align: 'left' },
+])
+
+const form = computed(() => ({
   fields: [
-    { key: 'code', label: 'Code', type: 'text', required: true, hint: 'e.g. CAMP-MAIN' },
-    { key: 'name', label: 'Name', type: 'text', required: true },
-    { key: 'address', label: 'Address', type: 'text' },
-    { key: 'description', label: 'Description', type: 'textarea' },
-    { key: 'status', label: 'Status', type: 'select', options: [{ label: 'Active', value: 'active' }, { label: 'Inactive', value: 'inactive' }], required: true },
+    { key: 'code', label: t('common.code'), type: 'text', required: true, hint: t('organization.campuses.codeHint') },
+    { key: 'name', label: t('common.name'), type: 'text', required: true },
+    { key: 'address', label: t('common.address'), type: 'text' },
+    { key: 'description', label: t('common.description'), type: 'textarea' },
+    { key: 'status', label: t('common.status'), type: 'select', options: [{ label: t('status.active'), value: 'active' }, { label: t('status.inactive'), value: 'inactive' }], required: true },
   ],
   defaults: { status: 'active' },
-}
+}))
 
 const submit = async (values, editing) => (editing ? campusService.update(editing.id, values) : campusService.create(values))
 const destroy = (row) => campusService.remove(row.id)

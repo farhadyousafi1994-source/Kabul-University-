@@ -2,7 +2,7 @@
   <div class="page-container q-pa-md q-pa-lg-md" v-if="asset">
     <!-- Header -->
     <div class="row items-center q-mb-md no-wrap">
-      <q-btn flat round dense icon="arrow_back" aria-label="Back" :to="{ name: 'assets' }" class="q-mr-sm" />
+      <q-btn flat round dense icon="arrow_back" :aria-label="t('common.back')" :to="{ name: 'assets' }" class="q-mr-sm" />
       <q-icon name="inventory_2" size="30px" color="primary" class="q-mr-sm" />
       <div class="col">
         <div class="text-h6 text-weight-bold q-mb-none">{{ asset.name }}</div>
@@ -10,10 +10,10 @@
       </div>
       <q-space />
       <div class="row q-gutter-xs no-wrap">
-        <q-btn v-if="canAssign && ['available', 'reserved'].includes(asset.status)" color="info" size="sm" icon="assignment_ind" label="Assign" @click="assignOpen = true" />
-        <q-btn v-if="canTransfer && !['disposed', 'retired'].includes(asset.status)" color="primary" size="sm" outline icon="swap_horiz" label="Transfer" @click="transferOpen = true" />
-        <q-btn v-if="canEdit && activeAssignment" color="teal" size="sm" outline icon="undo" label="Return" @click="returnAsset" />
-        <q-btn v-if="canEdit" color="primary" size="sm" icon="edit" label="Edit" :to="{ name: 'assets' }" />
+        <q-btn v-if="canAssign && ['available', 'reserved'].includes(asset.status)" color="info" size="sm" icon="assignment_ind" :label="t('assets.assignAsset')" @click="assignOpen = true" />
+        <q-btn v-if="canTransfer && !['disposed', 'retired'].includes(asset.status)" color="primary" size="sm" outline icon="swap_horiz" :label="t('assets.transferAsset')" @click="transferOpen = true" />
+        <q-btn v-if="canEdit && activeAssignment" color="teal" size="sm" outline icon="undo" :label="t('assets.returnAsset')" @click="returnAsset" />
+        <q-btn v-if="canEdit" color="primary" size="sm" icon="edit" :label="t('common.edit')" :to="{ name: 'assets' }" />
       </div>
     </div>
 
@@ -22,47 +22,47 @@
       <div class="col-12 col-md-4">
         <q-card flat bordered class="q-mb-md">
           <q-card-section class="q-pb-none">
-            <div class="text-subtitle2 text-weight-bold">Identity & ownership</div>
+            <div class="text-subtitle2 text-weight-bold">{{ t('assets.identityAndOwnership') }}</div>
           </q-card-section>
           <q-card-section class="q-pt-sm">
             <q-list dense>
-              <q-item><q-item-section><q-item-label caption>Category</q-item-label><q-item-label>{{ asset.category_name || '—' }}</q-item-label></q-item-section></q-item>
-              <q-item><q-item-section><q-item-label caption>Brand / Model</q-item-label><q-item-label>{{ [asset.brand, asset.model].filter(Boolean).join(' / ') || '—' }}</q-item-label></q-item-section></q-item>
-              <q-item><q-item-section><q-item-label caption>Serial number</q-item-label><q-item-label>{{ asset.serial_number || '—' }}</q-item-label></q-item-section></q-item>
-              <q-item><q-item-section><q-item-label caption>Supplier</q-item-label><q-item-label>{{ asset.supplier_name || '—' }}</q-item-label></q-item-section></q-item>
-              <q-item><q-item-section><q-item-label caption>Condition</q-item-label><q-item-label><StatusBadge :value="asset.condition" /></q-item-label></q-item-section></q-item>
-              <q-item><q-item-section><q-item-label caption>Warranty until</q-item-label><q-item-label>{{ date(asset.warranty_expiry_date) }}</q-item-label></q-item-section></q-item>
-              <q-item v-if="asset.description"><q-item-section><q-item-label caption>Description</q-item-label><q-item-label>{{ asset.description }}</q-item-label></q-item-section></q-item>
+              <q-item><q-item-section><q-item-label caption>{{ t('common.category') }}</q-item-label><q-item-label>{{ asset.category_name || '—' }}</q-item-label></q-item-section></q-item>
+              <q-item><q-item-section><q-item-label caption>{{ t('assets.brand') }} / {{ t('assets.model') }}</q-item-label><q-item-label>{{ [asset.brand, asset.model].filter(Boolean).join(' / ') || '—' }}</q-item-label></q-item-section></q-item>
+              <q-item><q-item-section><q-item-label caption>{{ t('assets.serialNumber') }}</q-item-label><q-item-label>{{ asset.serial_number || '—' }}</q-item-label></q-item-section></q-item>
+              <q-item><q-item-section><q-item-label caption>{{ t('common.supplier') }}</q-item-label><q-item-label>{{ asset.supplier_name || '—' }}</q-item-label></q-item-section></q-item>
+              <q-item><q-item-section><q-item-label caption>{{ t('common.condition') }}</q-item-label><q-item-label><StatusBadge :value="asset.condition" /></q-item-label></q-item-section></q-item>
+              <q-item><q-item-section><q-item-label caption>{{ t('assets.warrantyExpiry') }}</q-item-label><q-item-label>{{ date(asset.warranty_expiry_date) }}</q-item-label></q-item-section></q-item>
+              <q-item v-if="asset.description"><q-item-section><q-item-label caption>{{ t('common.description') }}</q-item-label><q-item-label>{{ asset.description }}</q-item-label></q-item-section></q-item>
             </q-list>
           </q-card-section>
         </q-card>
 
         <q-card flat bordered class="q-mb-md">
           <q-card-section class="q-pb-none">
-            <div class="text-subtitle2 text-weight-bold">Location</div>
+            <div class="text-subtitle2 text-weight-bold">{{ t('assets.location') }}</div>
           </q-card-section>
           <q-card-section class="q-pt-sm">
             <q-list dense>
-              <q-item><q-item-section><q-item-label caption>Campus</q-item-label><q-item-label>{{ asset.campus_name || '—' }}</q-item-label></q-item-section></q-item>
-              <q-item><q-item-section><q-item-label caption>Faculty</q-item-label><q-item-label>{{ asset.faculty_name || '—' }}</q-item-label></q-item-section></q-item>
-              <q-item><q-item-section><q-item-label caption>Department</q-item-label><q-item-label>{{ asset.department_name || '—' }}</q-item-label></q-item-section></q-item>
-              <q-item><q-item-section><q-item-label caption>Building</q-item-label><q-item-label>{{ asset.building_name || '—' }}</q-item-label></q-item-section></q-item>
-              <q-item><q-item-section><q-item-label caption>Floor / Room</q-item-label><q-item-label>{{ [asset.floor_name, asset.room_name].filter(Boolean).join(' / ') || '—' }}</q-item-label></q-item-section></q-item>
+              <q-item><q-item-section><q-item-label caption>{{ t('common.campus') }}</q-item-label><q-item-label>{{ asset.campus_name || '—' }}</q-item-label></q-item-section></q-item>
+              <q-item><q-item-section><q-item-label caption>{{ t('common.faculty') }}</q-item-label><q-item-label>{{ asset.faculty_name || '—' }}</q-item-label></q-item-section></q-item>
+              <q-item><q-item-section><q-item-label caption>{{ t('common.department') }}</q-item-label><q-item-label>{{ asset.department_name || '—' }}</q-item-label></q-item-section></q-item>
+              <q-item><q-item-section><q-item-label caption>{{ t('common.building') }}</q-item-label><q-item-label>{{ asset.building_name || '—' }}</q-item-label></q-item-section></q-item>
+              <q-item><q-item-section><q-item-label caption>{{ t('common.floor') }} / {{ t('common.room') }}</q-item-label><q-item-label>{{ [asset.floor_name, asset.room_name].filter(Boolean).join(' / ') || '—' }}</q-item-label></q-item-section></q-item>
             </q-list>
           </q-card-section>
         </q-card>
 
         <q-card flat bordered class="q-mb-md">
           <q-card-section class="q-pb-none">
-            <div class="text-subtitle2 text-weight-bold">Financial</div>
+            <div class="text-subtitle2 text-weight-bold">{{ t('assets.financial') }}</div>
           </q-card-section>
           <q-card-section class="q-pt-sm">
             <q-list dense>
-              <q-item><q-item-section><q-item-label caption>Purchase date</q-item-label><q-item-label>{{ date(asset.purchase_date) }}</q-item-label></q-item-section></q-item>
-              <q-item><q-item-section><q-item-label caption>Purchase price</q-item-label><q-item-label>{{ currency(asset.purchase_price) }}</q-item-label></q-item-section></q-item>
-              <q-item><q-item-section><q-item-label caption>Current value</q-item-label><q-item-label>{{ currency(asset.current_value) }}</q-item-label></q-item-section></q-item>
-              <q-item><q-item-section><q-item-label caption>Salvage value</q-item-label><q-item-label>{{ currency(asset.salvage_value) }}</q-item-label></q-item-section></q-item>
-              <q-item><q-item-section><q-item-label caption>Book value</q-item-label><q-item-label class="text-weight-medium">{{ bookValue ? currency(bookValue.book_value) : currency(asset.current_value) }}</q-item-label></q-item-section></q-item>
+              <q-item><q-item-section><q-item-label caption>{{ t('assets.purchaseDate') }}</q-item-label><q-item-label>{{ date(asset.purchase_date) }}</q-item-label></q-item-section></q-item>
+              <q-item><q-item-section><q-item-label caption>{{ t('assets.purchasePrice') }}</q-item-label><q-item-label>{{ currency(asset.purchase_price) }}</q-item-label></q-item-section></q-item>
+              <q-item><q-item-section><q-item-label caption>{{ t('assets.currentValue') }}</q-item-label><q-item-label>{{ currency(asset.current_value) }}</q-item-label></q-item-section></q-item>
+              <q-item><q-item-section><q-item-label caption>{{ t('assets.salvageValue') }}</q-item-label><q-item-label>{{ currency(asset.salvage_value) }}</q-item-label></q-item-section></q-item>
+              <q-item><q-item-section><q-item-label caption>{{ t('assets.bookValue') }}</q-item-label><q-item-label class="text-weight-medium">{{ bookValue ? currency(bookValue.book_value) : currency(asset.current_value) }}</q-item-label></q-item-section></q-item>
             </q-list>
           </q-card-section>
         </q-card>
@@ -70,7 +70,7 @@
         <!-- QR & barcode -->
         <q-card flat bordered class="q-mb-md">
           <q-card-section class="q-pb-none">
-            <div class="text-subtitle2 text-weight-bold">Barcode & QR</div>
+            <div class="text-subtitle2 text-weight-bold">{{ t('assets.barcodeAndQr') }}</div>
           </q-card-section>
           <q-card-section class="row items-center q-gutter-md q-pt-sm">
             <div class="column items-center">
@@ -89,7 +89,7 @@
       <div class="col-12 col-md-8">
         <q-card flat bordered class="q-mb-md">
           <q-card-section class="q-pb-none">
-            <div class="text-subtitle2 text-weight-bold">Activity timeline</div>
+            <div class="text-subtitle2 text-weight-bold">{{ t('assets.activityTimeline') }}</div>
           </q-card-section>
           <q-card-section>
             <div v-if="timelineLoading" class="q-gutter-sm">
@@ -100,7 +100,7 @@
                 <div class="text-body2 text-grey-8">{{ ev.description }}</div>
               </q-timeline-entry>
             </q-timeline>
-            <EmptyState v-else icon="history" title="No activity yet" message="Assignments, transfers and maintenance will appear here." />
+            <EmptyState v-else icon="history" :title="t('assets.noActivity')" :message="t('assets.noActivityDesc')" />
           </q-card-section>
         </q-card>
 
@@ -108,9 +108,9 @@
           <div class="col-12 col-md-6">
             <q-card flat bordered>
               <q-card-section class="row items-center q-pb-none">
-                <div class="text-subtitle2 text-weight-bold">Documents</div>
+                <div class="text-subtitle2 text-weight-bold">{{ t('assets.documents') }}</div>
                 <q-space />
-                <q-btn v-if="canEdit" flat dense size="sm" color="primary" icon="upload" label="Upload" @click="uploadDocInput.click()" />
+                <q-btn v-if="canEdit" flat dense size="sm" color="primary" icon="upload" :label="t('common.upload')" @click="uploadDocInput.click()" />
                 <input ref="uploadDocInput" type="file" class="hidden" @change="uploadDocument" />
               </q-card-section>
               <q-card-section class="q-pt-sm">
@@ -126,16 +126,16 @@
                     </q-item-section>
                   </q-item>
                 </q-list>
-                <EmptyState v-else icon="folder_open" title="No documents" message="Invoices, warranty papers and manuals go here." />
+                <EmptyState v-else icon="folder_open" :title="t('assets.noDocuments')" :message="t('assets.noDocumentsDesc')" />
               </q-card-section>
             </q-card>
           </div>
           <div class="col-12 col-md-6">
             <q-card flat bordered>
               <q-card-section class="row items-center q-pb-none">
-                <div class="text-subtitle2 text-weight-bold">Images</div>
+                <div class="text-subtitle2 text-weight-bold">{{ t('assets.images') }}</div>
                 <q-space />
-                <q-btn v-if="canEdit" flat dense size="sm" color="primary" icon="upload" label="Upload" @click="uploadImgInput.click()" />
+                <q-btn v-if="canEdit" flat dense size="sm" color="primary" icon="upload" :label="t('common.upload')" @click="uploadImgInput.click()" />
                 <input ref="uploadImgInput" type="file" accept="image/*" class="hidden" @change="uploadImage" />
               </q-card-section>
               <q-card-section class="q-pt-sm">
@@ -147,7 +147,7 @@
                     <div class="text-caption text-grey-6 ellipsis">{{ img.filename }}</div>
                   </div>
                 </div>
-                <EmptyState v-else icon="image" title="No images" message="Photos of the asset can be attached here." />
+                <EmptyState v-else icon="image" :title="t('assets.noImages')" :message="t('assets.noImagesDesc')" />
               </q-card-section>
             </q-card>
           </div>
@@ -159,18 +159,18 @@
     <q-dialog v-model="assignOpen" persistent>
       <q-card style="min-width: 380px">
         <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">Assign asset</div>
+          <div class="text-h6">{{ t('assets.assignAsset') }}</div>
           <q-space />
           <q-btn flat round dense icon="close" @click="assignOpen = false" />
         </q-card-section>
         <q-card-section>
           <q-form @submit="doAssign" class="column q-gutter-md">
-            <q-select v-model="assignForm.assigned_to_user_id" :options="userOptions" label="Assign to *" dense outlined emit-value map-options options-dense :rules="[required]" />
-            <q-input v-model="assignForm.expected_return_date" label="Expected return date" type="date" dense outlined />
-            <q-input v-model="assignForm.notes" label="Notes" type="textarea" dense outlined autogrow />
+            <q-select v-model="assignForm.assigned_to_user_id" :options="userOptions" :label="`${t('assets.assignTo')} *`" dense outlined emit-value map-options options-dense :rules="[required]" />
+            <q-input v-model="assignForm.expected_return_date" :label="t('assets.expectedReturnDate')" type="date" dense outlined />
+            <q-input v-model="assignForm.notes" :label="t('common.notes')" type="textarea" dense outlined autogrow />
             <div class="row justify-end q-gutter-sm">
-              <q-btn label="Cancel" flat color="grey-7" @click="assignOpen = false" />
-              <q-btn label="Assign" type="submit" color="primary" :loading="busy.assign" />
+              <q-btn :label="t('common.cancel')" flat color="grey-7" @click="assignOpen = false" />
+              <q-btn :label="t('assets.assignAsset')" type="submit" color="primary" :loading="busy.assign" />
             </div>
           </q-form>
         </q-card-section>
@@ -181,22 +181,22 @@
     <q-dialog v-model="transferOpen" persistent>
       <q-card style="min-width: 420px; max-width: 640px">
         <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">Transfer asset</div>
+          <div class="text-h6">{{ t('assets.transferAsset') }}</div>
           <q-space />
           <q-btn flat round dense icon="close" @click="transferOpen = false" />
         </q-card-section>
         <q-card-section>
           <q-form @submit="doTransfer" class="row q-col-gutter-md">
-            <q-select v-model="transferForm.to_campus_id" :options="campusOptions" label="To campus" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
-            <q-select v-model="transferForm.to_faculty_id" :options="facultyOptions" label="To faculty" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
-            <q-select v-model="transferForm.to_department_id" :options="departmentOptions" label="To department" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
-            <q-select v-model="transferForm.to_building_id" :options="buildingOptions" label="To building" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
-            <q-select v-model="transferForm.to_floor_id" :options="floorOptions" label="To floor" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
-            <q-select v-model="transferForm.to_room_id" :options="roomOptions" label="To room" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
-            <q-input v-model="transferForm.notes" label="Notes" type="textarea" dense outlined autogrow class="col-12" />
+            <q-select v-model="transferForm.to_campus_id" :options="campusOptions" :label="t('assets.toCampus')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
+            <q-select v-model="transferForm.to_faculty_id" :options="facultyOptions" :label="t('assets.toFaculty')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
+            <q-select v-model="transferForm.to_department_id" :options="departmentOptions" :label="t('assets.toDepartment')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
+            <q-select v-model="transferForm.to_building_id" :options="buildingOptions" :label="t('assets.toBuilding')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
+            <q-select v-model="transferForm.to_floor_id" :options="floorOptions" :label="t('assets.toFloor')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
+            <q-select v-model="transferForm.to_room_id" :options="roomOptions" :label="t('assets.toRoom')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
+            <q-input v-model="transferForm.notes" :label="t('common.notes')" type="textarea" dense outlined autogrow class="col-12" />
             <div class="col-12 row justify-end q-gutter-sm">
-              <q-btn label="Cancel" flat color="grey-7" @click="transferOpen = false" />
-              <q-btn label="Request transfer" type="submit" color="primary" :loading="busy.transfer" />
+              <q-btn :label="t('common.cancel')" flat color="grey-7" @click="transferOpen = false" />
+              <q-btn :label="t('assets.requestTransfer')" type="submit" color="primary" :loading="busy.transfer" />
             </div>
           </q-form>
         </q-card-section>
@@ -216,6 +216,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
+import { useI18n } from 'vue-i18n'
 import QRCode from 'qrcode'
 import JsBarcode from 'jsbarcode'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
@@ -228,6 +229,7 @@ import { useOptions } from 'src/composables/useOptions'
 import { useAuthStore } from 'src/stores/auth'
 import { currency, date } from 'src/utils/format'
 
+const { t } = useI18n()
 const route = useRoute()
 const $q = useQuasar()
 const authStore = useAuthStore()
@@ -260,7 +262,7 @@ const busy = reactive({ assign: false, transfer: false, return: false })
 const uploadDocInput = ref(null)
 const uploadImgInput = ref(null)
 
-const required = (v) => (v !== null && v !== undefined && String(v).trim() !== '') || 'This field is required'
+const required = (v) => (v !== null && v !== undefined && String(v).trim() !== '') || t('common.required')
 const canAssign = computed(() => authStore.hasPermission('assets.assign'))
 const canTransfer = computed(() => authStore.hasPermission('assets.transfer'))
 const canEdit = computed(() => authStore.hasPermission('assets.update'))
@@ -277,7 +279,7 @@ async function load() {
     asset.value = data
     loadAux()
   } catch (e) {
-    error.value = e.message || 'Asset not found.'
+    error.value = e.message || t('common.noData')
   } finally {
     loading.value = false
   }
@@ -301,7 +303,7 @@ async function loadAux() {
     activeAssignment.value = assignments.data?.data?.[0] || null
     renderCodes()
   } catch (e) {
-    $q.notify({ type: 'warning', message: 'Some details could not be loaded.' })
+    $q.notify({ type: 'warning', message: t('common.loadFailed') })
   } finally {
     timelineLoading.value = false
   }
@@ -323,7 +325,7 @@ async function doAssign() {
   try {
     await assignmentService.assign(asset.value.id, { ...assignForm })
     assignOpen.value = false
-    $q.notify({ type: 'positive', message: 'Asset assigned.' })
+    $q.notify({ type: 'positive', message: t('assets.assignedSuccess') })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
@@ -334,17 +336,17 @@ async function doAssign() {
 
 async function returnAsset() {
   $q.dialog({
-    title: 'Return asset',
-    message: `Return “${asset.value.name}” from ${activeAssignment.value?.assignee_name || 'the assignee'}?`,
+    title: t('assets.returnAsset'),
+    message: t('assets.returnConfirm', { name: asset.value.name, assignee: activeAssignment.value?.assignee_name || t('common.user') }),
     cancel: true, persistent: true,
   }).onOk(async () => {
     busy.return = true
     try {
       await assignmentService.returnAsset(activeAssignment.value.id, { condition_on_return: 'good' })
-      $q.notify({ type: 'positive', message: 'Asset returned.' })
+      $q.notify({ type: 'positive', message: t('assets.returnedSuccess') })
       await load()
     } catch (e) {
-      $q.notify({ type: 'negative', message: e.message || 'Return failed.' })
+      $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
     } finally {
       busy.return = false
     }
@@ -356,9 +358,9 @@ async function doTransfer() {
   try {
     await transferService.store(asset.value.id, { ...transferForm })
     transferOpen.value = false
-    $q.notify({ type: 'positive', message: 'Transfer request created.' })
+    $q.notify({ type: 'positive', message: t('assets.transferCreated') })
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || 'Transfer failed.' })
+    $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
   } finally {
     busy.transfer = false
   }
@@ -370,10 +372,10 @@ async function uploadDocument(e) {
   if (!file) return
   try {
     await assetService.uploadDocument(asset.value.id, { kind: 'other', file: { filename: file.name, mime: file.type, size: file.size } })
-    $q.notify({ type: 'positive', message: 'Document uploaded.' })
+    $q.notify({ type: 'positive', message: t('assets.documentUploaded') })
     documents.value = (await assetService.documents(asset.value.id)).data?.data || []
   } catch (err) {
-    $q.notify({ type: 'negative', message: err.message || 'Upload failed.' })
+    $q.notify({ type: 'negative', message: err.message || t('common.saveFailed') })
   }
 }
 
@@ -383,28 +385,28 @@ async function uploadImage(e) {
   if (!file) return
   try {
     await assetService.uploadImage(asset.value.id, { file: { filename: file.name, path: URL.createObjectURL(file), mime: file.type, size: file.size } })
-    $q.notify({ type: 'positive', message: 'Image uploaded.' })
+    $q.notify({ type: 'positive', message: t('assets.imageUploaded') })
     images.value = (await assetService.images(asset.value.id)).data?.data || []
   } catch (err) {
-    $q.notify({ type: 'negative', message: err.message || 'Upload failed.' })
+    $q.notify({ type: 'negative', message: err.message || t('common.saveFailed') })
   }
 }
 
 function removeDocument(doc) {
-  $q.dialog({ title: 'Delete document', message: `Delete “${doc.filename}”?`, cancel: true, persistent: true, color: 'negative' })
+  $q.dialog({ title: t('common.confirmDeleteTitle'), message: t('common.confirmDeleteMessage'), cancel: true, persistent: true, color: 'negative' })
     .onOk(async () => {
       await assetService.deleteDocument(doc.id)
       documents.value = (await assetService.documents(asset.value.id)).data?.data || []
-      $q.notify({ type: 'positive', message: 'Document deleted.' })
+      $q.notify({ type: 'positive', message: t('assets.documentDeleted') })
     })
 }
 
 function removeImage(img) {
-  $q.dialog({ title: 'Delete image', message: `Delete “${img.filename}”?`, cancel: true, persistent: true, color: 'negative' })
+  $q.dialog({ title: t('common.confirmDeleteTitle'), message: t('common.confirmDeleteMessage'), cancel: true, persistent: true, color: 'negative' })
     .onOk(async () => {
       await assetService.deleteImage(img.id)
       images.value = (await assetService.images(asset.value.id)).data?.data || []
-      $q.notify({ type: 'positive', message: 'Image deleted.' })
+      $q.notify({ type: 'positive', message: t('assets.imageDeleted') })
     })
 }
 

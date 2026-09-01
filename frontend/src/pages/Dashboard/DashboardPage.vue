@@ -1,12 +1,12 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
     <AppPageHeader
-      title="Dashboard"
-      subtitle="Enterprise overview of Kabul University assets"
+      :title="t('dashboard.title')"
+      :subtitle="t('dashboard.subtitle')"
       icon="dashboard"
     >
       <template #actions>
-        <q-btn color="primary" icon="refresh" label="Refresh" outline size="sm" :loading="dashboardStore.statsLoading" @click="dashboardStore.fetchAll()" />
+        <q-btn color="primary" icon="refresh" :label="t('common.refresh')" outline size="sm" :loading="dashboardStore.statsLoading" @click="dashboardStore.fetchAll()" />
       </template>
     </AppPageHeader>
 
@@ -21,28 +21,28 @@
       <!-- Inventory stats -->
       <div class="row q-col-gutter-md q-mb-lg">
         <div class="col-6 col-md-3">
-          <StatCard label="Total Assets" :value="stats.total_assets" icon="inventory_2" color="primary" />
+          <StatCard :label="t('dashboard.totalAssets')" :value="stats.total_assets" icon="inventory_2" color="primary" />
         </div>
         <div class="col-6 col-md-3">
-          <StatCard label="Available" :value="stats.available_assets" icon="check_circle" color="positive" />
+          <StatCard :label="t('dashboard.available')" :value="stats.available_assets" icon="check_circle" color="positive" />
         </div>
         <div class="col-6 col-md-3">
-          <StatCard label="Assigned" :value="stats.assigned_assets" icon="assignment_ind" color="info" />
+          <StatCard :label="t('dashboard.assigned')" :value="stats.assigned_assets" icon="assignment_ind" color="info" />
         </div>
         <div class="col-6 col-md-3">
-          <StatCard label="Under Maintenance" :value="stats.under_maintenance" icon="build" color="warning" />
+          <StatCard :label="t('dashboard.underMaintenance')" :value="stats.under_maintenance" icon="build" color="warning" />
         </div>
         <div class="col-6 col-md-3">
-          <StatCard label="Damaged" :value="stats.damaged_assets" icon="report_problem" color="deep-orange" />
+          <StatCard :label="t('dashboard.damaged')" :value="stats.damaged_assets" icon="report_problem" color="deep-orange" />
         </div>
         <div class="col-6 col-md-3">
-          <StatCard label="Lost / Stolen" :value="stats.lost_assets + stats.stolen_assets" icon="search_off" color="grey-8" />
+          <StatCard :label="t('dashboard.lostStolen')" :value="stats.lost_assets + stats.stolen_assets" icon="search_off" color="grey-8" />
         </div>
         <div class="col-6 col-md-3">
-          <StatCard label="Disposed" :value="stats.disposed_assets" icon="delete_forever" color="grey-6" />
+          <StatCard :label="t('dashboard.disposed')" :value="stats.disposed_assets" icon="delete_forever" color="grey-6" />
         </div>
         <div class="col-6 col-md-3">
-          <StatCard label="Users" :value="stats.total_users" icon="group" color="secondary" />
+          <StatCard :label="t('dashboard.users')" :value="stats.total_users" icon="group" color="secondary" />
         </div>
       </div>
 
@@ -53,8 +53,8 @@
             <q-card-section class="row items-center">
               <q-icon name="payments" size="32px" color="primary" class="q-mr-md" />
               <div>
-                <div class="text-h6 q-mb-none text-weight-bold">{{ currency(stats.total_purchase_value) }}</div>
-                <div class="text-caption text-grey-6">Total purchase value</div>
+                <div class="text-h6 q-mb-none text-weight-bold">{{ formatCurrency(stats.total_purchase_value) }}</div>
+                <div class="text-caption text-grey-6">{{ t('dashboard.totalPurchaseValue') }}</div>
               </div>
             </q-card-section>
           </q-card>
@@ -64,8 +64,8 @@
             <q-card-section class="row items-center">
               <q-icon name="savings" size="32px" color="positive" class="q-mr-md" />
               <div>
-                <div class="text-h6 q-mb-none text-weight-bold">{{ currency(stats.current_value) }}</div>
-                <div class="text-caption text-grey-6">Current asset value</div>
+                <div class="text-h6 q-mb-none text-weight-bold">{{ formatCurrency(stats.current_value) }}</div>
+                <div class="text-caption text-grey-6">{{ t('dashboard.currentAssetValue') }}</div>
               </div>
             </q-card-section>
           </q-card>
@@ -75,8 +75,8 @@
             <q-card-section class="row items-center">
               <q-icon name="trending_down" size="32px" color="warning" class="q-mr-md" />
               <div>
-                <div class="text-h6 q-mb-none text-weight-bold">{{ currency(stats.depreciated_value) }}</div>
-                <div class="text-caption text-grey-6">Depreciated value</div>
+                <div class="text-h6 q-mb-none text-weight-bold">{{ formatCurrency(stats.depreciated_value) }}</div>
+                <div class="text-caption text-grey-6">{{ t('dashboard.depreciatedValue') }}</div>
               </div>
             </q-card-section>
           </q-card>
@@ -88,7 +88,7 @@
         <div class="col-12 col-md-6">
           <q-card class="stat-card">
             <q-card-section>
-              <div class="text-subtitle1 text-weight-medium q-mb-sm">Assets by category</div>
+              <div class="text-subtitle1 text-weight-medium q-mb-sm">{{ t('dashboard.assetsByCategory') }}</div>
               <div v-if="dashboardStore.chartsLoading" class="q-pa-md"><q-skeleton type="rect" height="240px" /></div>
               <apexchart
                 v-else-if="charts.by_category.length"
@@ -97,55 +97,55 @@
                 :options="donutOptions"
                 :series="charts.by_category.map((c) => c.value)"
               />
-              <EmptyState v-else icon="pie_chart" title="No category data" />
+              <EmptyState v-else icon="pie_chart" :title="t('dashboard.noCategoryData')" />
             </q-card-section>
           </q-card>
         </div>
         <div class="col-12 col-md-6">
           <q-card class="stat-card">
             <q-card-section>
-              <div class="text-subtitle1 text-weight-medium q-mb-sm">Assets by status</div>
+              <div class="text-subtitle1 text-weight-medium q-mb-sm">{{ t('dashboard.assetsByStatus') }}</div>
               <div v-if="dashboardStore.chartsLoading" class="q-pa-md"><q-skeleton type="rect" height="240px" /></div>
               <apexchart
                 v-else-if="charts.by_status.length"
                 type="bar"
                 height="260"
                 :options="barOptions('status')"
-                :series="[{ name: 'Assets', data: charts.by_status.map((s) => s.value) }]"
+                :series="[{ name: t('dashboard.assetsLabel'), data: charts.by_status.map((s) => s.value) }]"
               />
-              <EmptyState v-else icon="bar_chart" title="No status data" />
+              <EmptyState v-else icon="bar_chart" :title="t('dashboard.noStatusData')" />
             </q-card-section>
           </q-card>
         </div>
         <div class="col-12 col-md-6">
           <q-card class="stat-card">
             <q-card-section>
-              <div class="text-subtitle1 text-weight-medium q-mb-sm">Monthly asset acquisitions</div>
+              <div class="text-subtitle1 text-weight-medium q-mb-sm">{{ t('dashboard.monthlyAcquisitions') }}</div>
               <div v-if="dashboardStore.chartsLoading" class="q-pa-md"><q-skeleton type="rect" height="240px" /></div>
               <apexchart
                 v-else-if="charts.acquisitions.length"
                 type="area"
                 height="260"
                 :options="areaOptions"
-                :series="[{ name: 'Assets acquired', data: charts.acquisitions.map((a) => a.value) }]"
+                :series="[{ name: t('dashboard.assetsAcquired'), data: charts.acquisitions.map((a) => a.value) }]"
               />
-              <EmptyState v-else icon="show_chart" title="No acquisition data" />
+              <EmptyState v-else icon="show_chart" :title="t('dashboard.noAcquisitionData')" />
             </q-card-section>
           </q-card>
         </div>
         <div class="col-12 col-md-6">
           <q-card class="stat-card">
             <q-card-section>
-              <div class="text-subtitle1 text-weight-medium q-mb-sm">Maintenance cost by month</div>
+              <div class="text-subtitle1 text-weight-medium q-mb-sm">{{ t('dashboard.maintenanceCostByMonth') }}</div>
               <div v-if="dashboardStore.chartsLoading" class="q-pa-md"><q-skeleton type="rect" height="240px" /></div>
               <apexchart
                 v-else-if="charts.maintenance_costs.length"
                 type="bar"
                 height="260"
                 :options="barOptions('cost')"
-                :series="[{ name: 'Cost', data: charts.maintenance_costs.map((c) => c.value) }]"
+                :series="[{ name: t('dashboard.costLabel'), data: charts.maintenance_costs.map((c) => c.value) }]"
               />
-              <EmptyState v-else icon="request_quote" title="No maintenance data" />
+              <EmptyState v-else icon="request_quote" :title="t('dashboard.noMaintenanceData')" />
             </q-card-section>
           </q-card>
         </div>
@@ -157,7 +157,7 @@
         <div class="col-12 col-lg-5">
           <q-card class="stat-card">
             <q-card-section>
-              <div class="text-subtitle1 text-weight-medium">Recent activity</div>
+              <div class="text-subtitle1 text-weight-medium">{{ t('dashboard.recentActivity') }}</div>
             </q-card-section>
             <q-separator />
             <q-card-section class="q-pa-none">
@@ -179,7 +179,7 @@
                   </q-item-section>
                 </q-item>
               </q-list>
-              <EmptyState v-else icon="history" title="No recent activity" />
+              <EmptyState v-else icon="history" :title="t('dashboard.noRecentActivity')" />
             </q-card-section>
           </q-card>
         </div>
@@ -190,7 +190,7 @@
             <div class="col-12 col-md-6">
               <q-card class="stat-card">
                 <q-card-section>
-                  <div class="text-subtitle1 text-weight-medium">Upcoming maintenance</div>
+                  <div class="text-subtitle1 text-weight-medium">{{ t('dashboard.upcomingMaintenance') }}</div>
                 </q-card-section>
                 <q-separator />
                 <q-card-section class="q-pa-none">
@@ -205,14 +205,14 @@
                       </q-item-section>
                     </q-item>
                   </q-list>
-                  <EmptyState v-else icon="build" title="No upcoming maintenance" />
+                  <EmptyState v-else icon="build" :title="t('dashboard.noUpcomingMaintenance')" />
                 </q-card-section>
               </q-card>
             </div>
             <div class="col-12 col-md-6">
               <q-card class="stat-card">
                 <q-card-section>
-                  <div class="text-subtitle1 text-weight-medium">Expiring warranties</div>
+                  <div class="text-subtitle1 text-weight-medium">{{ t('dashboard.expiringWarranties') }}</div>
                 </q-card-section>
                 <q-separator />
                 <q-card-section class="q-pa-none">
@@ -220,16 +220,16 @@
                     <q-item v-for="w in upcoming.warranties" :key="w.id">
                       <q-item-section>
                         <q-item-label class="text-body2">{{ w.asset_name }}</q-item-label>
-                        <q-item-label caption>Expires {{ formatDate(w.warranty_expiry_date) }}</q-item-label>
+                        <q-item-label caption>{{ formatDate(w.warranty_expiry_date) }}</q-item-label>
                       </q-item-section>
                       <q-item-section side>
                         <q-chip size="sm" dense :color="daysLeft(w.warranty_expiry_date) <= 30 ? 'negative' : 'warning'" text-color="white">
-                          {{ daysLeft(w.warranty_expiry_date) }} days
+                          {{ daysLeft(w.warranty_expiry_date) }} {{ t('dashboard.days') }}
                         </q-chip>
                       </q-item-section>
                     </q-item>
                   </q-list>
-                  <EmptyState v-else icon="verified" title="No expiring warranties" />
+                  <EmptyState v-else icon="verified" :title="t('dashboard.noExpiringWarranties')" />
                 </q-card-section>
               </q-card>
             </div>
@@ -244,6 +244,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import VueApexCharts from 'vue3-apexcharts'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import StatCard from 'src/components/common/StatCard.vue'
@@ -251,7 +252,9 @@ import StatusBadge from 'src/components/common/StatusBadge.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
 import { useDashboardStore } from 'src/stores/dashboard'
+import { currency, date, timeAgo } from 'src/utils/format'
 
+const { t } = useI18n()
 const dashboardStore = useDashboardStore()
 dashboardStore.fetchAll()
 
@@ -261,28 +264,11 @@ const activities = computed(() => dashboardStore.activities)
 const upcoming = computed(() => dashboardStore.upcoming)
 const loading = computed(() => !dashboardStore.stats && !dashboardStore.error)
 
-// ---------------------------------------------------------------------------
-const currencyFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 })
-const currency = (v) => `${currencyFmt.format(v || 0)} AFN`
-
-function formatDate(value) {
-  if (!value) return '—'
-  return new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-}
+const formatCurrency = (v) => currency(v)
+const formatDate = (v) => date(v)
 
 function daysLeft(dateStr) {
   return Math.max(0, Math.ceil((new Date(dateStr) - Date.now()) / 86400000))
-}
-
-function timeAgo(dateStr) {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins} minutes ago`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours} hours ago`
-  const days = Math.floor(hours / 24)
-  return `${days} days ago`
 }
 
 const ACTIVITY_META = {
@@ -305,8 +291,8 @@ const donutOptions = computed(() => ({
   labels: charts.value.by_category.map((c) => c.label),
   legend: { position: 'bottom' },
   dataLabels: { enabled: false },
-  tooltip: { y: { formatter: (v) => `${v} assets` } },
-  plotOptions: { pie: { donut: { labels: { show: true, total: { show: true, label: 'Total' } } } } },
+  tooltip: { y: { formatter: (v) => `${v}` } },
+  plotOptions: { pie: { donut: { labels: { show: true, total: { show: true, label: t('dashboard.totalDonut') } } } } },
 }))
 
 function barOptions(kind) {

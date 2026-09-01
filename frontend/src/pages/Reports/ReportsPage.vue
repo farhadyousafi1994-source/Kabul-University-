@@ -1,8 +1,8 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
-    <AppPageHeader title="Reports" subtitle="Pre-built reports with CSV export" icon="bar_chart">
+    <AppPageHeader :title="t('admin.reports.title')" :subtitle="t('admin.reports.subtitle')" icon="bar_chart">
       <template #actions>
-        <q-btn color="primary" outline size="sm" icon="refresh" label="Refresh" :loading="loading" @click="loadList" />
+        <q-btn color="primary" outline size="sm" icon="refresh" :label="t('common.refresh')" :loading="loading" @click="loadList" />
       </template>
     </AppPageHeader>
 
@@ -32,7 +32,7 @@
         <div class="row items-center justify-between q-mb-sm">
           <div class="text-subtitle1 text-weight-bold">{{ currentTitle }}</div>
           <div class="row q-gutter-sm">
-            <q-btn size="sm" color="primary" outline icon="file_download" label="CSV" :href="exportUrl" target="_blank" />
+            <q-btn size="sm" color="primary" outline icon="file_download" :label="t('admin.reports.exportCsv')" :href="exportUrl" target="_blank" />
           </div>
         </div>
         <div v-if="resultLoading" class="q-mt-sm">
@@ -42,7 +42,7 @@
         <q-table v-else :rows="resultRows" :columns="resultColumns" row-key="__id" flat bordered dense hide-bottom wrap-cells
           :pagination="{ rowsPerPage: 15 }" class="q-mt-sm">
           <template v-if="!resultRows.length" v-slot:no-data>
-            <EmptyState icon="bar_chart" title="No data" message="This report has no rows yet." />
+            <EmptyState icon="bar_chart" :title="t('common.noData')" :message="t('admin.reports.noReportData')" />
           </template>
         </q-table>
       </template>
@@ -52,10 +52,13 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
 import { reportService } from 'src/services/system.service'
+
+const { t } = useI18n()
 
 const reports = ref([])
 const loading = ref(false)
@@ -76,7 +79,7 @@ async function loadList() {
     const { data } = await reportService.list()
     reports.value = data?.data || []
   } catch (e) {
-    error.value = e.message || 'Failed to load reports.'
+    error.value = e.message || t('common.loadFailed')
   } finally {
     loading.value = false
   }
@@ -95,7 +98,7 @@ async function open(name) {
       ? Object.keys(rows[0]).map((k) => ({ name: k, label: k.replace(/_/g, ' '), field: k, align: 'left' }))
       : []
   } catch (e) {
-    resultError.value = e.message || 'Failed to load report.'
+    resultError.value = e.message || t('common.loadFailed')
     resultRows.value = []
     resultColumns.value = []
   } finally {

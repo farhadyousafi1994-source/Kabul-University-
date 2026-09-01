@@ -1,8 +1,8 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
-    <AppPageHeader title="Roles & Permissions" subtitle="What each role is allowed to do" icon="admin_panel_settings">
+    <AppPageHeader :title="t('admin.roles.title')" :subtitle="t('admin.roles.subtitle')" icon="admin_panel_settings">
       <template #actions>
-        <q-btn v-if="canCreate" color="primary" icon="add" label="New Role" size="sm" @click="openEdit(null)" />
+        <q-btn v-if="canCreate" color="primary" icon="add" :label="t('admin.roles.add')" size="sm" @click="openEdit(null)" />
       </template>
     </AppPageHeader>
 
@@ -21,8 +21,8 @@
         </template>
         <template v-slot:body-cell-actions="props">
           <q-td :props="props">
-            <q-btn v-if="canUpdate" flat dense round size="sm" color="primary" icon="edit" @click="openEdit(props.row)"><q-tooltip>Edit</q-tooltip></q-btn>
-            <q-btn v-if="canDelete" flat dense round size="sm" color="negative" icon="delete_outline" @click="remove(props.row)"><q-tooltip>Delete</q-tooltip></q-btn>
+            <q-btn v-if="canUpdate" flat dense round size="sm" color="primary" icon="edit" @click="openEdit(props.row)"><q-tooltip>{{ t('common.edit') }}</q-tooltip></q-btn>
+            <q-btn v-if="canDelete" flat dense round size="sm" color="negative" icon="delete_outline" @click="remove(props.row)"><q-tooltip>{{ t('common.delete') }}</q-tooltip></q-btn>
           </q-td>
         </template>
       </q-table>
@@ -31,13 +31,13 @@
     <q-dialog v-model="dialogOpen" persistent :maximized="$q.screen.lt.md">
       <q-card style="min-width: 520px; max-width: 860px">
         <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">{{ editing ? `Edit role: ${editing.name}` : 'New role' }}</div>
+          <div class="text-h6">{{ editing ? t('admin.roles.editRole', { name: editing.name }) : t('admin.roles.add') }}</div>
           <q-space />
           <q-btn flat round dense icon="close" @click="dialogOpen = false" />
         </q-card-section>
         <q-card-section>
-          <q-input v-model="form.name" label="Role name *" dense outlined class="q-mb-md" :rules="[(v) => !!v || 'Name is required']" />
-          <div class="text-subtitle2 q-mb-sm">Permissions</div>
+          <q-input v-model="form.name" :label="`${t('admin.roles.roleName')} *`" dense outlined class="q-mb-md" :rules="[(v) => !!v || t('common.required')]" />
+          <div class="text-subtitle2 q-mb-sm">{{ t('admin.roles.permissions') }}</div>
           <div class="row q-col-gutter-sm">
             <div v-for="group in permissionGroups" :key="group" class="col-12 col-md-6">
               <div class="text-overline text-grey-6">{{ group }}</div>
@@ -54,8 +54,8 @@
           </div>
         </q-card-section>
         <q-card-section class="row justify-end q-gutter-sm q-pt-none">
-          <q-btn label="Cancel" flat color="grey-7" @click="dialogOpen = false" />
-          <q-btn label="Save" color="primary" :loading="saving" @click="save" />
+          <q-btn :label="t('common.cancel')" flat color="grey-7" @click="dialogOpen = false" />
+          <q-btn :label="t('common.save')" color="primary" :loading="saving" @click="save" />
         </q-card-section>
       </q-card>
     </q-dialog>
@@ -65,11 +65,13 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useQuasar } from 'quasar'
+import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
 import { roleService, roleActions } from 'src/services/users.service'
 import { useAuthStore } from 'src/stores/auth'
 
+const { t } = useI18n()
 const $q = useQuasar()
 const authStore = useAuthStore()
 
@@ -86,12 +88,12 @@ const canCreate = computed(() => authStore.hasPermission('roles.create'))
 const canUpdate = computed(() => authStore.hasPermission('roles.update'))
 const canDelete = computed(() => authStore.hasPermission('roles.delete'))
 
-const columns = [
-  { name: 'name', label: 'Role', field: 'name', align: 'left' },
-  { name: 'users_count', label: 'Users', field: 'users_count', align: 'right' },
-  { name: 'permissions', label: 'Permissions', field: 'id', align: 'left' },
+const columns = computed(() => [
+  { name: 'name', label: t('admin.roles.roleName'), field: 'name', align: 'left' },
+  { name: 'users_count', label: t('admin.roles.usersCount'), field: 'users_count', align: 'right' },
+  { name: 'permissions', label: t('admin.roles.permissions'), field: 'id', align: 'left' },
   { name: 'actions', label: '', field: 'id', align: 'right' },
-]
+])
 
 const permissionGroups = computed(() => {
   const groups = new Set()
@@ -111,7 +113,7 @@ async function load() {
     rows.value = rolesRes.data?.data || []
     allPermissions.value = permsRes.data?.data || []
   } catch (e) {
-    error.value = e.message || 'Failed to load roles.'
+    error.value = e.message || t('common.loadFailed')
   } finally {
     loading.value = false
   }
@@ -125,13 +127,13 @@ function openEdit(role) {
 }
 
 async function save() {
-  if (!form.name) { $q.notify({ type: 'negative', message: 'Role name is required.' }); return }
+  if (!form.name) { $q.notify({ type: 'negative', message: t('common.required') }); return }
   saving.value = true
   try {
     if (editing.value) await roleService.update(editing.value.id, { name: form.name, permission_ids: form.permission_ids })
     else await roleService.create({ name: form.name, permission_ids: form.permission_ids })
     dialogOpen.value = false
-    $q.notify({ type: 'positive', message: editing.value ? 'Role updated.' : 'Role created.' })
+    $q.notify({ type: 'positive', message: editing.value ? t('common.updatedSuccess') : t('common.createdSuccess') })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
@@ -142,13 +144,13 @@ async function save() {
 
 function remove(role) {
   $q.dialog({
-    title: 'Delete role',
-    message: `Delete “${role.name}”? Users assigned to it will lose those permissions.`,
+    title: t('common.confirmDeleteTitle'),
+    message: t('common.confirmDeleteMessage'),
     cancel: true, persistent: true, color: 'negative',
   }).onOk(async () => {
     try {
       await roleService.remove(role.id)
-      $q.notify({ type: 'positive', message: 'Role deleted.' })
+      $q.notify({ type: 'positive', message: t('common.deletedSuccess') })
       await load()
     } catch (e) {
       $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })

@@ -3,19 +3,23 @@
     <!-- Header ---------------------------------------------------------->
     <q-header elevated class="bg-primary text-white" height-hint="60">
       <q-toolbar>
-        <q-btn flat dense round icon="menu" aria-label="Toggle sidebar" @click="drawerOpen = !drawerOpen" />
+        <q-btn flat dense round icon="menu" :aria-label="t('nav.sections.general')" @click="drawerOpen = !drawerOpen" />
         <q-toolbar-title class="row items-center no-wrap">
           <q-icon name="account_balance" size="26px" class="q-mr-sm" />
-          <span class="text-subtitle1 text-weight-medium gt-xs">Kabul University</span>
-          <span class="text-caption q-ml-xs gt-sm text-white/70">Asset Management System</span>
+          <span class="text-subtitle1 text-weight-medium gt-xs">{{ t('common.universityName') }}</span>
+          <span class="text-caption q-ml-xs gt-sm text-white/70">{{ t('common.appName') }}</span>
         </q-toolbar-title>
 
-        <q-btn flat round :icon="isDark ? 'light_mode' : 'dark_mode'" aria-label="Toggle dark mode" @click="toggleDark">
-          <q-tooltip>Toggle dark mode</q-tooltip>
+        <!-- Language Selector -->
+        <LanguageSwitcher flat text-color="white" class="q-mr-xs" />
+
+        <!-- Dark Mode Toggle -->
+        <q-btn flat round :icon="isDark ? 'light_mode' : 'dark_mode'" :aria-label="t('auth.toggleDarkMode')" @click="toggleDark">
+          <q-tooltip>{{ t('auth.toggleDarkMode') }}</q-tooltip>
         </q-btn>
 
         <!-- Notifications -->
-        <q-btn flat round icon="notifications" aria-label="Notifications">
+        <q-btn flat round icon="notifications" :aria-label="t('auth.notifications')">
           <q-badge v-if="notificationStore.unreadCount > 0" color="red" floating>
             {{ notificationStore.unreadCount > 9 ? '9+' : notificationStore.unreadCount }}
           </q-badge>
@@ -23,10 +27,10 @@
             <q-list style="min-width: 340px; max-height: 420px" class="scroll">
               <q-item class="bg-grey-2">
                 <q-item-section>
-                  <q-item-label class="text-subtitle2">Notifications</q-item-label>
+                  <q-item-label class="text-subtitle2">{{ t('auth.notifications') }}</q-item-label>
                 </q-item-section>
                 <q-item-section side>
-                  <q-btn flat dense size="sm" color="primary" label="Mark all read" @click="notificationStore.markAllRead" />
+                  <q-btn flat dense size="sm" color="primary" :label="t('auth.markAllRead')" @click="notificationStore.markAllRead" />
                 </q-item-section>
               </q-item>
               <template v-if="notificationStore.items.length">
@@ -50,7 +54,7 @@
               <q-item v-else>
                 <q-item-section class="text-center text-grey-6 q-py-md">
                   <q-icon name="notifications_off" size="32px" class="q-mb-sm" />
-                  <div>No notifications</div>
+                  <div>{{ t('auth.noNotifications') }}</div>
                 </q-item-section>
               </q-item>
             </q-list>
@@ -58,29 +62,25 @@
         </q-btn>
 
         <!-- User menu -->
-        <q-btn round flat>
+        <q-btn round flat class="q-ml-xs">
           <q-avatar size="32px" color="white" text-color="primary">{{ authStore.initials }}</q-avatar>
           <q-menu auto-close>
             <q-list style="min-width: 220px">
               <q-item class="bg-grey-2">
                 <q-item-section>
-                  <q-item-label>{{ authStore.fullName }}</q-item-label>
+                  <q-item-label class="text-weight-bold">{{ authStore.fullName }}</q-item-label>
                   <q-item-label caption>{{ authStore.user?.email || authStore.user?.username }}</q-item-label>
                 </q-item-section>
               </q-item>
               <q-separator />
-              <q-item clickable v-ripple to="/settings/profile" v-if="false">
-                <q-item-section avatar><q-icon name="person" /></q-item-section>
-                <q-item-section>Profile</q-item-section>
-              </q-item>
               <q-item clickable v-ripple @click="changePasswordDialog = true">
                 <q-item-section avatar><q-icon name="lock" /></q-item-section>
-                <q-item-section>Change password</q-item-section>
+                <q-item-section>{{ t('auth.changePassword') }}</q-item-section>
               </q-item>
               <q-separator />
               <q-item clickable v-ripple @click="logout">
                 <q-item-section avatar><q-icon name="logout" color="negative" /></q-item-section>
-                <q-item-section class="text-negative">Sign out</q-item-section>
+                <q-item-section class="text-negative">{{ t('auth.signOut') }}</q-item-section>
               </q-item>
             </q-list>
           </q-menu>
@@ -93,7 +93,7 @@
       <q-scroll-area class="fit">
         <q-list padding class="menu-list">
           <template v-for="section in menuSections" :key="section.label">
-            <div v-if="section.label" class="text-overline text-grey-6 q-pl-md q-mt-md q-mb-xs">
+            <div v-if="section.label" class="text-overline text-grey-6 q-px-md q-mt-md q-mb-xs">
               {{ section.label }}
             </div>
             <q-item
@@ -124,8 +124,8 @@
 
     <q-footer reveal bordered class="bg-white text-grey-8">
       <q-toolbar class="justify-between">
-        <div class="text-caption">© {{ year }} Kabul University — Asset Management System</div>
-        <div class="text-caption gt-xs">KU-AMS v1.0.0</div>
+        <div class="text-caption">© {{ year }} {{ t('common.universityName') }} — {{ t('common.appName') }}</div>
+        <div class="text-caption gt-xs">{{ t('common.version') }}</div>
       </q-toolbar>
     </q-footer>
 
@@ -139,13 +139,15 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Dark, useQuasar } from 'quasar'
+import { useI18n } from 'vue-i18n'
+import { Dark } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
 import { useNotificationStore } from 'src/stores/notifications'
+import LanguageSwitcher from 'src/components/common/LanguageSwitcher.vue'
 import ChangePasswordDialog from 'src/components/auth/ChangePasswordDialog.vue'
 
 const router = useRouter()
-const $q = useQuasar()
+const { t, te } = useI18n()
 const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
 
@@ -161,9 +163,8 @@ function toggleDark() {
 }
 
 // ---------------------------------------------------------------------------
-// Sidebar menu — derived from the router table of contents. Only routes the
-// current user is permitted to see are rendered, so the menu grows as modules
-// are added and stays permission-aware automatically.
+// Sidebar menu — derived dynamically from the router table of contents and
+// localized reactively using vue-i18n.
 // ---------------------------------------------------------------------------
 const menuSections = computed(() => {
   const toc = router.getRoutes()
@@ -174,15 +175,19 @@ const menuSections = computed(() => {
   const sections = []
   const index = new Map()
   for (const route of toc) {
-    const label = route.meta.section
-    if (!index.has(label)) {
-      const entry = { label, items: [] }
-      index.set(label, entry)
+    const sectionKey = route.meta.sectionKey
+    const sectionLabel = sectionKey && te(sectionKey) ? t(sectionKey) : route.meta.section
+    const titleKey = route.meta.titleKey
+    const itemTitle = titleKey && te(titleKey) ? t(titleKey) : route.meta.title
+
+    if (!index.has(sectionLabel)) {
+      const entry = { label: sectionLabel, items: [] }
+      index.set(sectionLabel, entry)
       sections.push(entry)
     }
-    index.get(label).items.push({
+    index.get(sectionLabel).items.push({
       name: route.name,
-      title: route.meta.title,
+      title: itemTitle,
       icon: route.meta.icon,
     })
   }
@@ -196,12 +201,12 @@ function notificationIcon(n) {
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime()
   const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
+  if (mins < 1) return t('common.justNow')
+  if (mins < 60) return t('common.minsAgo', { m: mins })
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h ago`
+  if (hours < 24) return t('common.hoursAgo', { h: hours })
   const days = Math.floor(hours / 24)
-  return `${days}d ago`
+  return t('common.daysAgo', { d: days })
 }
 
 async function logout() {

@@ -1,18 +1,18 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
-    <AppPageHeader title="Stock Transactions" subtitle="In/out movements and inter-warehouse transfers" icon="swap_vert">
+    <AppPageHeader :title="t('warehouse.transactions.title')" :subtitle="t('warehouse.transactions.subtitle')" icon="swap_vert">
       <template #actions>
-        <q-btn v-if="canTransfer" color="primary" icon="add" label="Record Transaction" size="sm" @click="recordOpen = true" />
-        <q-btn v-if="canTransfer" color="info" outline icon="swap_horiz" label="Transfer" size="sm" class="q-ml-sm" @click="transferOpen = true" />
+        <q-btn v-if="canTransfer" color="primary" icon="add" :label="t('warehouse.transactions.newTransaction')" size="sm" @click="recordOpen = true" />
+        <q-btn v-if="canTransfer" color="info" outline icon="swap_horiz" :label="t('assets.transferAsset')" size="sm" class="q-ml-sm" @click="transferOpen = true" />
       </template>
     </AppPageHeader>
 
     <div class="row items-center q-col-gutter-sm q-mb-sm">
       <div class="col-12 col-md-3">
-        <q-select v-model="filters.warehouse_id" :options="warehouseOptions" label="Warehouse" dense outlined clearable emit-value map-options options-dense />
+        <q-select v-model="filters.warehouse_id" :options="warehouseOptions" :label="t('warehouse.warehouses.entity')" dense outlined clearable emit-value map-options options-dense />
       </div>
       <div class="col-6 col-md-2">
-        <q-select v-model="filters.type" :options="[{ label: 'In', value: 'in' }, { label: 'Out', value: 'out' }]" label="Type" dense outlined clearable emit-value map-options options-dense />
+        <q-select v-model="filters.type" :options="[{ label: 'In', value: 'in' }, { label: 'Out', value: 'out' }]" :label="t('common.type')" dense outlined clearable emit-value map-options options-dense />
       </div>
     </div>
 
@@ -29,11 +29,11 @@
           </q-td>
         </template>
         <template v-if="!rows.length" v-slot:no-data>
-          <EmptyState icon="swap_vert" title="No transactions" message="Stock movements will be listed here." />
+          <EmptyState icon="swap_vert" :title="t('common.noData')" :message="t('common.noDataDesc')" />
         </template>
       </q-table>
       <div class="row items-center justify-between q-mt-md">
-        <div class="text-caption text-grey-6">Showing {{ rows.length }} of {{ total }}</div>
+        <div class="text-caption text-grey-6">{{ t('common.showingRecords', { count: rows.length, total: total, page: page, pages: Math.max(1, lastPage) }) }}</div>
         <q-pagination v-model="page" :max="Math.max(1, lastPage)" :max-pages="7" boundary-numbers direction-links />
       </div>
     </template>
@@ -42,20 +42,20 @@
     <q-dialog v-model="recordOpen" persistent>
       <q-card style="min-width: 440px; max-width: 600px">
         <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">Record stock transaction</div>
+          <div class="text-h6">{{ t('warehouse.transactions.newTransaction') }}</div>
           <q-space />
           <q-btn flat round dense icon="close" @click="recordOpen = false" />
         </q-card-section>
         <q-card-section>
           <q-form @submit="doRecord" class="row q-col-gutter-md">
-            <q-select v-model="recordForm.asset_id" :options="assetOptions" label="Asset *" dense outlined emit-value map-options options-dense :rules="[required]" class="col-12" />
-            <q-select v-model="recordForm.warehouse_id" :options="warehouseOptions" label="Warehouse *" dense outlined emit-value map-options options-dense :rules="[required]" class="col-12 col-md-6" />
-            <q-select v-model="recordForm.type" :options="[{ label: 'Stock in', value: 'in' }, { label: 'Stock out', value: 'out' }]" label="Type *" dense outlined emit-value map-options options-dense :rules="[required]" class="col-12 col-md-6" />
-            <q-input v-model.number="recordForm.quantity" label="Quantity" type="number" dense outlined class="col-6 col-md-3" :rules="[(v) => Number(v) >= 1 || 'At least 1']" />
-            <q-input v-model="recordForm.notes" label="Notes" dense outlined class="col-6 col-md-9" />
+            <q-select v-model="recordForm.asset_id" :options="assetOptions" :label="`${t('assignments.asset')} *`" dense outlined emit-value map-options options-dense :rules="[required]" class="col-12" />
+            <q-select v-model="recordForm.warehouse_id" :options="warehouseOptions" :label="`${t('warehouse.warehouses.entity')} *`" dense outlined emit-value map-options options-dense :rules="[required]" class="col-12 col-md-6" />
+            <q-select v-model="recordForm.type" :options="[{ label: 'Stock in', value: 'in' }, { label: 'Stock out', value: 'out' }]" :label="`${t('common.type')} *`" dense outlined emit-value map-options options-dense :rules="[required]" class="col-12 col-md-6" />
+            <q-input v-model.number="recordForm.quantity" :label="t('common.quantity')" type="number" dense outlined class="col-6 col-md-3" :rules="[(v) => Number(v) >= 1 || '>= 1']" />
+            <q-input v-model="recordForm.notes" :label="t('common.notes')" dense outlined class="col-6 col-md-9" />
             <div class="col-12 row justify-end q-gutter-sm">
-              <q-btn label="Cancel" flat color="grey-7" @click="recordOpen = false" />
-              <q-btn label="Record" type="submit" color="primary" :loading="saving" />
+              <q-btn :label="t('common.cancel')" flat color="grey-7" @click="recordOpen = false" />
+              <q-btn :label="t('common.save')" type="submit" color="primary" :loading="saving" />
             </div>
           </q-form>
         </q-card-section>
@@ -66,19 +66,19 @@
     <q-dialog v-model="transferOpen" persistent>
       <q-card style="min-width: 440px; max-width: 600px">
         <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">Transfer stock between warehouses</div>
+          <div class="text-h6">{{ t('assets.transferAsset') }}</div>
           <q-space />
           <q-btn flat round dense icon="close" @click="transferOpen = false" />
         </q-card-section>
         <q-card-section>
           <q-form @submit="doTransfer" class="row q-col-gutter-md">
-            <q-select v-model="transferForm.asset_id" :options="assetOptions" label="Asset *" dense outlined emit-value map-options options-dense :rules="[required]" class="col-12" />
-            <q-select v-model="transferForm.from_warehouse_id" :options="warehouseOptions" label="From warehouse *" dense outlined emit-value map-options options-dense :rules="[required]" class="col-12 col-md-6" />
-            <q-select v-model="transferForm.to_warehouse_id" :options="warehouseOptions" label="To warehouse *" dense outlined emit-value map-options options-dense :rules="[required]" class="col-12 col-md-6" />
-            <q-input v-model.number="transferForm.quantity" label="Quantity" type="number" dense outlined class="col-6 col-md-3" :rules="[(v) => Number(v) >= 1 || 'At least 1']" />
+            <q-select v-model="transferForm.asset_id" :options="assetOptions" :label="`${t('assignments.asset')} *`" dense outlined emit-value map-options options-dense :rules="[required]" class="col-12" />
+            <q-select v-model="transferForm.from_warehouse_id" :options="warehouseOptions" :label="`${t('transfers.fromLocation')} *`" dense outlined emit-value map-options options-dense :rules="[required]" class="col-12 col-md-6" />
+            <q-select v-model="transferForm.to_warehouse_id" :options="warehouseOptions" :label="`${t('transfers.toLocation')} *`" dense outlined emit-value map-options options-dense :rules="[required]" class="col-12 col-md-6" />
+            <q-input v-model.number="transferForm.quantity" :label="t('common.quantity')" type="number" dense outlined class="col-6 col-md-3" :rules="[(v) => Number(v) >= 1 || '>= 1']" />
             <div class="col-12 row justify-end q-gutter-sm">
-              <q-btn label="Cancel" flat color="grey-7" @click="transferOpen = false" />
-              <q-btn label="Transfer" type="submit" color="primary" :loading="saving" />
+              <q-btn :label="t('common.cancel')" flat color="grey-7" @click="transferOpen = false" />
+              <q-btn :label="t('assets.transferAsset')" type="submit" color="primary" :loading="saving" />
             </div>
           </q-form>
         </q-card-section>
@@ -90,6 +90,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
+import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
@@ -99,6 +100,7 @@ import { useOptions } from 'src/composables/useOptions'
 import { useAuthStore } from 'src/stores/auth'
 import { date } from 'src/utils/format'
 
+const { t } = useI18n()
 const $q = useQuasar()
 const authStore = useAuthStore()
 const { warehouses, opts } = useOptions()
@@ -119,18 +121,18 @@ const transferForm = reactive({ asset_id: null, from_warehouse_id: null, to_ware
 const filters = reactive({ warehouse_id: null, type: null })
 const assetOptions = ref([])
 
-const required = (v) => !!v || 'This field is required'
+const required = (v) => !!v || t('common.required')
 const canTransfer = computed(() => authStore.hasPermission('warehouse.transfer'))
 
-const columns = [
-  { name: 'created_at', label: 'Date', field: 'created_at', align: 'left', format: (v) => date(v, true) },
-  { name: 'type', label: 'Type', field: 'type', align: 'left' },
-  { name: 'asset_code', label: 'Asset code', field: 'asset_code', align: 'left' },
-  { name: 'asset_name', label: 'Asset', field: 'asset_name', align: 'left' },
-  { name: 'warehouse_name', label: 'Warehouse', field: 'warehouse_name', align: 'left' },
-  { name: 'quantity', label: 'Qty', field: 'quantity', align: 'right' },
-  { name: 'user_name', label: 'By', field: 'user_name', align: 'left' },
-]
+const columns = computed(() => [
+  { name: 'created_at', label: t('common.date'), field: 'created_at', align: 'left', format: (v) => date(v, true) },
+  { name: 'type', label: t('common.type'), field: 'type', align: 'left' },
+  { name: 'asset_code', label: t('assets.assetCode'), field: 'asset_code', align: 'left' },
+  { name: 'asset_name', label: t('assignments.asset'), field: 'asset_name', align: 'left' },
+  { name: 'warehouse_name', label: t('warehouse.warehouses.entity'), field: 'warehouse_name', align: 'left' },
+  { name: 'quantity', label: t('common.quantity'), field: 'quantity', align: 'right' },
+  { name: 'user_name', label: t('common.user'), field: 'user_name', align: 'left' },
+])
 
 async function load() {
   loading.value = true
@@ -144,7 +146,7 @@ async function load() {
     total.value = data?.meta?.total || 0
     lastPage.value = data?.meta?.last_page || 1
   } catch (e) {
-    error.value = e.message || 'Failed to load transactions.'
+    error.value = e.message || t('common.loadFailed')
   } finally {
     loading.value = false
   }
@@ -168,7 +170,7 @@ async function doRecord() {
   try {
     await warehouseActions.record({ ...recordForm })
     recordOpen.value = false
-    $q.notify({ type: 'positive', message: 'Transaction recorded.' })
+    $q.notify({ type: 'positive', message: t('common.createdSuccess') })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
@@ -182,7 +184,7 @@ async function doTransfer() {
   try {
     await warehouseActions.transfer({ ...transferForm })
     transferOpen.value = false
-    $q.notify({ type: 'positive', message: 'Stock transferred.' })
+    $q.notify({ type: 'positive', message: t('assets.transferCreated') })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
