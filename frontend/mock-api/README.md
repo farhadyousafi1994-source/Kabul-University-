@@ -19,7 +19,24 @@ Quasar SPA is fully usable without PHP. It is served by the Vite dev server from
   `audit-procurement` (audits, purchase requests/orders),
   `warehouse` (warehouses, stock, transactions, transfers),
   `financial` (depreciation, disposals),
-  `system` (settings, reports + CSV export)
+  `system` (settings, reports + CSV export),
+  `backup` (backup & restore, clean-start template)
+
+## Backup & restore (Module 29)
+
+| Method | Route | Permission | Purpose |
+|---|---|---|---|
+| GET | `/api/backups` | `backup.view` | history + summary meta (count, total size, last backup) |
+| POST | `/api/backups` | `backup.create` | take a snapshot — `{ "format": "sqlite" \| "json" }` |
+| GET | `/api/backups/fresh-template` | `backup.create` | clean-start JSON (users & lists kept, records emptied) |
+| POST | `/api/backups/restore` | `backup.restore` | replace all records with an uploaded JSON snapshot |
+| GET | `/api/backups/:id/download` | `backup.view` | the backup file (`.sqlite` copy of the dev database or `.json` dump) |
+| DELETE | `/api/backups/:id` | `backup.delete` | delete the file and its record |
+
+Snapshots are written to `mock-api/data/backups/` (gitignored) and a seeded
+history is created on first boot so the screen has something to show. A
+`pre_restore` safety snapshot is taken automatically before every restore;
+`sessions` and `backups` are never overwritten, so you stay logged in.
 
 ## Switching to the real Laravel API
 

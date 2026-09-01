@@ -57,3 +57,15 @@ export function timeAgo(value) {
 }
 
 export const titleCase = (s = '') => s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+
+/**
+ * Human-readable file size (used by the backup/DR screen).
+ */
+export function fileSize(bytes) {
+  const n = Number(bytes || 0)
+  if (!n) return '0 KB'
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.min(Math.floor(Math.log(n) / Math.log(1024)), units.length - 1)
+  const value = n / 1024 ** i
+  return `${value.toFixed(i === 0 ? 0 : 1)} ${units[i]}`
+}

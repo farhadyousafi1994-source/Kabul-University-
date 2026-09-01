@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Route;
 |   Phase 12 - Audit         routes/api/audit.php
 |   Phase 13 - Financial     routes/api/financial.php    (depreciation, disposal)
 |   Phase 14 - System        routes/api/system.php       (notifications, logs, reports, dashboard, settings)
+|   Phase 29 - Backup/DR    routes/api/system.php       (backups, restore, clean-start template)
 |
 */
 

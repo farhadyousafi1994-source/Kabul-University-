@@ -79,6 +79,13 @@ export const i18n = createI18n({
 
 /**
  * Apply direction and Quasar lang pack for a given locale code.
+ *
+ * Three things have to move together, otherwise the UI ends up half-flipped:
+ *   1. vue-i18n locale (translations)
+ *   2. `dir`/`lang` on <html> and <body> — every Quasar RTL rule in
+ *      quasar/dist/quasar.rtl.css is scoped by `[dir=rtl]`
+ *   3. the Quasar lang pack — Quasar components (drawer side, menu anchoring,
+ *      table arrows, …) read `$q.lang.rtl`, which also syncs <html dir> itself
  */
 export function applyLocale(langCode, quasarInstance = null) {
   const langConfig = SUPPORTED_LANGUAGES.find((l) => l.code === langCode) || SUPPORTED_LANGUAGES[0]
@@ -91,13 +98,15 @@ export function applyLocale(langCode, quasarInstance = null) {
 
   // Update HTML & Body direction and lang attributes
   if (typeof document !== 'undefined') {
-    document.documentElement.setAttribute('dir', langConfig.dir)
-    document.documentElement.setAttribute('lang', langCode)
-    document.body.setAttribute('dir', langConfig.dir)
-    if (isRtl) {
-      document.body.classList.add('q-body--rtl')
-    } else {
-      document.body.classList.remove('q-body--rtl')
+    const html = document.documentElement
+    const body = document.body // may be null before the parser reaches <body>
+
+    html.setAttribute('dir', langConfig.dir)
+    html.setAttribute('lang', langCode)
+
+    if (body) {
+      body.setAttribute('dir', langConfig.dir)
+      body.classList.toggle('q-body--rtl', isRtl)
     }
   }
 

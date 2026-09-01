@@ -16,3 +16,6 @@ Schedule::command('notify:maintenance')->dailyAt('07:00');
 
 // Overdue assignment detection (daily 08:00)
 Schedule::command('assignment:mark-overdue')->dailyAt('08:00');
+
+// Nightly backup snapshot + retention pruning (Module 29, 3-2-1 policy)
+Schedule::command('backup:run')->dailyAt(config('backup.scheduled_at', '02:30'));
