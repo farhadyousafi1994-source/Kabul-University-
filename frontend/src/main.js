@@ -5,7 +5,18 @@ import quasarIconSet from 'quasar/icon-set/material-icons'
 import VueApexCharts from 'vue3-apexcharts'
 
 // Core styles
-import 'quasar/src/css/index.sass'
+//
+// Quasar ships RTL support as a separate build whose rules are scoped by
+// direction (`[dir=ltr] …` / `[dir=rtl] …`). Compiling the Sass source
+// (`quasar/src/css/index.sass`) only ever produces the *LTR* rules, which is
+// why switching to Dari/Pashto/Arabic used to translate the text but leave
+// every spacing, alignment and positioning utility pointing the wrong way.
+//
+// So we load the pre-built RTL stylesheet instead — it contains both
+// directions, verified to expose the same class list as the Sass build — and
+// re-apply the brand palette right after it (see src/css/quasar.brand.sass).
+import 'quasar/dist/quasar.rtl.css'
+import './css/quasar.brand.sass'
 import '@quasar/extras/material-icons/material-icons.css'
 import '@quasar/extras/roboto-font/roboto-font.css'
 import './css/app.sass'

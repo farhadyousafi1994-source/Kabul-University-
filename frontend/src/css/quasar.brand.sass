@@ -1,0 +1,28 @@
+// ---------------------------------------------------------------------------
+// KU-AMS brand variables for the pre-built Quasar stylesheet
+// ---------------------------------------------------------------------------
+//
+// `src/main.js` loads Quasar's **pre-built RTL stylesheet**
+// (`quasar/dist/quasar.rtl.css`) instead of compiling
+// `quasar/src/css/index.sass`, because only that build ships the direction-
+// scoped rules (`[dir=ltr]` / `[dir=rtl]`) that Dari, Pashto and Arabic need.
+//
+// The trade-off: the pre-built file is compiled with Quasar's *default*
+// palette, so the brand colours from `src/css/quasar.variables.sass` have to
+// be re-declared here. Everything else in Quasar's CSS reads its colours
+// through these custom properties (verified: no component rule hard-codes a
+// brand colour), so overriding the `:root` block is enough.
+//
+// $primary/$secondary/… are injected into every Sass module by the
+// @quasar/vite-plugin (see `quasar({ sassVariables })` in vite.config.js).
+
+\:root
+  --q-primary:   #{$primary}
+  --q-secondary: #{$secondary}
+  --q-accent:    #{$accent}
+  --q-positive:  #{$positive}
+  --q-negative:  #{$negative}
+  --q-info:      #{$info}
+  --q-warning:   #{$warning}
+  --q-dark:      #{$dark}
+  --q-dark-page: #{$dark-page}

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -10,6 +10,18 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="format-detection" content="telephone=no" />
     <title>KU-AMS — Kabul University Asset Management</title>
+    <script>
+      // Apply the saved direction before first paint so Dari/Pashto/Arabic
+      // users never see an LTR flash (Quasar's RTL rules are scoped [dir=rtl]).
+      ;(function () {
+        try {
+          var code = localStorage.getItem('ku_ams_locale')
+          var rtl = code === 'fa' || code === 'ps' || code === 'ar'
+          document.documentElement.setAttribute('dir', rtl ? 'rtl' : 'ltr')
+          if (code) document.documentElement.setAttribute('lang', code)
+        } catch (e) { /* localStorage unavailable */ }
+      })()
+    </script>
   </head>
   <body>
     <div id="q-app"></div>
