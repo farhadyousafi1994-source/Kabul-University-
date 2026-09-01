@@ -1,13 +1,17 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
-    <AppPageHeader :title="t('warehouse.transactions.title')" :subtitle="t('warehouse.transactions.subtitle')" icon="swap_vert">
-      <template #actions>
-        <q-btn v-if="canTransfer" color="primary" icon="add" :label="t('warehouse.transactions.newTransaction')" size="sm" @click="recordOpen = true" />
-        <q-btn v-if="canTransfer" color="info" outline icon="swap_horiz" :label="t('assets.transferAsset')" size="sm" class="q-ml-sm" @click="transferOpen = true" />
-      </template>
-    </AppPageHeader>
+    <AppPageHeader :title="t('warehouse.transactions.title')" :subtitle="t('warehouse.transactions.subtitle')" icon="swap_vert" />
 
-    <div class="row items-center q-col-gutter-sm q-mb-sm">
+    <!-- Shared action bar (same buttons on every table) -->
+    <TableActionBar
+      class="print-hide"
+      :actions="barActions"
+      :rows="rows"
+      :columns="columns"
+      :filename="'warehouse-transactions'"
+    />
+
+    <div class="row items-center q-col-gutter-sm q-mb-sm print-hide">
       <div class="col-12 col-md-3">
         <q-select v-model="filters.warehouse_id" :options="warehouseOptions" :label="t('warehouse.warehouses.entity')" dense outlined clearable emit-value map-options options-dense />
       </div>
@@ -22,6 +26,8 @@
     </div>
     <ErrorState v-else-if="error" :message="error" @retry="load" />
     <template v-else>
+      <div class="print-area">
+      <div class="print-title text-h6 q-mb-xs">{{ t('warehouse.transactions.title') }}</div>
       <q-table :rows="rows" :columns="columns" row-key="id" flat bordered dense hide-bottom wrap-cells :pagination="{ rowsPerPage: perPage }" class="q-mt-sm">
         <template v-slot:body-cell-type="props">
           <q-td :props="props">
@@ -32,10 +38,11 @@
           <EmptyState icon="swap_vert" :title="t('common.noData')" :message="t('common.noDataDesc')" />
         </template>
       </q-table>
-      <div class="row items-center justify-between q-mt-md">
+      <div class="row items-center justify-between q-mt-md print-hide">
         <div class="text-caption text-grey-6">{{ t('common.showingRecords', { count: rows.length, total: total, page: page, pages: Math.max(1, lastPage) }) }}</div>
         <q-pagination v-model="page" :max="Math.max(1, lastPage)" :max-pages="7" boundary-numbers direction-links />
       </div>
+    </div>
     </template>
 
     <!-- Record transaction dialog -->
@@ -92,6 +99,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
+import TableActionBar from 'src/components/common/TableActionBar.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
 import { warehouseActions } from 'src/services/warehouse.service'
@@ -105,6 +113,11 @@ const $q = useQuasar()
 const authStore = useAuthStore()
 const { warehouses, opts } = useOptions()
 const warehouseOptions = computed(() => opts(warehouses.value))
+
+const barActions = computed(() => [
+  {key: 'record', icon: 'swap_vert', label: t('warehouse.transactions.newTransaction'), color: 'teal', show: canTransfer.value, handler: () => { recordOpen.value = true }},
+  {key: 'transfer', icon: 'swap_horiz', label: t('assets.transferAsset'), color: 'info', show: canTransfer.value, handler: () => { transferOpen.value = true }},
+])
 
 const rows = ref([])
 const total = ref(0)

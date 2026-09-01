@@ -1,12 +1,17 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
-    <AppPageHeader :title="t('requests.title')" :subtitle="t('requests.subtitle')" icon="request_page">
-      <template #actions>
-        <q-btn v-if="canCreate" color="primary" icon="add" :label="t('requests.newRequest')" size="sm" @click="dialogOpen = true" />
-      </template>
-    </AppPageHeader>
+    <AppPageHeader :title="t('requests.title')" :subtitle="t('requests.subtitle')" icon="request_page" />
 
-    <div class="row items-center q-col-gutter-sm q-mb-sm">
+    <!-- Shared action bar (same buttons on every table) -->
+    <TableActionBar
+      class="print-hide"
+      :actions="barActions"
+      :rows="rows"
+      :columns="columns"
+      :filename="'requests'"
+    />
+
+    <div class="row items-center q-col-gutter-sm q-mb-sm print-hide">
       <div class="col-12 col-md-4">
         <q-input v-model="search" dense outlined clearable debounce="350" :placeholder="t('assets.searchPlaceholder')">
           <template #prepend><q-icon name="search" /></template>
@@ -26,6 +31,8 @@
     </div>
     <ErrorState v-else-if="error" :message="error" @retry="load" />
     <template v-else>
+      <div class="print-area">
+      <div class="print-title text-h6 q-mb-xs">{{ t('requests.title') }}</div>
       <q-table :rows="rows" :columns="columns" row-key="id" flat bordered dense hide-bottom wrap-cells :pagination="{ rowsPerPage: perPage }" class="q-mt-sm">
         <template v-slot:body-cell-status="props">
           <q-td :props="props"><StatusBadge :value="props.row.status" /></q-td>
@@ -42,10 +49,11 @@
           <EmptyState icon="request_page" :title="t('common.noData')" :message="t('common.noDataDesc')" />
         </template>
       </q-table>
-      <div class="row items-center justify-between q-mt-md">
+      <div class="row items-center justify-between q-mt-md print-hide">
         <div class="text-caption text-grey-6">{{ t('common.showingRecords', { count: rows.length, total: total, page: page, pages: Math.max(1, lastPage) }) }}</div>
         <q-pagination v-model="page" :max="Math.max(1, lastPage)" :max-pages="7" boundary-numbers direction-links />
       </div>
+    </div>
     </template>
 
     <!-- New request dialog -->
@@ -79,6 +87,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
+import TableActionBar from 'src/components/common/TableActionBar.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
 import StatusBadge from 'src/components/common/StatusBadge.vue'
@@ -93,6 +102,10 @@ const authStore = useAuthStore()
 const { departments, categories, opts } = useOptions()
 const departmentOptions = computed(() => opts(departments.value))
 const categoryOptions = computed(() => opts(categories.value))
+
+const barActions = computed(() => [
+  {key: 'add', icon: 'add', label: t('requests.newRequest'), color: 'teal', show: canCreate.value, handler: () => { dialogOpen.value = true }},
+])
 
 const rows = ref([])
 const total = ref(0)

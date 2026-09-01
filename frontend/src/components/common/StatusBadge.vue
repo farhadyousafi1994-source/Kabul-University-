@@ -45,6 +45,8 @@ const MAP = {
   // Users / records
   active: ['positive', 'Active'],
   inactive: ['grey-6', 'Inactive'],
+  leave: ['orange', 'On Leave'],
+  deactivated: ['grey-6', 'Deactivated'],
   // Assignments
   overdue: ['negative', 'Overdue'],
   returned: ['teal', 'Returned'],

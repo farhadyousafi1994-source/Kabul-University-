@@ -29,22 +29,30 @@
 
       <!-- Result table -->
       <template v-if="current">
-        <div class="row items-center justify-between q-mb-sm">
-          <div class="text-subtitle1 text-weight-bold">{{ currentTitle }}</div>
-          <div class="row q-gutter-sm">
-            <q-btn size="sm" color="primary" outline icon="file_download" :label="t('admin.reports.exportCsv')" :href="exportUrl" target="_blank" />
-          </div>
-        </div>
+        <div class="text-subtitle1 text-weight-bold q-mb-sm print-hide">{{ currentTitle }}</div>
+
+        <!-- Shared action bar (same buttons on every table) -->
+        <TableActionBar
+          class="print-hide"
+          :rows="resultRows"
+          :columns="resultColumns"
+          :filename="`report-${current}`"
+          :actions="barActions"
+        />
+
         <div v-if="resultLoading" class="q-mt-sm">
           <q-skeleton type="rect" height="64px" />
         </div>
         <ErrorState v-else-if="resultError" :message="resultError" @retry="() => open(current)" />
-        <q-table v-else :rows="resultRows" :columns="resultColumns" row-key="__id" flat bordered dense hide-bottom wrap-cells
-          :pagination="{ rowsPerPage: 15 }" class="q-mt-sm">
-          <template v-if="!resultRows.length" v-slot:no-data>
-            <EmptyState icon="bar_chart" :title="t('common.noData')" :message="t('admin.reports.noReportData')" />
-          </template>
-        </q-table>
+        <div v-else class="print-area">
+          <div class="print-title text-h6 q-mb-xs">{{ currentTitle }}</div>
+          <q-table :rows="resultRows" :columns="resultColumns" row-key="__id" flat bordered dense hide-bottom wrap-cells
+            :pagination="{ rowsPerPage: 15 }" class="q-mt-sm">
+            <template v-if="!resultRows.length" v-slot:no-data>
+              <EmptyState icon="bar_chart" :title="t('common.noData')" :message="t('admin.reports.noReportData')" />
+            </template>
+          </q-table>
+        </div>
       </template>
     </template>
   </div>
@@ -52,11 +60,17 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
+import TableActionBar from 'src/components/common/TableActionBar.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
 import { reportService } from 'src/services/system.service'
+import api from 'src/boot/axios'
+import { stamp } from 'src/utils/export'
+
+const $q = useQuasar()
 
 const { t } = useI18n()
 
@@ -69,8 +83,52 @@ const resultRows = ref([])
 const resultColumns = ref([])
 const resultLoading = ref(false)
 const resultError = ref('')
+const exporting = ref(false)
 
-const exportUrl = computed(() => (current.value ? reportService.exportUrl(current.value) : '#'))
+// Authenticated CSV export — the old `:href` + `target="_blank"` variant
+// opened the endpoint in a fresh tab WITHOUT the bearer token, so the API
+// answered 401 and nothing downloaded. We now fetch the blob through the
+// authenticated axios instance and trigger the download from JS.
+async function exportCsv() {
+  if (!current.value) return
+  exporting.value = true
+  try {
+    const blob = await api.get(`/reports/${current.value}/export`, { responseType: 'blob' })
+    if (blob?.type === 'application/json') {
+      let message = t('common.exportFailed')
+      try {
+        const parsed = JSON.parse(await blob.text())
+        message = parsed?.message || message
+      } catch { /* keep generic */ }
+      throw new Error(message)
+    }
+    const name = `report-${current.value}-${stamp()}.csv`
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = name
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 4000)
+    $q.notify({ type: 'positive', message: t('common.exportedSuccess') })
+  } catch (e) {
+    $q.notify({ type: 'negative', message: e.message || t('common.exportFailed') })
+  } finally {
+    exporting.value = false
+  }
+}
+
+const barActions = computed(() => [
+  {
+    key: 'csv',
+    icon: 'file_download',
+    label: t('admin.reports.exportCsv'),
+    color: 'teal',
+    show: !!current.value && !resultLoading.value,
+    handler: exportCsv,
+  },
+])
 
 async function loadList() {
   loading.value = true

@@ -1,17 +1,22 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
-    <AppPageHeader :title="t('procurement.title')" :subtitle="t('procurement.subtitle')" icon="shopping_cart">
-      <template #actions>
-        <q-btn v-if="canCreate" color="primary" icon="add" :label="t('procurement.newPurchaseRequest')" size="sm" @click="openPr" />
-      </template>
-    </AppPageHeader>
+    <AppPageHeader :title="t('procurement.title')" :subtitle="t('procurement.subtitle')" icon="shopping_cart" />
+
+    <!-- Shared action bar (same buttons on every table) -->
+    <TableActionBar
+      class="print-hide"
+      :actions="barActions"
+      :rows="rows"
+      :columns="tab === 'pr' ? prColumns : poColumns"
+      :filename="'procurement'"
+    />
 
     <q-tabs v-model="tab" class="q-mb-md" dense>
       <q-tab name="pr" icon="request_quote" :label="t('procurement.newPurchaseRequest')" />
       <q-tab name="po" icon="receipt_long" :label="t('procurement.newPurchaseOrder')" />
     </q-tabs>
 
-    <div class="row items-center q-col-gutter-sm q-mb-sm">
+    <div class="row items-center q-col-gutter-sm q-mb-sm print-hide">
       <div class="col-12 col-md-4">
         <q-input v-model="search" dense outlined clearable debounce="350" :placeholder="tab === 'pr' ? `${t('common.search')} PR…` : `${t('common.search')} PO…`">
           <template #prepend><q-icon name="search" /></template>
@@ -28,6 +33,8 @@
     </div>
     <ErrorState v-else-if="error" :message="error" @retry="load" />
     <template v-else>
+      <div class="print-area">
+      <div class="print-title text-h6 q-mb-xs">{{ t('procurement.title') }}</div>
       <q-table :rows="rows" :columns="tab === 'pr' ? prColumns : poColumns" row-key="id" flat bordered dense hide-bottom wrap-cells :pagination="{ rowsPerPage: perPage }" class="q-mt-sm">
         <template v-slot:body-cell-status="props">
           <q-td :props="props"><StatusBadge :value="props.row.status" /></q-td>
@@ -48,10 +55,11 @@
           <EmptyState :icon="tab === 'pr' ? 'request_quote' : 'receipt_long'" :title="t('common.noData')" :message="t('common.noDataDesc')" />
         </template>
       </q-table>
-      <div class="row items-center justify-between q-mt-md">
+      <div class="row items-center justify-between q-mt-md print-hide">
         <div class="text-caption text-grey-6">{{ t('common.showingRecords', { count: rows.length, total: total, page: page, pages: Math.max(1, lastPage) }) }}</div>
         <q-pagination v-model="page" :max="Math.max(1, lastPage)" :max-pages="7" boundary-numbers direction-links />
       </div>
+    </div>
     </template>
 
     <!-- New PR dialog -->
@@ -125,6 +133,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
+import TableActionBar from 'src/components/common/TableActionBar.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
 import StatusBadge from 'src/components/common/StatusBadge.vue'
@@ -142,6 +151,10 @@ const supplierOptions = computed(() => opts(suppliers.value))
 const categoryOptions = computed(() => opts(categories.value))
 
 const tab = ref('pr')
+const barActions = computed(() => [
+  {key: 'add', icon: 'add', label: t('procurement.newPurchaseRequest'), color: 'teal', show: canCreate.value, handler: openPr},
+])
+
 const rows = ref([])
 const total = ref(0)
 const lastPage = ref(1)

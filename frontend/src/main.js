@@ -18,6 +18,8 @@ import VueApexCharts from 'vue3-apexcharts'
 import 'quasar/dist/quasar.rtl.css'
 import './css/quasar.brand.sass'
 import '@quasar/extras/material-icons/material-icons.css'
+// MDI is needed for the shared table action bar (import / tune / excel / pdf icons)
+import '@quasar/extras/mdi-v7/mdi-v7.css'
 import '@quasar/extras/roboto-font/roboto-font.css'
 import './css/app.sass'
 
@@ -29,6 +31,7 @@ import i18n, { initialLocale, applyLocale, SUPPORTED_LANGUAGES } from './i18n'
 // Boot modules (auth bootstrap, axios registration)
 import { registerAxios } from './boot/axios'
 import { bootstrapAuth } from './boot/auth'
+import { useThemeStore } from './stores/theme'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -36,6 +39,10 @@ const pinia = createPinia()
 const initialLangConfig = SUPPORTED_LANGUAGES.find((l) => l.code === initialLocale) || SUPPORTED_LANGUAGES[0]
 
 app.use(pinia)
+
+// Restore the user's appearance (scheme, dark mode, font size, …) before the
+// first paint so the whole app — including the login screen — is themed.
+useThemeStore().applyInitial()
 app.use(router)
 app.use(i18n)
 app.use(VueApexCharts)

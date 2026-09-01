@@ -32,6 +32,9 @@ CREATE TABLE IF NOT EXISTS users (
   phone TEXT,
   employee_number TEXT UNIQUE,
   department_id INTEGER,
+  position TEXT,
+  hire_type TEXT NOT NULL DEFAULT 'permanent',
+  salary REAL NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'active',
   password_hash TEXT NOT NULL,
   avatar TEXT,
@@ -674,21 +677,23 @@ export function seed(db) {
 
   // --- Users ---------------------------------------------------------------
   const userDefs = [
-    { name: 'Abdul Rahman Ahmadzai', username: 'superadmin', email: 'superadmin@ku.edu.af', phone: '+93 700 000 001', employee_number: 'KU-0001', role: 'Super Admin' },
-    { name: 'Maryam Nazari', username: 'administrator', email: 'admin@ku.edu.af', phone: '+93 700 000 002', employee_number: 'KU-0002', role: 'University Administrator' },
-    { name: 'Hassan Karimi', username: 'assetmanager', email: 'assets@ku.edu.af', phone: '+93 700 000 003', employee_number: 'KU-0003', role: 'Asset Manager' },
-    { name: 'Sara Rahimi', username: 'facultymanager', email: 'faculty.cs@ku.edu.af', phone: '+93 700 000 004', employee_number: 'KU-0004', role: 'Faculty Manager' },
-    { name: 'Omid Stanikzai', username: 'deptmanager', email: 'dept@ku.edu.af', phone: '+93 700 000 005', employee_number: 'KU-0005', role: 'Department Manager' },
-    { name: 'Nadia Wahidi', username: 'warehousemanager', email: 'warehouse@ku.edu.af', phone: '+93 700 000 006', employee_number: 'KU-0006', role: 'Warehouse Manager' },
-    { name: 'Farid Ahmadi', username: 'technician', email: 'tech@ku.edu.af', phone: '+93 700 000 007', employee_number: 'KU-0007', role: 'Maintenance Technician' },
-    { name: 'Zarghona Habibi', username: 'auditor', email: 'audit@ku.edu.af', phone: '+93 700 000 008', employee_number: 'KU-0008', role: 'Auditor' },
-    { name: 'Ahmad Farid', username: 'employee', email: 'employee@ku.edu.af', phone: '+93 700 000 009', employee_number: 'KU-0009', role: 'Employee' },
+    { name: 'Abdul Rahman Ahmadzai', username: 'superadmin', email: 'superadmin@ku.edu.af', phone: '+93 700 000 001', employee_number: 'KU-0001', role: 'Super Admin', position: 'IT Director', hire_type: 'permanent', salary: 45000 },
+    { name: 'Maryam Nazari', username: 'administrator', email: 'admin@ku.edu.af', phone: '+93 700 000 002', employee_number: 'KU-0002', role: 'University Administrator', position: 'Administrator', hire_type: 'permanent', salary: 38000 },
+    { name: 'Hassan Karimi', username: 'assetmanager', email: 'assets@ku.edu.af', phone: '+93 700 000 003', employee_number: 'KU-0003', role: 'Asset Manager', position: 'Asset Manager', hire_type: 'permanent', salary: 32000 },
+    { name: 'Sara Rahimi', username: 'facultymanager', email: 'faculty.cs@ku.edu.af', phone: '+93 700 000 004', employee_number: 'KU-0004', role: 'Faculty Manager', position: 'Lecturer', hire_type: 'permanent', salary: 28000 },
+    { name: 'Omid Stanikzai', username: 'deptmanager', email: 'dept@ku.edu.af', phone: '+93 700 000 005', employee_number: 'KU-0005', role: 'Department Manager', position: 'Department Manager', hire_type: 'contract', salary: 26000 },
+    { name: 'Nadia Wahidi', username: 'warehousemanager', email: 'warehouse@ku.edu.af', phone: '+93 700 000 006', employee_number: 'KU-0006', role: 'Warehouse Manager', position: 'Warehouse Manager', hire_type: 'permanent', salary: 30000 },
+    { name: 'Farid Ahmadi', username: 'technician', email: 'tech@ku.edu.af', phone: '+93 700 000 007', employee_number: 'KU-0007', role: 'Maintenance Technician', position: 'Technician', hire_type: 'contract', salary: 18000 },
+    { name: 'Zarghona Habibi', username: 'auditor', email: 'audit@ku.edu.af', phone: '+93 700 000 008', employee_number: 'KU-0008', role: 'Auditor', position: 'Auditor', hire_type: 'permanent', salary: 34000, status: 'leave' },
+    { name: 'Ahmad Farid', username: 'employee', email: 'employee@ku.edu.af', phone: '+93 700 000 009', employee_number: 'KU-0009', role: 'Employee', position: 'Research Assistant', hire_type: 'contract', salary: 15000 },
   ]
   const userIds = {}
   for (const u of userDefs) {
     const uid = insert(db, 'users', {
       name: u.name, username: u.username, email: u.email, phone: u.phone,
-      employee_number: u.employee_number, status: 'active',
+      employee_number: u.employee_number,
+      position: u.position, hire_type: u.hire_type, salary: u.salary,
+      status: u.status || 'active',
       password_hash: hashPassword('password'),
       created_at: daysAgo(400), updated_at: now,
     })
@@ -1175,18 +1180,27 @@ export function seed(db) {
   }
 
   // --- Notifications -----------------------------------------------------------------------
+  // [userId, type, title, message, icon, agoDays, alreadyRead]
   const notifDefs = [
-    [1, 'asset_assigned', 'Asset assigned', 'Dell Latitude 5420 Laptop was assigned to Ahmad Farid.', 'assignment_ind', 1],
-    [1, 'maintenance_completed', 'Maintenance completed', 'Drum replacement on Canon iR2520 Photocopier completed.', 'build', 45],
-    [1, 'transfer_approved', 'Transfer approved', 'Transfer of Lenovo ThinkPad T14 to the Central Library was approved.', 'swap_horiz', 3],
-    [1, 'warranty_expiring', 'Warranty expiring soon', 'Warranty for Acer Aspire Desktop expires in 30 days.', 'verified', 0],
-    [1, 'request_approval', 'Approval required', 'Asset request ARQ-2026-0001 awaits your approval.', 'approval', 1],
-    [9, 'asset_assigned', 'Asset assigned to you', 'Dell Latitude 5420 Laptop has been assigned to you.', 'assignment_ind', 1],
+    [1, 'asset_assigned', 'Asset assigned', 'Dell Latitude 5420 Laptop was assigned to Ahmad Farid.', 'assignment_ind', 0, false],
+    [1, 'request_approval', 'Approval required', 'Asset request ARQ-2026-0001 awaits your approval.', 'approval', 0, false],
+    [1, 'warranty_expiring', 'Warranty expiring soon', 'Warranty for Acer Aspire Desktop expires in 30 days.', 'verified', 0, false],
+    [1, 'incident_reported', 'Incident reported', 'Stolen: Cisco Aironet 1815 AP (IT Department).', 'report_problem', 1, false],
+    [1, 'purchase_approval', 'Purchase order awaiting approval', 'PO-2026-0002 (45,000 AFN) needs your sign-off.', 'how_to_reg', 1, false],
+    [1, 'asset_returned', 'Asset returned', 'HP LaserJet 1020 Printer was returned by Gul Agha.', 'inventory_2', 2, false],
+    [1, 'transfer_approved', 'Transfer approved', 'Transfer of Lenovo ThinkPad T14 to the Central Library was approved.', 'swap_horiz', 3, true],
+    [1, 'maintenance_scheduled', 'Maintenance scheduled', 'Quarterly service for the projector fleet starts next week.', 'build', 4, true],
+    [1, 'asset_registered', 'Asset registered', 'Samsung 24" Monitor was registered under Engineering Faculty.', 'inventory_2', 6, true],
+    [1, 'system_info', 'Backup completed', 'The daily automatic backup finished successfully (408 KB).', 'cloud_done', 7, true],
+    [1, 'maintenance_completed', 'Maintenance completed', 'Drum replacement on Canon iR2520 Photocopier completed.', 'build', 45, true],
+    [1, 'asset_assigned', 'Asset assigned', 'ThinkPad T14 was assigned to Karim Rezaei.', 'assignment_ind', 60, true],
+    [9, 'asset_assigned', 'Asset assigned to you', 'Dell Latitude 5420 Laptop has been assigned to you.', 'assignment_ind', 1, false],
   ]
-  for (const [userId, type, title, message, icon, ago] of notifDefs) {
+  for (const [userId, type, title, message, icon, ago, read] of notifDefs) {
     insert(db, 'notifications', {
       type, notifiable_id: userId,
       data_json: JSON.stringify({ title, message, icon }),
+      read_at: read ? daysAgo(Math.max(0, ago - 1)) + 'T10:00:00.000Z' : null,
       created_at: daysAgo(ago) + 'T09:30:00.000Z', updated_at: now,
     })
   }

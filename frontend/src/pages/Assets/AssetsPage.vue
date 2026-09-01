@@ -1,13 +1,18 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
-    <AppPageHeader :title="t('assets.title')" :subtitle="t('assets.subtitle')" icon="inventory_2">
-      <template #actions>
-        <q-btn color="primary" icon="add" :label="t('assets.addAsset')" size="sm" v-if="canCreate" @click="openCreate" />
-      </template>
-    </AppPageHeader>
+    <AppPageHeader :title="t('assets.title')" :subtitle="t('assets.subtitle')" icon="inventory_2" />
+
+    <!-- Shared action bar (same buttons on every table) -->
+    <TableActionBar
+      class="print-hide"
+      :actions="barActions"
+      :rows="rows"
+      :columns="columns"
+      :filename="'assets'"
+    />
 
     <!-- Toolbar -->
-    <div class="row items-center q-col-gutter-sm q-mb-sm">
+    <div class="row items-center q-col-gutter-sm q-mb-sm print-hide">
       <div class="col-12 col-md-4">
         <q-input v-model="search" dense outlined clearable debounce="350" :placeholder="t('assets.searchPlaceholder')">
           <template #prepend><q-icon name="search" /></template>
@@ -38,6 +43,8 @@
     <ErrorState v-else-if="error" :message="error" @retry="load" />
 
     <template v-else>
+      <div class="print-area">
+      <div class="print-title text-h6 q-mb-xs">{{ t('assets.title') }}</div>
       <q-table :rows="rows" :columns="columns" row-key="id" flat bordered dense hide-bottom wrap-cells
         :pagination="{ rowsPerPage: perPage }" class="q-mt-sm">
         <template v-slot:body-cell-status="props">
@@ -74,9 +81,10 @@
         </template>
       </q-table>
 
-      <div class="row items-center justify-between q-mt-md">
+      <div class="row items-center justify-between q-mt-md print-hide">
         <div class="text-caption text-grey-6">{{ t('common.showingRecords', { count: rows.length, total: total, page: page, pages: Math.max(1, lastPage) }) }}</div>
         <q-pagination v-model="page" :max="Math.max(1, lastPage)" :max-pages="7" boundary-numbers direction-links />
+      </div>
       </div>
     </template>
 
@@ -132,7 +140,7 @@
         <q-card-section>
           <div class="text-caption text-grey-7 q-mb-sm">{{ assignTarget?.name }} · {{ assignTarget?.asset_code }}</div>
           <q-form @submit="doAssign" class="column q-gutter-md">
-            <q-select v-model="assignForm.assigned_to_user_id" :options="userOptions" :label="`${t('assets.assignTo')} *`" dense outlined emit-value map-options options-dense :rules="[required]"/>
+            <UserSelect v-model="assignForm.assigned_to_user_id" :label="`${t('assets.assignTo')} *`" dense outlined :rules="[required]"/>
             <q-input v-model="assignForm.expected_return_date" :label="t('assets.expectedReturnDate')" type="date" dense outlined/>
             <q-input v-model="assignForm.notes" :label="t('common.notes')" type="textarea" dense outlined autogrow/>
             <div class="row justify-end q-gutter-sm">
@@ -151,6 +159,8 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
+import TableActionBar from 'src/components/common/TableActionBar.vue'
+import UserSelect from 'src/components/common/UserSelect.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
 import StatusBadge from 'src/components/common/StatusBadge.vue'
@@ -163,7 +173,7 @@ import { currency, date } from 'src/utils/format'
 const { t, te } = useI18n()
 const $q = useQuasar()
 const authStore = useAuthStore()
-const { categories, subcategories, suppliers, campuses, faculties, departments, buildings, floors, rooms, users, opts } = useOptions()
+const { categories, subcategories, suppliers, campuses, faculties, departments, buildings, floors, rooms, opts } = useOptions()
 
 const categoryOptions = computed(() => opts(categories.value))
 const subcategoryOptions = computed(() => opts(subcategories.value))
@@ -174,7 +184,6 @@ const departmentOptions = computed(() => opts(departments.value))
 const buildingOptions = computed(() => opts(buildings.value))
 const floorOptions = computed(() => opts(floors.value))
 const roomOptions = computed(() => opts(rooms.value))
-const userOptions = computed(() => opts(users.value))
 
 const statusOptions = computed(() => [
   { label: t('status.available'), value: 'available' },
@@ -222,6 +231,10 @@ const canCreate = computed(() => authStore.hasPermission('assets.create'))
 const canEdit = computed(() => authStore.hasPermission('assets.update'))
 const canDelete = computed(() => authStore.hasPermission('assets.delete'))
 const canAssign = computed(() => authStore.hasPermission('assets.assign'))
+
+const barActions = computed(() => [
+  { key: 'add', icon: 'add', label: t('assets.addAsset'), color: 'teal', show: canCreate.value, handler: openCreate },
+])
 
 const columns = computed(() => [
   { name: 'asset_code', label: t('assets.assetCode'), field: 'asset_code', align: 'left' },

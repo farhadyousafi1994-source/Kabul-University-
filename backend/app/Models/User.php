@@ -20,6 +20,7 @@ class User extends Authenticatable
 
     public const STATUS_ACTIVE = 'active';
     public const STATUS_INACTIVE = 'inactive';
+    public const STATUS_LEAVE = 'leave';
 
     /**
      * The attributes that are mass assignable.
@@ -33,6 +34,9 @@ class User extends Authenticatable
         'phone',
         'employee_number',
         'department_id',
+        'position',
+        'hire_type',
+        'salary',
         'status',
         'avatar',
         'password',
@@ -58,6 +62,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'salary' => 'integer',
         ];
     }
 

@@ -9,6 +9,9 @@ export const userService = makeCrudService('users')
 export const userActions = {
   activate: (id) => http.post(`/users/${id}/activate`),
   deactivate: (id) => http.post(`/users/${id}/deactivate`),
+  leave: (id) => http.post(`/users/${id}/leave`),
+  /** Bulk-import employees from parsed CSV rows. */
+  bulkImport: (rows) => http.post('/users/bulk', { rows }),
 }
 
 export const roleService = makeCrudService('roles')

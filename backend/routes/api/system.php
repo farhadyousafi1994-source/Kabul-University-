@@ -31,11 +31,14 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     // Users & roles
     Route::get('users', [UserController::class, 'index'])->middleware('permission:users.view');
     Route::post('users', [UserController::class, 'store'])->middleware('permission:users.create');
+    // Bulk import must be declared before the {user} wildcard routes.
+    Route::post('users/bulk', [UserController::class, 'bulk'])->middleware('permission:users.create');
     Route::get('users/{user}', [UserController::class, 'show'])->middleware('permission:users.view');
     Route::put('users/{user}', [UserController::class, 'update'])->middleware('permission:users.update');
     Route::delete('users/{user}', [UserController::class, 'destroy'])->middleware('permission:users.delete');
     Route::post('users/{user}/activate', [UserController::class, 'activate'])->middleware('permission:users.update');
     Route::post('users/{user}/deactivate', [UserController::class, 'deactivate'])->middleware('permission:users.update');
+    Route::post('users/{user}/leave', [UserController::class, 'leave'])->middleware('permission:users.update');
 
     Route::get('roles', [RoleController::class, 'index'])->middleware('permission:roles.view');
     Route::get('roles/permissions', [RoleController::class, 'permissions'])->middleware('permission:roles.view');

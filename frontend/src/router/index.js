@@ -457,6 +457,71 @@ const routes = [
           order: 70,
         },
       },
+      // ------------------------------------------------------------------
+      // Appearance & personal options (cloned from the reference app)
+      // Personal settings — any authenticated user may customize their own
+      // appearance and workstation preferences, so no extra permission.
+      // ------------------------------------------------------------------
+      {
+        path: 'theme',
+        name: 'theme',
+        component: () => import('src/pages/Settings/ThemePage.vue'),
+        meta: {
+          title: 'Appearance & Theme',
+          titleKey: 'nav.items.theme',
+          icon: 'palette',
+          section: 'Administration',
+          sectionKey: 'nav.sections.administration',
+          order: 80,
+        },
+      },
+      {
+        path: 'options',
+        name: 'options',
+        component: () => import('src/pages/Settings/OptionsPage.vue'),
+        meta: {
+          title: 'Options',
+          titleKey: 'nav.items.options',
+          icon: 'tune',
+          section: 'Administration',
+          sectionKey: 'nav.sections.administration',
+          order: 90,
+        },
+      },
+      // ------------------------------------------------------------------
+      // HR — employees directory
+      // ------------------------------------------------------------------
+      {
+        path: 'hr/employees',
+        name: 'employees',
+        component: () => import('src/pages/HR/EmployeesPage.vue'),
+        meta: {
+          title: 'Employees',
+          titleKey: 'nav.items.employees',
+          icon: 'badge',
+          section: 'HR',
+          sectionKey: 'nav.sections.hr',
+          permission: 'users.view',
+          order: 10,
+        },
+      },
+      // ------------------------------------------------------------------
+      // Control room — live operations overview
+      // ------------------------------------------------------------------
+      {
+        path: 'control-room',
+        name: 'control-room',
+        component: () => import('src/pages/Dashboard/ControlRoomPage.vue'),
+        meta: {
+          title: 'Control Room',
+          titleKey: 'nav.items.controlRoom',
+          icon: 'monitoring',
+          section: 'General',
+          sectionKey: 'nav.sections.general',
+          permission: 'dashboard.view',
+          order: 20,
+        },
+      },
     ],
   },
   {

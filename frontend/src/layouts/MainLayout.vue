@@ -1,7 +1,7 @@
 <template>
   <q-layout view="hHh Lpr lFf">
     <!-- Header ---------------------------------------------------------->
-    <q-header elevated class="bg-primary text-white" height-hint="60">
+    <q-header elevated class="ku-app-header text-white" height-hint="60">
       <q-toolbar>
         <q-btn flat dense round icon="menu" :aria-label="t('nav.sections.general')" @click="drawerOpen = !drawerOpen" />
         <q-toolbar-title class="row items-center no-wrap">
@@ -89,11 +89,20 @@
     </q-header>
 
     <!-- Sidebar ---------------------------------------------------------->
-    <q-drawer v-model="drawerOpen" show-if-above bordered :width="264" :breakpoint="1024" class="bg-grey-1">
+    <q-drawer
+      v-model="drawerOpen"
+      :mini="miniSidebar"
+      show-if-above
+      bordered
+      :width="264"
+      :mini-width="76"
+      :breakpoint="1024"
+      class="bg-grey-1"
+    >
       <q-scroll-area class="fit">
         <q-list padding class="menu-list">
           <template v-for="section in menuSections" :key="section.label">
-            <div v-if="section.label" class="text-overline text-grey-6 q-px-md q-mt-md q-mb-xs">
+            <div v-if="section.label && !miniSidebar" class="text-overline text-grey-6 q-px-md q-mt-md q-mb-xs">
               {{ section.label }}
             </div>
             <q-item
@@ -105,10 +114,11 @@
               v-ripple
               class="q-mx-sm rounded-borders menu-item"
             >
-              <q-item-section avatar class="q-pr-none">
+              <q-item-section avatar class="q-pr-none" :class="{ 'menu-item__icon-only': miniSidebar }">
                 <q-icon :name="item.icon" size="20px" />
               </q-item-section>
-              <q-item-section>{{ item.title }}</q-item-section>
+              <q-item-section v-if="!miniSidebar">{{ item.title }}</q-item-section>
+              <q-tooltip v-if="miniSidebar" anchor="bottom start" self="top start">{{ item.title }}</q-tooltip>
             </q-item>
           </template>
         </q-list>
@@ -140,9 +150,9 @@
 import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Dark } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
 import { useNotificationStore } from 'src/stores/notifications'
+import { useThemeStore } from 'src/stores/theme'
 import LanguageSwitcher from 'src/components/common/LanguageSwitcher.vue'
 import ChangePasswordDialog from 'src/components/auth/ChangePasswordDialog.vue'
 
@@ -150,16 +160,18 @@ const router = useRouter()
 const { t, te } = useI18n()
 const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
+const themeStore = useThemeStore()
 
 const drawerOpen = ref(true)
 const changePasswordDialog = ref(false)
-const isDark = ref(Dark.isActive)
+const isDark = computed(() => themeStore.settings.mode === 'dark')
+const miniSidebar = computed(() => themeStore.settings.sidebar === 'mini')
 
 const year = new Date().getFullYear()
 
+// The header quick-toggle and the theme center share one source of truth.
 function toggleDark() {
-  isDark.value = !isDark.value
-  Dark.set(isDark.value)
+  themeStore.patch({ mode: isDark.value ? 'light' : 'dark' })
 }
 
 // ---------------------------------------------------------------------------
