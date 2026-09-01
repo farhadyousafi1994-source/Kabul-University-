@@ -1,32 +1,59 @@
+import i18n from 'src/i18n'
+
 /**
- * Shared display formatters.
+ * Shared display formatters with internationalization support.
  */
 export function currency(value, currencyCode = 'AFN') {
   const n = Number(value || 0)
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode, maximumFractionDigits: 0 }).format(n)
+  const currentLocale = i18n?.global?.locale?.value || 'en'
+  const t = i18n?.global?.t
+
+  const formattedNum = new Intl.NumberFormat(
+    currentLocale === 'fa' ? 'fa-AF' : currentLocale === 'ps' ? 'ps-AF' : currentLocale === 'ar' ? 'ar-SA' : 'en-US',
+    { maximumFractionDigits: 0 }
+  ).format(n)
+
+  const currencyLabel = t ? t('common.currency') : currencyCode
+  return `${formattedNum} ${currencyLabel}`
 }
 
 export function date(value, withTime = false) {
   if (!value) return '—'
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return value
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
-    (withTime ? ` ${d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : '')
+  const currentLocale = i18n?.global?.locale?.value || 'en'
+  const dateLocale = currentLocale === 'fa' ? 'fa-AF' : currentLocale === 'ps' ? 'ps-AF' : currentLocale === 'ar' ? 'ar-SA' : 'en-GB'
+  return d.toLocaleDateString(dateLocale, { day: '2-digit', month: 'short', year: 'numeric' }) +
+    (withTime ? ` ${d.toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' })}` : '')
 }
 
 export function timeAgo(value) {
   if (!value) return '—'
   const diff = Date.now() - new Date(value).getTime()
   const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
+  const t = i18n?.global?.t
+
+  if (!t) {
+    if (mins < 1) return 'just now'
+    if (mins < 60) return `${mins}m ago`
+    const hours = Math.floor(mins / 60)
+    if (hours < 24) return `${hours}h ago`
+    const days = Math.floor(hours / 24)
+    if (days < 30) return `${days}d ago`
+    const months = Math.floor(days / 30)
+    if (months < 12) return `${months}mo ago`
+    return `${Math.floor(months / 12)}y ago`
+  }
+
+  if (mins < 1) return t('common.justNow')
+  if (mins < 60) return t('common.minsAgo', { m: mins })
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h ago`
+  if (hours < 24) return t('common.hoursAgo', { h: hours })
   const days = Math.floor(hours / 24)
-  if (days < 30) return `${days}d ago`
+  if (days < 30) return t('common.daysAgo', { d: days })
   const months = Math.floor(days / 30)
-  if (months < 12) return `${months}mo ago`
-  return `${Math.floor(months / 12)}y ago`
+  if (months < 12) return t('common.monthsAgo', { m: months })
+  return t('common.yearsAgo', { y: Math.floor(months / 12) })
 }
 
 export const titleCase = (s = '') => s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())

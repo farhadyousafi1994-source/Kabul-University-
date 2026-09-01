@@ -1,8 +1,8 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
-    <AppPageHeader title="Notifications" subtitle="In-app alerts and approvals awaiting you" icon="notifications">
+    <AppPageHeader :title="t('admin.notifications.title')" :subtitle="t('admin.notifications.subtitle')" icon="notifications">
       <template #actions>
-        <q-btn color="primary" outline size="sm" icon="done_all" label="Mark all read" :disable="!items.length" @click="markAll" />
+        <q-btn color="primary" outline size="sm" icon="done_all" :label="t('nav.markAllRead')" :disable="!items.length" @click="markAll" />
       </template>
     </AppPageHeader>
 
@@ -26,19 +26,21 @@
         </q-item-section>
       </q-item>
     </q-list>
-    <EmptyState v-else icon="notifications_off" title="No notifications" message="You are all caught up." />
+    <EmptyState v-else icon="notifications_off" :title="t('nav.noNotifications')" :message="t('nav.allCaughtUp')" />
   </div>
 </template>
 
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
+import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
 import { notificationService } from 'src/services/notifications.service'
 import { timeAgo } from 'src/utils/format'
 
+const { t } = useI18n()
 const $q = useQuasar()
 const items = ref([])
 const loading = ref(false)
@@ -51,7 +53,7 @@ async function load() {
     const { data } = await notificationService.list()
     items.value = data?.data || []
   } catch (e) {
-    error.value = e.message || 'Failed to load notifications.'
+    error.value = e.message || t('common.loadFailed')
   } finally {
     loading.value = false
   }
@@ -69,9 +71,9 @@ async function markAll() {
   try {
     await notificationService.markAllRead()
     items.value.forEach((n) => { n.read_at = new Date().toISOString() })
-    $q.notify({ type: 'positive', message: 'All notifications marked as read.' })
+    $q.notify({ type: 'positive', message: t('common.savedSuccess') })
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || 'Failed.' })
+    $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
   }
 }
 

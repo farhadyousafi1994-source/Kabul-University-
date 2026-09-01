@@ -15,6 +15,18 @@ body
   font-family: 'Roboto', -apple-system, 'Segoe UI', sans-serif
   -webkit-tap-highlight-color: rgba(27, 94, 32, .12)
 
+// RTL & Multilingual typography ---------------------------------------------
+[dir="rtl"],
+body.q-body--rtl
+  font-family: 'Segoe UI', Tahoma, 'Vazirmatn', 'Noto Sans Arabic', Arial, sans-serif
+
+  .text-overline
+    letter-spacing: normal
+
+  .auth-lang-picker
+    right: auto
+    left: 0
+
 // Visible focus ring for keyboard users (a11y)
 :focus-visible
   outline: 2px solid $primary
@@ -64,11 +76,18 @@ body
   align-items: center
   justify-content: center
   background: linear-gradient(135deg, #1b5e20 0%, #0d47a1 100%)
+  position: relative
 
   .auth-card
     width: 100%
     max-width: 420px
     border-radius: 14px
+
+  .auth-lang-picker
+    position: absolute
+    top: 12px
+    right: 12px
+    z-index: 10
 
 // Timeline polish
 .asset-timeline .q-timeline__title
@@ -92,4 +111,3 @@ body
 
   .q-toolbar__title
     font-size: 16px
-

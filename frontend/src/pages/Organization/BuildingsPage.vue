@@ -1,17 +1,17 @@
 <template>
   <DataTablePage
-    title="Buildings"
-    subtitle="Buildings across campuses"
+    :title="t('organization.buildings.title')"
+    :subtitle="t('organization.buildings.subtitle')"
     icon="apartment"
-    entity-label="building"
+    :entity-label="t('organization.buildings.entity')"
     :load="buildingService.list"
     :columns="columns"
     perms="organization"
-    search-placeholder="Search by code or name…"
-    create-label="Add Building"
-    empty-title="No buildings yet"
-    empty-message="Buildings sit under campuses."
-    :filters="[{ key: 'campus_id', label: 'Campus', options: campusOptions, loading: campusesLoading }]"
+    :search-placeholder="`${t('common.search')}…`"
+    :create-label="t('organization.buildings.add')"
+    :empty-title="t('common.nothingHere')"
+    :empty-message="t('common.noDataDesc')"
+    :filters="[{ key: 'campus_id', label: t('common.campus'), options: campusOptions, loading: campusesLoading }]"
     :create-form="form"
     :submit="submit"
     :destroy="destroy"
@@ -20,31 +20,33 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { buildingService } from 'src/services/organization.service'
 import { useOptions } from 'src/composables/useOptions'
 import DataTablePage from 'src/components/common/DataTablePage.vue'
 
+const { t } = useI18n()
 const { campuses, opts } = useOptions()
 const campusOptions = computed(() => opts(campuses.value))
 const campusesLoading = computed(() => !campuses.value.length)
 
-const columns = [
-  { name: 'code', label: 'Code', field: 'code', align: 'left' },
-  { name: 'name', label: 'Name', field: 'name', align: 'left' },
-  { name: 'description', label: 'Description', field: 'description', align: 'left' },
-  { name: 'status', label: 'Status', field: 'status', align: 'left' },
-]
+const columns = computed(() => [
+  { name: 'code', label: t('common.code'), field: 'code', align: 'left' },
+  { name: 'name', label: t('common.name'), field: 'name', align: 'left' },
+  { name: 'description', label: t('common.description'), field: 'description', align: 'left' },
+  { name: 'status', label: t('common.status'), field: 'status', align: 'left' },
+])
 
-const form = {
+const form = computed(() => ({
   fields: [
-    { key: 'campus_id', label: 'Campus', type: 'select', options: campusOptions, required: true },
-    { key: 'code', label: 'Code', type: 'text', required: true, hint: 'e.g. BLD-CS' },
-    { key: 'name', label: 'Name', type: 'text', required: true },
-    { key: 'description', label: 'Description', type: 'textarea' },
-    { key: 'status', label: 'Status', type: 'select', options: [{ label: 'Active', value: 'active' }, { label: 'Inactive', value: 'inactive' }], required: true },
+    { key: 'campus_id', label: t('common.campus'), type: 'select', options: campusOptions.value, required: true },
+    { key: 'code', label: t('common.code'), type: 'text', required: true, hint: 'e.g. BLD-CS' },
+    { key: 'name', label: t('common.name'), type: 'text', required: true },
+    { key: 'description', label: t('common.description'), type: 'textarea' },
+    { key: 'status', label: t('common.status'), type: 'select', options: [{ label: t('status.active'), value: 'active' }, { label: t('status.inactive'), value: 'inactive' }], required: true },
   ],
   defaults: { status: 'active' },
-}
+}))
 
 const submit = async (values, editing) => (editing ? buildingService.update(editing.id, values) : buildingService.create(values))
 const destroy = (row) => buildingService.remove(row.id)

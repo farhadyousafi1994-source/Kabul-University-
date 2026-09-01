@@ -1,23 +1,28 @@
 <template>
   <div class="auth-bg">
+    <!-- Language Switcher in the top bar of login screen -->
+    <div class="auth-lang-picker absolute-top-right q-pa-md">
+      <LanguageSwitcher flat text-color="white" />
+    </div>
+
     <q-card class="auth-card q-pa-lg shadow-8">
       <div class="column items-center q-mb-lg">
         <q-avatar size="72px" color="white" text-color="primary" class="shadow-4 q-mb-md">
           <q-icon name="account_balance" size="44px" />
         </q-avatar>
-        <div class="text-h6 text-weight-bold text-center">Kabul University</div>
-        <div class="text-subtitle2 text-grey-7 text-center">Asset Management System</div>
+        <div class="text-h6 text-weight-bold text-center">{{ t('common.universityName') }}</div>
+        <div class="text-subtitle2 text-grey-7 text-center">{{ t('common.appName') }}</div>
       </div>
 
       <q-form @submit="submit" class="q-gutter-md" greedy>
         <q-input
           v-model="form.login"
-          label="Username or email"
+          :label="t('auth.usernameOrEmail')"
           outlined
           dense
           autofocus
           autocomplete="username"
-          :rules="[(v) => !!v || 'Username or email is required']"
+          :rules="[(v) => !!v || t('auth.loginRequired')]"
           @keyup.enter="submit"
         >
           <template #prepend><q-icon name="person" /></template>
@@ -25,12 +30,12 @@
 
         <q-input
           v-model="form.password"
-          label="Password"
+          :label="t('auth.password')"
           :type="showPassword ? 'text' : 'password'"
           outlined
           dense
           autocomplete="current-password"
-          :rules="[(v) => !!v || 'Password is required']"
+          :rules="[(v) => !!v || t('auth.passwordRequired')]"
           @keyup.enter="submit"
         >
           <template #prepend><q-icon name="lock" /></template>
@@ -49,7 +54,7 @@
         </q-banner>
 
         <q-btn
-          label="Sign in"
+          :label="t('auth.signIn')"
           type="submit"
           color="primary"
           class="full-width"
@@ -57,13 +62,13 @@
           :loading="authStore.loading"
         >
           <template #loading>
-            <q-spinner-facebook class="on-left" /> Signing in…
+            <q-spinner-facebook class="on-left" /> {{ t('auth.signingIn') }}
           </template>
         </q-btn>
       </q-form>
 
       <div class="text-caption text-grey-6 text-center q-mt-lg">
-        Demo access: <code class="bg-grey-3 q-px-xs rounded-borders">superadmin</code> /
+        {{ t('auth.demoAccess') }}: <code class="bg-grey-3 q-px-xs rounded-borders">superadmin</code> /
         <code class="bg-grey-3 q-px-xs rounded-borders">password</code>
       </div>
     </q-card>
@@ -73,8 +78,11 @@
 <script setup>
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from 'src/stores/auth'
+import LanguageSwitcher from 'src/components/common/LanguageSwitcher.vue'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
@@ -93,7 +101,7 @@ async function submit() {
     })
     router.push(route.query.redirect || { name: 'dashboard' })
   } catch (e) {
-    error.value = e.message || 'Invalid credentials. Please try again.'
+    error.value = e.message || t('auth.invalidCredentials')
   }
 }
 </script>

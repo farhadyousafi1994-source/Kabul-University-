@@ -1,24 +1,24 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
-    <AppPageHeader title="Procurement" subtitle="Purchase requests and orders" icon="shopping_cart">
+    <AppPageHeader :title="t('procurement.title')" :subtitle="t('procurement.subtitle')" icon="shopping_cart">
       <template #actions>
-        <q-btn v-if="canCreate" color="primary" icon="add" label="New Purchase Request" size="sm" @click="openPr" />
+        <q-btn v-if="canCreate" color="primary" icon="add" :label="t('procurement.newPurchaseRequest')" size="sm" @click="openPr" />
       </template>
     </AppPageHeader>
 
     <q-tabs v-model="tab" class="q-mb-md" dense>
-      <q-tab name="pr" icon="request_quote" label="Purchase Requests" />
-      <q-tab name="po" icon="receipt_long" label="Purchase Orders" />
+      <q-tab name="pr" icon="request_quote" :label="t('procurement.newPurchaseRequest')" />
+      <q-tab name="po" icon="receipt_long" :label="t('procurement.newPurchaseOrder')" />
     </q-tabs>
 
     <div class="row items-center q-col-gutter-sm q-mb-sm">
       <div class="col-12 col-md-4">
-        <q-input v-model="search" dense outlined clearable debounce="350" :placeholder="tab === 'pr' ? 'Search PR number…' : 'Search PO number…'">
+        <q-input v-model="search" dense outlined clearable debounce="350" :placeholder="tab === 'pr' ? `${t('common.search')} PR…` : `${t('common.search')} PO…`">
           <template #prepend><q-icon name="search" /></template>
         </q-input>
       </div>
       <div class="col-6 col-md-2">
-        <q-select v-model="filters.status" :options="tab === 'pr' ? prStatusOptions : poStatusOptions" label="Status" dense outlined clearable emit-value map-options options-dense />
+        <q-select v-model="filters.status" :options="tab === 'pr' ? prStatusOptions : poStatusOptions" :label="t('common.status')" dense outlined clearable emit-value map-options options-dense />
       </div>
     </div>
 
@@ -35,21 +35,21 @@
         <template v-slot:body-cell-actions="props">
           <q-td :props="props">
             <template v-if="tab === 'pr'">
-              <q-btn v-if="canApprove && ['draft', 'requested'].includes(props.row.status)" flat dense round size="sm" color="positive" icon="approval" @click="openApprove(props.row)"><q-tooltip>Approve → PO</q-tooltip></q-btn>
+              <q-btn v-if="canApprove && ['draft', 'requested'].includes(props.row.status)" flat dense round size="sm" color="positive" icon="approval" @click="openApprove(props.row)"><q-tooltip>{{ t('requests.approve') }}</q-tooltip></q-btn>
             </template>
             <template v-else>
-              <q-btn flat dense round size="sm" color="primary" icon="visibility" @click="openPo(props.row)"><q-tooltip>View</q-tooltip></q-btn>
-              <q-btn v-if="canUpdate && props.row.status === 'draft'" flat dense round size="sm" color="warning" icon="send" @click="send(props.row)"><q-tooltip>Send to supplier</q-tooltip></q-btn>
-              <q-btn v-if="canUpdate && ['sent', 'partially_received'].includes(props.row.status)" flat dense round size="sm" color="positive" icon="inventory" @click="receive(props.row)"><q-tooltip>Receive goods</q-tooltip></q-btn>
+              <q-btn flat dense round size="sm" color="primary" icon="visibility" @click="openPo(props.row)"><q-tooltip>{{ t('common.details') }}</q-tooltip></q-btn>
+              <q-btn v-if="canUpdate && props.row.status === 'draft'" flat dense round size="sm" color="warning" icon="send" @click="send(props.row)"><q-tooltip>{{ t('common.submit') }}</q-tooltip></q-btn>
+              <q-btn v-if="canUpdate && ['sent', 'partially_received'].includes(props.row.status)" flat dense round size="sm" color="positive" icon="inventory" @click="receive(props.row)"><q-tooltip>{{ t('status.completed') }}</q-tooltip></q-btn>
             </template>
           </q-td>
         </template>
         <template v-if="!rows.length" v-slot:no-data>
-          <EmptyState :icon="tab === 'pr' ? 'request_quote' : 'receipt_long'" :title="tab === 'pr' ? 'No purchase requests' : 'No purchase orders'" message="Procurement turns requests into received assets." />
+          <EmptyState :icon="tab === 'pr' ? 'request_quote' : 'receipt_long'" :title="t('common.noData')" :message="t('common.noDataDesc')" />
         </template>
       </q-table>
       <div class="row items-center justify-between q-mt-md">
-        <div class="text-caption text-grey-6">Showing {{ rows.length }} of {{ total }}</div>
+        <div class="text-caption text-grey-6">{{ t('common.showingRecords', { count: rows.length, total: total, page: page, pages: Math.max(1, lastPage) }) }}</div>
         <q-pagination v-model="page" :max="Math.max(1, lastPage)" :max-pages="7" boundary-numbers direction-links />
       </div>
     </template>
@@ -58,18 +58,18 @@
     <q-dialog v-model="prOpen" persistent>
       <q-card style="min-width: 440px; max-width: 620px">
         <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">New purchase request</div>
+          <div class="text-h6">{{ t('procurement.newPurchaseRequest') }}</div>
           <q-space />
           <q-btn flat round dense icon="close" @click="prOpen = false" />
         </q-card-section>
         <q-card-section>
           <q-form @submit="doCreatePr" class="row q-col-gutter-md">
-            <q-select v-model="prForm.department_id" :options="departmentOptions" label="Department" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
-            <q-select v-model="prForm.supplier_id" :options="supplierOptions" label="Supplier" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
-            <q-input v-model="prForm.notes" label="Notes" type="textarea" dense outlined autogrow class="col-12" />
+            <q-select v-model="prForm.department_id" :options="departmentOptions" :label="t('organization.departments.entity')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
+            <q-select v-model="prForm.supplier_id" :options="supplierOptions" :label="t('catalog.suppliers.entity')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
+            <q-input v-model="prForm.notes" :label="t('common.notes')" type="textarea" dense outlined autogrow class="col-12" />
             <div class="col-12 row justify-end q-gutter-sm">
-              <q-btn label="Cancel" flat color="grey-7" @click="prOpen = false" />
-              <q-btn label="Create" type="submit" color="primary" :loading="saving" />
+              <q-btn :label="t('common.cancel')" flat color="grey-7" @click="prOpen = false" />
+              <q-btn :label="t('common.create')" type="submit" color="primary" :loading="saving" />
             </div>
           </q-form>
         </q-card-section>
@@ -80,23 +80,23 @@
     <q-dialog v-model="approveOpen" persistent>
       <q-card style="min-width: 480px; max-width: 720px">
         <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">Approve & convert to PO</div>
+          <div class="text-h6">{{ t('requests.approve') }}</div>
           <q-space />
           <q-btn flat round dense icon="close" @click="approveOpen = false" />
         </q-card-section>
         <q-card-section>
-          <div class="text-caption text-grey-7 q-mb-sm">{{ approveTarget?.pr_number }} — add the line items to order.</div>
+          <div class="text-caption text-grey-7 q-mb-sm">{{ approveTarget?.pr_number }}</div>
           <div v-for="(item, i) in approveForm.items" :key="i" class="row q-col-gutter-sm items-center q-mb-sm">
-            <q-input v-model="item.name" label="Item name *" dense outlined class="col-12 col-md-4" :rules="[required]" />
-            <q-select v-model="item.asset_category_id" :options="categoryOptions" label="Category" dense outlined emit-value map-options options-dense clearable class="col-6 col-md-3" />
-            <q-input v-model.number="item.quantity" label="Qty" type="number" dense outlined class="col-3 col-md-2" />
-            <q-input v-model.number="item.unit_price" label="Unit price" type="number" dense outlined class="col-3 col-md-2" />
+            <q-input v-model="item.name" :label="`${t('common.name')} *`" dense outlined class="col-12 col-md-4" :rules="[required]" />
+            <q-select v-model="item.asset_category_id" :options="categoryOptions" :label="t('common.category')" dense outlined emit-value map-options options-dense clearable class="col-6 col-md-3" />
+            <q-input v-model.number="item.quantity" :label="t('common.quantity')" type="number" dense outlined class="col-3 col-md-2" />
+            <q-input v-model.number="item.unit_price" :label="t('financial.depreciation.originalCost')" type="number" dense outlined class="col-3 col-md-2" />
             <q-btn flat dense round color="negative" icon="delete_outline" @click="approveForm.items.splice(i, 1)" />
           </div>
-          <q-btn flat dense size="sm" color="primary" icon="add" label="Add item" @click="approveForm.items.push({ name: '', asset_category_id: null, quantity: 1, unit_price: 0 })" />
+          <q-btn flat dense size="sm" color="primary" icon="add" :label="t('common.create')" @click="approveForm.items.push({ name: '', asset_category_id: null, quantity: 1, unit_price: 0 })" />
           <div class="row justify-end q-gutter-sm q-mt-md">
-            <q-btn label="Cancel" flat color="grey-7" @click="approveOpen = false" />
-            <q-btn label="Approve & create PO" color="positive" :loading="saving" @click="doApprove" />
+            <q-btn :label="t('common.cancel')" flat color="grey-7" @click="approveOpen = false" />
+            <q-btn :label="t('requests.approve')" color="positive" :loading="saving" @click="doApprove" />
           </div>
         </q-card-section>
       </q-card>
@@ -106,14 +106,14 @@
     <q-dialog v-model="poOpen" persistent>
       <q-card style="min-width: 520px; max-width: 800px">
         <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">{{ poDetail?.po_number }} — Purchase order</div>
+          <div class="text-h6">{{ poDetail?.po_number }} — {{ t('procurement.newPurchaseOrder') }}</div>
           <q-space />
           <q-chip v-if="poDetail" size="sm" color="primary" text-color="white">{{ poDetail.supplier_name || `Supplier #${poDetail.supplier_id}` }}</q-chip>
           <q-btn flat round dense icon="close" @click="poOpen = false" />
         </q-card-section>
         <q-card-section>
           <q-table v-if="poDetail?.items?.length" :rows="poDetail.items" :columns="poItemColumns" row-key="id" flat bordered dense hide-bottom wrap-cells :pagination="{ rowsPerPage: 10 }" />
-          <EmptyState v-else icon="receipt_long" title="No items" message="This order has no line items yet." />
+          <EmptyState v-else icon="receipt_long" :title="t('common.noData')" :message="t('common.noDataDesc')" />
         </q-card-section>
       </q-card>
     </q-dialog>
@@ -123,6 +123,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
+import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
@@ -132,6 +133,7 @@ import { useOptions } from 'src/composables/useOptions'
 import { useAuthStore } from 'src/stores/auth'
 import { date } from 'src/utils/format'
 
+const { t } = useI18n()
 const $q = useQuasar()
 const authStore = useAuthStore()
 const { departments, suppliers, categories, opts } = useOptions()
@@ -158,47 +160,54 @@ const prForm = reactive({ department_id: null, supplier_id: null, notes: '' })
 const approveForm = reactive({ items: [] })
 const filters = reactive({ status: null })
 
-const prStatusOptions = [
-  { label: 'Draft', value: 'draft' }, { label: 'Requested', value: 'requested' },
-  { label: 'Approved', value: 'approved' }, { label: 'Rejected', value: 'rejected' },
-  { label: 'Purchase Order', value: 'purchase_order' }, { label: 'Cancelled', value: 'cancelled' },
-]
-const poStatusOptions = [
-  { label: 'Draft', value: 'draft' }, { label: 'Sent', value: 'sent' },
-  { label: 'Partially Received', value: 'partially_received' }, { label: 'Received', value: 'received' },
-  { label: 'Cancelled', value: 'cancelled' },
-]
-const required = (v) => !!v || 'This field is required'
+const prStatusOptions = computed(() => [
+  { label: t('status.draft'), value: 'draft' },
+  { label: t('status.requested'), value: 'requested' },
+  { label: t('status.approved'), value: 'approved' },
+  { label: t('status.rejected'), value: 'rejected' },
+  { label: t('procurement.poNumber'), value: 'purchase_order' },
+  { label: t('status.cancelled'), value: 'cancelled' },
+])
+
+const poStatusOptions = computed(() => [
+  { label: t('status.draft'), value: 'draft' },
+  { label: t('status.sent'), value: 'sent' },
+  { label: t('status.partiallyReceived'), value: 'partially_received' },
+  { label: t('status.received'), value: 'received' },
+  { label: t('status.cancelled'), value: 'cancelled' },
+])
+
+const required = (v) => !!v || t('common.required')
 const canCreate = computed(() => authStore.hasPermission('procurement.create'))
 const canUpdate = computed(() => authStore.hasPermission('procurement.update'))
 const canApprove = computed(() => authStore.hasPermission('procurement.approve'))
 
-const prColumns = [
-  { name: 'pr_number', label: 'Number', field: 'pr_number', align: 'left' },
-  { name: 'requested_by_name', label: 'Requested by', field: 'requested_by_name', align: 'left' },
-  { name: 'supplier_name', label: 'Supplier', field: 'supplier_name', align: 'left' },
-  { name: 'created_at', label: 'Created', field: 'created_at', align: 'left', format: (v) => date(v) },
-  { name: 'status', label: 'Status', field: 'status', align: 'left' },
+const prColumns = computed(() => [
+  { name: 'pr_number', label: t('common.code'), field: 'pr_number', align: 'left' },
+  { name: 'requested_by_name', label: t('common.user'), field: 'requested_by_name', align: 'left' },
+  { name: 'supplier_name', label: t('catalog.suppliers.entity'), field: 'supplier_name', align: 'left' },
+  { name: 'created_at', label: t('common.date'), field: 'created_at', align: 'left', format: (v) => date(v) },
+  { name: 'status', label: t('common.status'), field: 'status', align: 'left' },
   { name: 'actions', label: '', field: 'id', align: 'right' },
-]
+])
 
-const poColumns = [
-  { name: 'po_number', label: 'Number', field: 'po_number', align: 'left' },
-  { name: 'supplier_name', label: 'Supplier', field: 'supplier_name', align: 'left' },
-  { name: 'order_date', label: 'Ordered', field: 'order_date', align: 'left', format: (v) => date(v) },
-  { name: 'expected_date', label: 'Expected', field: 'expected_date', align: 'left', format: (v) => date(v) },
-  { name: 'status', label: 'Status', field: 'status', align: 'left' },
+const poColumns = computed(() => [
+  { name: 'po_number', label: t('procurement.poNumber'), field: 'po_number', align: 'left' },
+  { name: 'supplier_name', label: t('catalog.suppliers.entity'), field: 'supplier_name', align: 'left' },
+  { name: 'order_date', label: t('common.date'), field: 'order_date', align: 'left', format: (v) => date(v) },
+  { name: 'expected_date', label: t('procurement.expectedDelivery'), field: 'expected_date', align: 'left', format: (v) => date(v) },
+  { name: 'status', label: t('common.status'), field: 'status', align: 'left' },
   { name: 'actions', label: '', field: 'id', align: 'right' },
-]
+])
 
-const poItemColumns = [
-  { name: 'name', label: 'Item', field: 'name', align: 'left' },
-  { name: 'brand', label: 'Brand', field: 'brand', align: 'left' },
-  { name: 'model', label: 'Model', field: 'model', align: 'left' },
-  { name: 'quantity', label: 'Qty', field: 'quantity', align: 'right' },
-  { name: 'received_quantity', label: 'Received', field: 'received_quantity', align: 'right' },
-  { name: 'unit_price', label: 'Unit price', field: 'unit_price', align: 'right' },
-]
+const poItemColumns = computed(() => [
+  { name: 'name', label: t('common.name'), field: 'name', align: 'left' },
+  { name: 'brand', label: t('assets.brand'), field: 'brand', align: 'left' },
+  { name: 'model', label: t('assets.model'), field: 'model', align: 'left' },
+  { name: 'quantity', label: t('common.quantity'), field: 'quantity', align: 'right' },
+  { name: 'received_quantity', label: t('status.received'), field: 'received_quantity', align: 'right' },
+  { name: 'unit_price', label: t('financial.depreciation.originalCost'), field: 'unit_price', align: 'right' },
+])
 
 async function load() {
   loading.value = true
@@ -212,7 +221,7 @@ async function load() {
     total.value = data?.meta?.total || 0
     lastPage.value = data?.meta?.last_page || 1
   } catch (e) {
-    error.value = e.message || 'Failed to load procurement data.'
+    error.value = e.message || t('common.loadFailed')
   } finally {
     loading.value = false
   }
@@ -235,7 +244,7 @@ async function doCreatePr() {
   try {
     await procurementService.createPurchaseRequest({ ...prForm })
     prOpen.value = false
-    $q.notify({ type: 'positive', message: 'Purchase request created.' })
+    $q.notify({ type: 'positive', message: t('common.createdSuccess') })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
@@ -255,7 +264,7 @@ async function doApprove() {
   try {
     await procurementService.approvePurchaseRequest(approveTarget.value.id, { items: approveForm.items })
     approveOpen.value = false
-    $q.notify({ type: 'positive', message: 'Approved — purchase order created.' })
+    $q.notify({ type: 'positive', message: t('common.savedSuccess') })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
@@ -270,16 +279,16 @@ async function openPo(row) {
     poDetail.value = data
     poOpen.value = true
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || 'Failed to load order.' })
+    $q.notify({ type: 'negative', message: e.message || t('common.loadFailed') })
   }
 }
 
 async function send(row) {
-  $q.dialog({ title: 'Send order', message: `Send ${row.po_number} to ${row.supplier_name || 'the supplier'}?`, cancel: true, persistent: true })
+  $q.dialog({ title: t('common.submit'), message: `${t('common.submit')}: ${row.po_number}?`, cancel: true, persistent: true })
     .onOk(async () => {
       try {
         await procurementService.sendOrder(row.id)
-        $q.notify({ type: 'positive', message: 'Order sent.' })
+        $q.notify({ type: 'positive', message: t('common.savedSuccess') })
         await load()
       } catch (e) {
         $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
@@ -289,13 +298,13 @@ async function send(row) {
 
 async function receive(row) {
   $q.dialog({
-    title: 'Receive goods',
-    message: `Mark ${row.po_number} as received? Asset records will be created from the line items.`,
+    title: t('status.completed'),
+    message: `${t('status.completed')}: ${row.po_number}?`,
     cancel: true, persistent: true,
   }).onOk(async () => {
     try {
       await procurementService.receive(row.id, {})
-      $q.notify({ type: 'positive', message: 'Goods received — assets created.' })
+      $q.notify({ type: 'positive', message: t('common.savedSuccess') })
       await load()
     } catch (e) {
       $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })

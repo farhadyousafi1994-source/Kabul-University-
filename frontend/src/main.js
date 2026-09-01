@@ -1,7 +1,6 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { Quasar, Dark } from 'quasar'
-import quasarLang from 'quasar/lang/en-US'
 import quasarIconSet from 'quasar/icon-set/material-icons'
 import VueApexCharts from 'vue3-apexcharts'
 
@@ -14,6 +13,7 @@ import './css/app.sass'
 // App
 import App from './App.vue'
 import router from './router'
+import i18n, { initialLocale, applyLocale, SUPPORTED_LANGUAGES } from './i18n'
 
 // Boot modules (auth bootstrap, axios registration)
 import { registerAxios } from './boot/axios'
@@ -22,11 +22,14 @@ import { bootstrapAuth } from './boot/auth'
 const app = createApp(App)
 const pinia = createPinia()
 
+const initialLangConfig = SUPPORTED_LANGUAGES.find((l) => l.code === initialLocale) || SUPPORTED_LANGUAGES[0]
+
 app.use(pinia)
 app.use(router)
+app.use(i18n)
 app.use(VueApexCharts)
 app.use(Quasar, {
-  lang: quasarLang,
+  lang: initialLangConfig.quasarLang,
   iconSet: quasarIconSet,
   config: {
     dark: Dark.isActive, // follow system preference; togglable from the layout
@@ -38,6 +41,9 @@ app.use(Quasar, {
     notify: { position: 'top-right', timeout: 3500 },
   },
 })
+
+// Ensure initial HTML dir/lang attributes are set
+applyLocale(initialLocale)
 
 registerAxios(app)
 

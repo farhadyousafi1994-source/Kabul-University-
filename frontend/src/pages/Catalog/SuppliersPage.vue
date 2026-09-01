@@ -1,16 +1,16 @@
 <template>
   <DataTablePage
-    title="Suppliers"
-    subtitle="Vendors used for asset procurement"
+    :title="t('catalog.suppliers.title')"
+    :subtitle="t('catalog.suppliers.subtitle')"
     icon="local_shipping"
-    entity-label="supplier"
+    :entity-label="t('catalog.suppliers.entity')"
     :load="supplierService.list"
     :columns="columns"
     perms="suppliers"
-    search-placeholder="Search by name, company or email…"
-    create-label="Add Supplier"
-    empty-title="No suppliers yet"
-    empty-message="Add suppliers before creating purchase requests."
+    :search-placeholder="`${t('common.search')}…`"
+    :create-label="t('catalog.suppliers.add')"
+    :empty-title="t('common.nothingHere')"
+    :empty-message="t('common.noDataDesc')"
     :create-form="form"
     :submit="submit"
     :destroy="destroy"
@@ -18,33 +18,37 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { supplierService } from 'src/services/catalog.service'
 import DataTablePage from 'src/components/common/DataTablePage.vue'
 
-const columns = [
-  { name: 'code', label: 'Code', field: 'code', align: 'left' },
-  { name: 'name', label: 'Name', field: 'name', align: 'left' },
-  { name: 'company_name', label: 'Company', field: 'company_name', align: 'left' },
-  { name: 'contact_person', label: 'Contact', field: 'contact_person', align: 'left' },
-  { name: 'phone', label: 'Phone', field: 'phone', align: 'left' },
-  { name: 'email', label: 'Email', field: 'email', align: 'left' },
-  { name: 'status', label: 'Status', field: 'status', align: 'left' },
-]
+const { t } = useI18n()
 
-const form = {
+const columns = computed(() => [
+  { name: 'code', label: t('common.code'), field: 'code', align: 'left' },
+  { name: 'name', label: t('common.name'), field: 'name', align: 'left' },
+  { name: 'company_name', label: t('catalog.suppliers.entity'), field: 'company_name', align: 'left' },
+  { name: 'contact_person', label: t('catalog.suppliers.contactPerson'), field: 'contact_person', align: 'left' },
+  { name: 'phone', label: t('common.phone'), field: 'phone', align: 'left' },
+  { name: 'email', label: t('common.email'), field: 'email', align: 'left' },
+  { name: 'status', label: t('common.status'), field: 'status', align: 'left' },
+])
+
+const form = computed(() => ({
   fields: [
-    { key: 'code', label: 'Code', type: 'text', required: true, hint: 'e.g. SUP-001' },
-    { key: 'name', label: 'Name', type: 'text', required: true },
-    { key: 'company_name', label: 'Company name', type: 'text' },
-    { key: 'contact_person', label: 'Contact person', type: 'text' },
-    { key: 'phone', label: 'Phone', type: 'text' },
-    { key: 'email', label: 'Email', type: 'text' },
-    { key: 'address', label: 'Address', type: 'textarea' },
-    { key: 'tax_number', label: 'Tax number', type: 'text' },
-    { key: 'status', label: 'Status', type: 'select', options: [{ label: 'Active', value: 'active' }, { label: 'Inactive', value: 'inactive' }], required: true },
+    { key: 'code', label: t('common.code'), type: 'text', required: true, hint: 'e.g. SUP-001' },
+    { key: 'name', label: t('common.name'), type: 'text', required: true },
+    { key: 'company_name', label: t('common.name'), type: 'text' },
+    { key: 'contact_person', label: t('catalog.suppliers.contactPerson'), type: 'text' },
+    { key: 'phone', label: t('common.phone'), type: 'text' },
+    { key: 'email', label: t('common.email'), type: 'text' },
+    { key: 'address', label: t('common.address'), type: 'textarea' },
+    { key: 'tax_number', label: t('catalog.suppliers.taxNumber'), type: 'text' },
+    { key: 'status', label: t('common.status'), type: 'select', options: [{ label: t('status.active'), value: 'active' }, { label: t('status.inactive'), value: 'inactive' }], required: true },
   ],
   defaults: { status: 'active' },
-}
+}))
 
 const submit = async (values, editing) => (editing ? supplierService.update(editing.id, values) : supplierService.create(values))
 const destroy = (row) => supplierService.remove(row.id)
