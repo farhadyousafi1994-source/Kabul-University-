@@ -6,6 +6,7 @@ use App\Domains\System\Services\ActivityLogService;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Role;
 
 /**
  * Module 3 — Users management (RBAC).
@@ -21,6 +22,9 @@ class UserService
             'phone' => $data['phone'] ?? null,
             'employee_number' => $data['employee_number'] ?? null,
             'department_id' => $data['department_id'] ?? null,
+            'position' => $data['position'] ?? null,
+            'hire_type' => $data['hire_type'] ?? 'permanent',
+            'salary' => (int) ($data['salary'] ?? 0),
             'status' => $data['status'] ?? User::STATUS_ACTIVE,
             'password' => Hash::make($data['password']),
         ]);
@@ -46,6 +50,9 @@ class UserService
             'phone' => array_key_exists('phone', $data) ? $data['phone'] : $user->phone,
             'employee_number' => array_key_exists('employee_number', $data) ? $data['employee_number'] : $user->employee_number,
             'department_id' => array_key_exists('department_id', $data) ? $data['department_id'] : $user->department_id,
+            'position' => array_key_exists('position', $data) ? $data['position'] : $user->position,
+            'hire_type' => $data['hire_type'] ?? $user->hire_type,
+            'salary' => array_key_exists('salary', $data) ? (int) ($data['salary'] ?? 0) : $user->salary,
             'status' => $data['status'] ?? $user->status,
         ]);
 
@@ -80,6 +87,79 @@ class UserService
         ActivityLogService::record('updated', 'Users', User::class, $user->id, $user->name, null, ['status' => 'inactive']);
 
         return $user->fresh();
+    }
+
+    /**
+     * Send an employee on leave (they cannot log in while on leave).
+     */
+    public static function leave(User $user): User
+    {
+        $user->update(['status' => User::STATUS_LEAVE]);
+        $user->tokens()->delete();
+
+        ActivityLogService::record('updated', 'Users', User::class, $user->id, $user->name, null, ['status' => 'leave']);
+
+        return $user->fresh();
+    }
+
+    /**
+     * Bulk-import employees from a CSV payload. Each row:
+     * name, email, phone, department_id, position, hire_type, salary.
+     * Returns [created, errors] where errors is [{row, reason}].
+     */
+    public static function bulkImport(array $rows): array
+    {
+        $created = 0;
+        $errors = [];
+        $count = User::query()->withTrashed()->count();
+
+        foreach ($rows as $i => $row) {
+            $name = trim((string) ($row['name'] ?? ''));
+            $email = trim((string) ($row['email'] ?? ''));
+
+            if ($name === '') {
+                $errors[] = ['row' => $i + 2, 'reason' => 'name missing'];
+                continue;
+            }
+            if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $errors[] = ['row' => $i + 2, 'reason' => 'email missing/invalid'];
+                continue;
+            }
+
+            $base = strtolower(preg_replace('/[^a-z]+/', '.', $name));
+            $base = trim($base, '.') ?: ('employee' . ($count + 1));
+            $username = $base;
+            $suffix = 1;
+            while (User::query()->withTrashed()->where('username', $username)->orWhere('email', $email)->exists()) {
+                $suffix++;
+                $username = $base . $suffix;
+            }
+
+            $count++;
+            $user = User::create([
+                'name' => $name,
+                'username' => $username,
+                'email' => $email,
+                'phone' => $row['phone'] ?? null,
+                'employee_number' => 'KU-' . str_pad((string) $count, 4, '0', STR_PAD_LEFT),
+                'department_id' => $row['department_id'] ?? null,
+                'position' => $row['position'] ?? null,
+                'hire_type' => $row['hire_type'] ?? 'permanent',
+                'salary' => (int) ($row['salary'] ?? 0),
+                'status' => User::STATUS_ACTIVE,
+                'password' => Hash::make('password123'),
+            ]);
+
+            $role = Role::where('name', 'Employee')->first();
+            if ($role) {
+                $user->assignRole($role->name);
+            }
+
+            $created++;
+            ActivityLogService::record('created', 'Users (bulk import)', User::class, $user->id, $user->name);
+        }
+
+        return [$created, $errors];
     }
 
     public static function delete(User $user): void

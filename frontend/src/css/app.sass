@@ -93,6 +93,63 @@ body.q-body--rtl
 .asset-timeline .q-timeline__title
   font-weight: 600
 
+// Theme options — applied live by the theme store (see stores/theme.js) -------
+//
+// `--ku-radius` / `--ku-density` … come from <html style> so every override
+// below reacts instantly without re-rendering.
+
+body
+  transition: font-size .15s ease
+
+// Corner radius (sharp / normal / round)
+body
+  .q-card,
+  .q-dialog .q-card,
+  .q-dialog-card,
+  .q-table__card,
+  .q-btn,
+  .q-field,
+  .q-field__control,
+  .q-chip,
+  .q-input,
+  .q-select
+    border-radius: var(--ku-radius, 8px) !important
+
+  .q-avatar
+    border-radius: calc(var(--ku-radius, 8px) + 4px) !important
+
+  .q-menu,
+  .q-tooltip,
+  .q-notification
+    border-radius: var(--ku-radius, 8px) !important
+
+// Table density (compact / loose)
+body.ku-density-loose
+  .q-table td
+    padding-top: 14px !important
+    padding-bottom: 14px !important
+
+  .q-table th
+    padding-top: 14px !important
+    padding-bottom: 14px !important
+
+// Animations off
+body.ku-no-anim
+  *,
+  *::before,
+  *::after
+    transition: none !important
+    animation: none !important
+
+// Gradient application header (theme scheme colors)
+.ku-app-header
+  background: linear-gradient(115deg, var(--ku-header-from, $primary) 0%, var(--ku-header-to, $secondary) 100%) !important
+
+// Brand color usages that were hard-wired to the default green
+.menu-item.q-router-link--active
+  color: var(--q-primary)
+  background: color-mix(in srgb, var(--q-primary) 10%, transparent)
+
 // Mobile polish ----------------------------------------------------------------
 
 @media (max-width: 599px)

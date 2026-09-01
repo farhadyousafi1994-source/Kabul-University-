@@ -3,20 +3,20 @@
     <AppPageHeader :title="title" :subtitle="subtitle" :icon="icon">
       <template #actions>
         <slot name="headerActions" />
-        <q-btn
-          v-if="createForm && canCreate"
-          color="primary"
-          :icon="createIcon"
-          :label="resolvedCreateLabel"
-          size="sm"
-          data-cy="create-btn"
-          @click="openCreate"
-        />
       </template>
     </AppPageHeader>
 
+    <!-- Shared action bar (same buttons on every table) -->
+    <TableActionBar
+      class="print-hide"
+      :actions="barActions"
+      :rows="rows"
+      :columns="columns"
+      :filename="exportFilename"
+    />
+
     <!-- Toolbar: search + filters -->
-    <div class="row items-center q-col-gutter-sm q-mb-sm">
+    <div class="row items-center q-col-gutter-sm q-mb-sm print-hide">
       <div class="col-12 col-md-4">
         <q-input
           v-model="search"
@@ -61,6 +61,8 @@
 
     <!-- Table -->
     <template v-else>
+      <div class="print-area">
+        <div class="print-title text-h6 q-mb-xs">{{ title }}</div>
       <q-table
         :rows="rows"
         :columns="columns"
@@ -106,7 +108,7 @@
         </template>
       </q-table>
 
-      <div class="row items-center justify-between q-mt-md q-gutter-sm">
+      <div class="row items-center justify-between q-mt-md q-gutter-sm print-hide">
         <div class="text-caption text-grey-6">
           {{ t('common.showingRecords', { count: rows.length, total: total, page: page, pages: Math.max(1, lastPage) }) }}
         </div>
@@ -118,6 +120,7 @@
           direction-links
           :disable="loading"
         />
+      </div>
       </div>
     </template>
 
@@ -200,6 +203,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
+import TableActionBar from 'src/components/common/TableActionBar.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
 import { useAuthStore } from 'src/stores/auth'
@@ -224,6 +228,11 @@ const props = defineProps({
   emptyTitle: { type: String, default: '' },
   emptyMessage: { type: String, default: '' },
   refreshKey: { type: [Number, String], default: 0 },
+  /** Extra action-bar buttons (e.g. Import / Advanced search) in addition to the
+      built-in Create + Print / PDF / Excel. Same shape as TableActionBar `actions`. */
+  actions: { type: Array, default: () => [] },
+  /** Base filename for Print / PDF / Excel exports. */
+  exportFilename: { type: String, default: '' },
 })
 
 const { t } = useI18n()
@@ -252,6 +261,21 @@ const hasActiveFilters = computed(() => Object.values(filterValues).some((v) => 
 const isEmpty = computed(() => !rows.value.length)
 
 const resolvedCreateLabel = computed(() => props.createLabel || t('common.add'))
+
+// The shared action bar: the Create button lives here now (it used to be in
+// the page header), followed by any parent-supplied buttons, followed by the
+// built-in Print / PDF / Excel handled inside TableActionBar.
+const barActions = computed(() => [
+  {
+    key: 'create',
+    icon: props.createIcon,
+    label: resolvedCreateLabel.value,
+    color: 'teal',
+    show: Boolean(props.createForm && canCreate.value),
+    handler: openCreate,
+  },
+  ...props.actions,
+])
 
 const formFields = computed(() => (editing.value ? (props.editForm?.fields || props.createForm?.fields) : props.createForm?.fields) || [])
 const form = reactive({})

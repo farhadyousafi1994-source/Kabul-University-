@@ -165,7 +165,7 @@
         </q-card-section>
         <q-card-section>
           <q-form @submit="doAssign" class="column q-gutter-md">
-            <q-select v-model="assignForm.assigned_to_user_id" :options="userOptions" :label="`${t('assets.assignTo')} *`" dense outlined emit-value map-options options-dense :rules="[required]" />
+            <UserSelect v-model="assignForm.assigned_to_user_id" :label="`${t('assets.assignTo')} *`" dense outlined :rules="[required]" />
             <q-input v-model="assignForm.expected_return_date" :label="t('assets.expectedReturnDate')" type="date" dense outlined />
             <q-input v-model="assignForm.notes" :label="t('common.notes')" type="textarea" dense outlined autogrow />
             <div class="row justify-end q-gutter-sm">
@@ -220,6 +220,7 @@ import { useI18n } from 'vue-i18n'
 import QRCode from 'qrcode'
 import JsBarcode from 'jsbarcode'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
+import UserSelect from 'src/components/common/UserSelect.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
 import StatusBadge from 'src/components/common/StatusBadge.vue'
@@ -233,14 +234,13 @@ const { t } = useI18n()
 const route = useRoute()
 const $q = useQuasar()
 const authStore = useAuthStore()
-const { campuses, faculties, departments, buildings, floors, rooms, users, opts } = useOptions()
+const { campuses, faculties, departments, buildings, floors, rooms, opts } = useOptions()
 const campusOptions = computed(() => opts(campuses.value))
 const facultyOptions = computed(() => opts(faculties.value))
 const departmentOptions = computed(() => opts(departments.value))
 const buildingOptions = computed(() => opts(buildings.value))
 const floorOptions = computed(() => opts(floors.value))
 const roomOptions = computed(() => opts(rooms.value))
-const userOptions = computed(() => opts(users.value))
 
 const asset = ref(null)
 const loading = ref(true)

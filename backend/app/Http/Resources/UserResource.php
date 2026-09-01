@@ -26,6 +26,9 @@ class UserResource extends JsonResource
             'phone' => $this->phone,
             'employee_number' => $this->employee_number,
             'department_id' => $this->department_id,
+            'position' => $this->position,
+            'hire_type' => $this->hire_type,
+            'salary' => (int) $this->salary,
             'department' => $this->whenLoaded('department', fn () => [
                 'id' => $this->department->id,
                 'name' => $this->department->name,

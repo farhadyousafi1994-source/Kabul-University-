@@ -1,10 +1,15 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
-    <AppPageHeader :title="t('admin.roles.title')" :subtitle="t('admin.roles.subtitle')" icon="admin_panel_settings">
-      <template #actions>
-        <q-btn v-if="canCreate" color="primary" icon="add" :label="t('admin.roles.add')" size="sm" @click="openEdit(null)" />
-      </template>
-    </AppPageHeader>
+    <AppPageHeader :title="t('admin.roles.title')" :subtitle="t('admin.roles.subtitle')" icon="admin_panel_settings" />
+
+    <!-- Shared action bar (same buttons on every table) -->
+    <TableActionBar
+      class="print-hide"
+      :actions="barActions"
+      :rows="rows"
+      :columns="columns"
+      :filename="'roles'"
+    />
 
     <div v-if="loading" class="q-mt-sm">
       <q-skeleton type="rect" height="64px" class="q-mb-sm" />
@@ -12,6 +17,8 @@
     </div>
     <ErrorState v-else-if="error" :message="error" @retry="load" />
     <template v-else>
+      <div class="print-area">
+      <div class="print-title text-h6 q-mb-xs">{{ t('admin.roles.title') }}</div>
       <q-table :rows="rows" :columns="columns" row-key="id" flat bordered dense hide-bottom wrap-cells :pagination="{ rowsPerPage: 20 }" class="q-mt-sm">
         <template v-slot:body-cell-permissions="props">
           <q-td :props="props" class="text-caption">
@@ -26,6 +33,7 @@
           </q-td>
         </template>
       </q-table>
+      </div>
     </template>
 
     <q-dialog v-model="dialogOpen" persistent :maximized="$q.screen.lt.md">
@@ -67,6 +75,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
+import TableActionBar from 'src/components/common/TableActionBar.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
 import { roleService, roleActions } from 'src/services/users.service'
 import { useAuthStore } from 'src/stores/auth'
@@ -74,6 +83,10 @@ import { useAuthStore } from 'src/stores/auth'
 const { t } = useI18n()
 const $q = useQuasar()
 const authStore = useAuthStore()
+
+const barActions = computed(() => [
+  { key: 'add', icon: 'add', label: t('admin.roles.add'), color: 'teal', show: canCreate.value, handler: () => openEdit(null) },
+])
 
 const rows = ref([])
 const allPermissions = ref([])

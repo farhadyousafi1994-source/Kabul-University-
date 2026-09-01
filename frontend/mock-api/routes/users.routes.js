@@ -16,6 +16,7 @@ export function userRoutes(router) {
     const params = []
     if (ctx.query.status) { where += ' AND u.status = ?'; params.push(ctx.query.status) }
     if (ctx.query.department_id) { where += ' AND u.department_id = ?'; params.push(Number(ctx.query.department_id)) }
+    if (ctx.query.hire_type) { where += ' AND u.hire_type = ?'; params.push(ctx.query.hire_type) }
     if (ctx.query.role_id) { where += ' AND EXISTS (SELECT 1 FROM role_user ru WHERE ru.user_id = u.id AND ru.role_id = ?)'; params.push(Number(ctx.query.role_id)) }
     if (search) {
       where += ' AND (u.name LIKE ? OR u.username LIKE ? OR u.email LIKE ? OR u.employee_number LIKE ?)'
@@ -34,7 +35,7 @@ export function userRoutes(router) {
   }, { auth: true, permission: 'users.view' })
 
   router.post('/api/users', (ctx) => {
-    const { name, username, email, password, employee_number, phone, department_id, role_ids } = ctx.body || {}
+    const { name, username, email, password, employee_number, phone, department_id, role_ids, position, hire_type, salary } = ctx.body || {}
     const errors = {}
     if (!name) errors.name = ['The name field is required.']
     if (!username) errors.username = ['The username field is required.']
@@ -48,10 +49,10 @@ export function userRoutes(router) {
     const now = new Date().toISOString()
     const count = ctx.db.prepare('SELECT COUNT(*) AS c FROM users').get().c
     const info = ctx.db.prepare(
-      `INSERT INTO users (name, username, email, phone, employee_number, department_id, status, password_hash, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (name, username, email, phone, employee_number, department_id, position, hire_type, salary, status, password_hash, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(name, username, email, phone || null, employee_number || `KU-${String(count + 1).padStart(4, '0')}`,
-      department_id || null, 'active', hashPassword(password), now, now)
+      department_id || null, position || null, hire_type || 'permanent', Number(salary) || 0, 'active', hashPassword(password), now, now)
     const uid = Number(info.lastInsertRowid)
     const roleIds = Array.isArray(role_ids) ? role_ids : []
     for (const rid of roleIds) {
@@ -59,6 +60,48 @@ export function userRoutes(router) {
     }
     log(ctx, 'created', 'Users', ctx.db.prepare('SELECT * FROM users WHERE id = ?').get(uid))
     return ok('User created successfully.', router.serializeUser(ctx.db.prepare('SELECT * FROM users WHERE id = ?').get(uid)), null, 201)
+  }, { auth: true, permission: 'users.create' })
+
+  // POST /api/users/bulk — CSV import of employees (must stay before /:id)
+  router.post('/api/users/bulk', (ctx) => {
+    const rows = Array.isArray(ctx.body?.rows) ? ctx.body.rows : []
+    const created = []
+    const errors = []
+    const now = new Date().toISOString()
+    const count = ctx.db.prepare('SELECT COUNT(*) AS c FROM users').get().c
+    let n = count
+
+    for (const [i, r] of rows.entries()) {
+      const name = String(r.name || '').trim()
+      const email = String(r.email || '').trim()
+      if (!name) { errors.push({ row: i + 2, reason: 'name missing' }); continue }
+      if (!email) { errors.push({ row: i + 2, reason: 'email missing' }); continue }
+
+      const base = name.toLowerCase().replace(/[^a-z]+/g, '.').replace(/^\.+|\.+$/g, '') || `employee${n + 1}`
+      let username = base
+      let emailGuess = email
+      if (!/^\S+@\S+\.\S+$/.test(emailGuess)) emailGuess = `${base}@ku.edu.af`
+      let suffix = 1
+      while (ctx.db.prepare('SELECT id FROM users WHERE username = ? OR email = ?').get(username, emailGuess)) {
+        suffix += 1
+        username = `${base}${suffix}`
+      }
+      n += 1
+      const info = ctx.db.prepare(
+        `INSERT INTO users (name, username, email, phone, employee_number, department_id, position, hire_type, salary, status, password_hash, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)`,
+      ).run(
+        name, username, emailGuess, r.phone || null, `KU-${String(n).padStart(4, '0')}`,
+        r.department_id || null, r.position || null, r.hire_type || 'permanent',
+        Number(r.salary) || 0, hashPassword('password123'), now, now,
+      )
+      const uid = Number(info.lastInsertRowid)
+      const rid = ctx.db.prepare("SELECT id FROM roles WHERE name = 'Employee'").get()
+      if (rid) ctx.db.prepare('INSERT INTO role_user (role_id, user_id) VALUES (?, ?)').run(rid.id, uid)
+      created.push(uid)
+      log(ctx, 'created', 'Users (bulk import)', { id: uid, name })
+    }
+    return ok('Bulk import finished.', { created: created.length, errors }, null, errors.length && !created.length ? 422 : 200)
   }, { auth: true, permission: 'users.create' })
 
   router.get('/api/users/:id', (ctx) => {
@@ -71,9 +114,10 @@ export function userRoutes(router) {
     const user = ctx.db.prepare('SELECT * FROM users WHERE id = ? AND deleted_at IS NULL').get(Number(ctx.params.id))
     if (!user) throw new HttpError(404, 'User not found.')
 
-    const cols = ['name', 'email', 'phone', 'employee_number', 'department_id']
+    const cols = ['name', 'email', 'phone', 'employee_number', 'department_id', 'position', 'hire_type', 'salary', 'status']
     const sets = { updated_at: new Date().toISOString() }
     for (const c of cols) if (ctx.body[c] !== undefined) sets[c] = ctx.body[c]
+    if (sets.salary !== undefined) sets.salary = Number(sets.salary) || 0
     if (ctx.body.password) sets.password_hash = hashPassword(ctx.body.password)
     const keys = Object.keys(sets)
     ctx.db.prepare(`UPDATE users SET ${keys.map((k) => `"${k}" = ?`).join(', ')} WHERE id = ?`)
@@ -114,6 +158,16 @@ export function userRoutes(router) {
     ctx.db.prepare("UPDATE users SET status = 'inactive', updated_at = ? WHERE id = ?").run(new Date().toISOString(), user.id)
     log(ctx, 'deactivated', 'Users', user)
     return ok('User deactivated successfully.', router.serializeUser(ctx.db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)))
+  }, { auth: true, permission: 'users.update' })
+
+  // POST /api/users/:id/leave — send an employee on leave
+  router.post('/api/users/:id/leave', (ctx) => {
+    const user = ctx.db.prepare('SELECT * FROM users WHERE id = ? AND deleted_at IS NULL').get(Number(ctx.params.id))
+    if (!user) throw new HttpError(404, 'User not found.')
+    if (user.id === ctx.user.id) throw new HttpError(422, 'Validation failed', { id: ['You cannot put your own account on leave.'] })
+    ctx.db.prepare("UPDATE users SET status = 'leave', updated_at = ? WHERE id = ?").run(new Date().toISOString(), user.id)
+    log(ctx, 'left', 'Users', user)
+    return ok('Employee marked as on leave.', router.serializeUser(ctx.db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)))
   }, { auth: true, permission: 'users.update' })
 
   // ---------------- Roles & permissions ----------------
