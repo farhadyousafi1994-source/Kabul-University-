@@ -60,7 +60,7 @@ No frontend code changes are required to switch between mock and live API.
 | 26 | Security & performance — security headers, API throttle, trusted proxies, envelope-consistent errors, per-action route permissions | ✅ |
 | 27 | Testing / QA — feature + unit test suite (auth, authorization, asset lifecycle, maintenance, procurement, disposal, depreciation, users/roles) | ✅ |
 | 28 | Deployment — nginx + PHP-FPM + Supervisor + cron guide (`docs/DEPLOYMENT.md`) | ✅ |
-| 29 | Backup / DR — 3-2-1 backups, restore runbook, RPO/RTO (`docs/OPERATIONS.md`) | ✅ |
+| 29 | Backup / DR — in-app backup & restore console (take/download/restore/delete, clean-start file, automatic safety snapshot, `backup:run` + retention) + 3-2-1 runbook, RPO/RTO (`docs/OPERATIONS.md`) | ✅ |
 | 30 | Final documentation & review (`docs/FINAL_REVIEW.md`) | ✅ |
 
 **Verification status:** the Laravel backend slice (11 migrations + Spatie

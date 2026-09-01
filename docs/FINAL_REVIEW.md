@@ -26,7 +26,7 @@ environment, known limitations, and the go-live checklist.
 | 26 | Security & performance | ✅ | SecurityHeaders, API throttle, trusted proxies, envelope-consistent 401/422/429/500, per-route permissions (see `docs/SECURITY.md`) |
 | 27 | Testing / QA | ✅ | Feature + unit suite authored (auth, authorization, org, asset lifecycle, maintenance, procurement, disposal, depreciation, users/roles, code-gen, math) |
 | 28 | Deployment | ✅ | `docs/DEPLOYMENT.md` — nginx + PHP-FPM + Supervisor + cron, zero-downtime release |
-| 29 | Backup / DR | ✅ | `docs/OPERATIONS.md` — 3-2-1 backup, restore runbook, RPO/RTO, monthly drill |
+| 29 | Backup / DR | ✅ | `docs/OPERATIONS.md` — 3-2-1 backup, restore runbook, RPO/RTO, monthly drill **+ in-app console**: `BackupService`, `BackupController` (`backup.view/create/restore/delete`), `backup:run` artisan command, clean-start template, automatic pre-restore snapshot, `BackupPage.vue` (history, download, restore, delete) |
 | 30 | Final documentation | ✅ | This document + README + ANALYSIS + IMPLEMENTATION_PLAN |
 
 ## 2. Verification summary (this environment)

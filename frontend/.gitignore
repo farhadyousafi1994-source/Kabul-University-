@@ -9,3 +9,6 @@ mock-api/data/*.sqlite-journal
 # SQLite WAL sidecar files (dev mock API)
 mock-api/data/*.sqlite-shm
 mock-api/data/*.sqlite-wal
+
+# Backup snapshots produced by the dev mock API (Module 29)
+mock-api/data/backups/

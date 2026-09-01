@@ -21,6 +21,47 @@ Kabul University Asset Management System.
 
 ## 2. Backup scripts
 
+### 2.0 In-app backup & restore screen (Administration → Backup & Restore)
+
+The SPA ships a full backup console backed by the same API. It is the fastest
+path for the common cases and every action is written to `activity_logs`.
+
+| Action | Endpoint | Permission | Notes |
+|---|---|---|---|
+| History + summary | `GET /api/backups` | `backup.view` | returns `meta.count`, `meta.total_size`, `meta.last_backup` |
+| Take a snapshot | `POST /api/backups` | `backup.create` | `{ "format": "sqlite" \| "json" }`; the file is stored on the server **and** downloaded |
+| Download a snapshot | `GET /api/backups/{id}/download` | `backup.view` | authenticated streaming download |
+| Delete a snapshot | `DELETE /api/backups/{id}` | `backup.delete` | removes the file and its record |
+| Restore from a file | `POST /api/backups/restore` | `backup.restore` | uploads a JSON snapshot; takes an automatic `pre_restore` safety snapshot first |
+| Clean-start file | `GET /api/backups/fresh-template` | `backup.create` | JSON that keeps users, organisation, master data and settings, and empties every record |
+
+Formats:
+
+- **`.sqlite`** — a byte-for-byte copy of the database file (SQLite driver).
+  Taken after `PRAGMA wal_checkpoint(TRUNCATE)`, so it is a consistent,
+  standalone snapshot. Restore it with the file-level procedure in §4.
+- **`.json`** — a portable dump (`{"format":"ku-ams-backup","tables":{…}}`) that
+  can be uploaded straight back into the UI. This is the default on MySQL and
+  PostgreSQL and the only format the restore slot accepts.
+
+Restore is conservative by design: `sessions`, `backups`, `migrations`, cache,
+queue and token tables are never overwritten, so the operator stays logged in
+and the backup index keeps pointing at real files.
+
+Scheduled snapshots + retention pruning:
+
+```bash
+php artisan backup:run                  # nightly (see routes/console.php)
+php artisan backup:run --format=json    # portable dump instead of a DB copy
+php artisan backup:run --keep=30        # retain only the 30 newest snapshots
+```
+
+Configuration lives in `backend/config/backup.php` (`BACKUP_DISK`,
+`BACKUP_DIRECTORY`, `BACKUP_KEEP`, `BACKUP_SCHEDULED_AT`).
+
+> These files are a second copy, not the 3-2-1 strategy. Keep the cron script
+> below as well — on-server snapshots do not survive a lost volume.
+
 ### 2.1 Daily backup (SQLite)
 
 ```bash
@@ -137,7 +178,8 @@ php artisan tinker --execute="dump(['assets' => \App\Domains\Asset\Models\Asset:
 
 ### 4.3 Restore drill checklist (run monthly)
 
-- [ ] Pick the most recent backup; restore to a scratch directory
+- [ ] Pick the most recent backup (or download one from Administration →
+      Backup & Restore); restore to a scratch directory
 - [ ] `PRAGMA integrity_check` passes
 - [ ] App boots, login works, an asset lookup returns data
 - [ ] Uploaded images/documents are viewable

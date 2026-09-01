@@ -1,5 +1,5 @@
 import { DatabaseSync } from 'node:sqlite'
-import { mkdirSync } from 'node:fs'
+import { copyFileSync, mkdirSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { hashPassword } from './server.js'
@@ -13,7 +13,9 @@ import { hashPassword } from './server.js'
 
 const DATA_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'data')
 mkdirSync(DATA_DIR, { recursive: true })
-const DB_PATH = path.join(DATA_DIR, 'ku-ams.sqlite')
+export const DB_PATH = path.join(DATA_DIR, 'ku-ams.sqlite')
+export const BACKUP_DIR = path.join(DATA_DIR, 'backups')
+mkdirSync(BACKUP_DIR, { recursive: true })
 
 const iso = (d) => d.toISOString().slice(0, 10)
 const daysAgo = (n) => iso(new Date(Date.now() - n * 86400000))
@@ -548,6 +550,22 @@ CREATE TABLE IF NOT EXISTS settings (
   type TEXT NOT NULL DEFAULT 'string',
   created_at TEXT, updated_at TEXT
 );
+
+-- Module 29 — Backup & disaster recovery index.
+-- One row per backup file kept on the server (.sqlite copy of this database,
+-- or a .json dump). Column "kind" is manual | scheduled | pre_restore.
+CREATE TABLE IF NOT EXISTS backups (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  filename TEXT NOT NULL,
+  path TEXT NOT NULL,
+  driver TEXT NOT NULL DEFAULT 'sqlite',
+  format TEXT NOT NULL DEFAULT 'sqlite',
+  kind TEXT NOT NULL DEFAULT 'manual',
+  size INTEGER NOT NULL DEFAULT 0,
+  created_by INTEGER,
+  created_at TEXT, updated_at TEXT,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
 `
 
 // ---------------------------------------------------------------------------
@@ -598,6 +616,7 @@ export function seed(db) {
     'depreciation.view', 'depreciation.calculate',
     'requests.view', 'requests.create', 'requests.approve',
     'reports.view', 'settings.manage', 'notifications.view',
+    'backup.view', 'backup.create', 'backup.restore', 'backup.delete',
   ]
   const permIds = {}
   for (const p of PERMISSIONS) {
@@ -1192,6 +1211,58 @@ export function seed(db) {
   db.exec('COMMIT')
 }
 
+// ---------------------------------------------------------------------------
+// Module 29 — Backup history seed (dev convenience)
+//
+// A fresh mock database would otherwise open with an empty backup list, which
+// makes the backup & restore screen look untested. On first run we copy the
+// seeded database file a handful of times — those copies are genuine,
+// restorable snapshots, exactly like the ones the page creates later.
+// ---------------------------------------------------------------------------
+
+const pad2 = (n) => String(n).padStart(2, '0')
+
+export function backupStamp(d = new Date()) {
+  return `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}-${pad2(d.getHours())}${pad2(d.getMinutes())}${pad2(d.getSeconds())}`
+}
+
+const BACKUP_HISTORY_MINUTES = [
+  96, 105, 118, // a cluster of runs during the last maintenance window
+  1445, 1454, 1463, // yesterday
+  3200, 4760, // ~2 and ~3 days ago
+  6150, 7700, // ~4 and ~5 days ago
+  17200, 17211, // ~12 days ago
+  23000, // ~16 days ago
+]
+
+function seedBackupHistory(db) {
+  const superAdmin = db.prepare("SELECT id FROM users WHERE username = 'superadmin'").get()
+  const userId = superAdmin?.id ?? null
+
+  // Flush the WAL so the copied file is a complete, standalone snapshot.
+  db.exec('PRAGMA wal_checkpoint(TRUNCATE)')
+
+  const now = Date.now()
+  for (const minutes of BACKUP_HISTORY_MINUTES) {
+    const at = new Date(now - minutes * 60000)
+    const iso = at.toISOString()
+    const filename = `backup-${backupStamp(at)}.sqlite`
+    const target = path.join(BACKUP_DIR, filename)
+
+    try {
+      copyFileSync(DB_PATH, target)
+    } catch {
+      continue // never block startup on a missing/corrupt dev snapshot
+    }
+
+    const size = statSync(target).size
+    db.prepare(
+      `INSERT INTO backups (filename, path, driver, format, kind, size, created_by, created_at, updated_at)
+       VALUES (?, ?, 'sqlite', 'sqlite', 'scheduled', ?, ?, ?, ?)`,
+    ).run(filename, target, size, userId, iso, iso)
+  }
+}
+
 export function openDb() {
   const db = new DatabaseSync(DB_PATH)
   db.exec('PRAGMA journal_mode = WAL')
@@ -1208,5 +1279,10 @@ export function openDb() {
       throw err
     }
   }
+
+  if (db.prepare('SELECT COUNT(*) AS c FROM backups').get().c === 0) {
+    seedBackupHistory(db)
+  }
+
   return db
 }

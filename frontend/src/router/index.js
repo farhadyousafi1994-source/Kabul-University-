@@ -440,6 +440,23 @@ const routes = [
           order: 60,
         },
       },
+      // ------------------------------------------------------------------
+      // Phase 29 — Backup & disaster recovery
+      // ------------------------------------------------------------------
+      {
+        path: 'backup',
+        name: 'backup',
+        component: () => import('src/pages/Admin/BackupPage.vue'),
+        meta: {
+          title: 'Backup & Restore',
+          titleKey: 'nav.items.backup',
+          icon: 'cloud_sync',
+          section: 'Administration',
+          sectionKey: 'nav.sections.administration',
+          permission: 'backup.view',
+          order: 70,
+        },
+      },
     ],
   },
   {

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ActivityLogController;
+use App\Http\Controllers\Api\BackupController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DisposalController;
 use App\Http\Controllers\Api\DepreciationController;
@@ -134,4 +135,14 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     // Settings
     Route::get('settings', [SettingsController::class, 'index'])->middleware('permission:settings.manage');
     Route::put('settings', [SettingsController::class, 'update'])->middleware('permission:settings.manage');
+
+    // Backup & disaster recovery (Module 29)
+    Route::get('backups', [BackupController::class, 'index'])->middleware('permission:backup.view');
+    Route::post('backups', [BackupController::class, 'store'])->middleware('permission:backup.create');
+    Route::get('backups/fresh-template', [BackupController::class, 'freshTemplate'])->middleware('permission:backup.create');
+    Route::post('backups/restore', [BackupController::class, 'restore'])->middleware('permission:backup.restore');
+    Route::get('backups/{backup}/download', [BackupController::class, 'download'])
+        ->name('backups.download')
+        ->middleware('permission:backup.view');
+    Route::delete('backups/{backup}', [BackupController::class, 'destroy'])->middleware('permission:backup.delete');
 });

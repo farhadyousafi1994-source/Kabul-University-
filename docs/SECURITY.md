@@ -17,7 +17,7 @@ Management System (backend + frontend).
 - Change-password revokes all other tokens.
 
 ### Authorization
-- **Spatie Permission** matrix: 18 permission groups (30+ granular permissions)
+- **Spatie Permission** matrix: 19 permission groups (30+ granular permissions, incl. `backup.*`)
   seeded into 9 roles.
 - Every API route is guarded by `permission:X` middleware, **per action**: the
   generic `apiResource` groups (categories, subcategories, assets, org

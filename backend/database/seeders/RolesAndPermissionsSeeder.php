@@ -31,6 +31,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'reports' => ['view'],
         'settings' => ['manage'],
         'notifications' => ['view'],
+        'backup' => ['view', 'create', 'restore', 'delete'],
     ];
 
     /**
