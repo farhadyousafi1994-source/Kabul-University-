@@ -5,6 +5,7 @@
   "description": "Kabul University Asset Management System — Quasar 2 SPA",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/ensure-dev-dependencies.mjs",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
