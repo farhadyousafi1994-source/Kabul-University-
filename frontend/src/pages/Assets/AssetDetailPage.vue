@@ -12,7 +12,7 @@
       <div class="row q-gutter-xs no-wrap">
         <q-btn v-if="canAssign && ['available', 'reserved'].includes(asset.status)" color="info" size="sm" icon="assignment_ind" :label="t('assets.assignAsset')" @click="assignOpen = true" />
         <q-btn v-if="canTransfer && !['disposed', 'retired'].includes(asset.status)" color="primary" size="sm" outline icon="swap_horiz" :label="t('assets.transferAsset')" @click="transferOpen = true" />
-        <q-btn v-if="canEdit && activeAssignment" color="teal" size="sm" outline icon="undo" :label="t('assets.returnAsset')" @click="returnAsset" />
+        <q-btn v-if="canEdit && activeAssignment" color="primary" size="sm" outline icon="undo" :label="t('assets.returnAsset')" @click="returnAsset" />
         <q-btn v-if="canEdit" color="primary" size="sm" icon="edit" :label="t('common.edit')" :to="{ name: 'assets' }" />
       </div>
     </div>
@@ -176,7 +176,7 @@
         </q-card-section>
         <q-card-section>
           <q-form @submit="doAssign" class="column q-gutter-md">
-            <UserSelect v-model="assignForm.assigned_to_user_id" :label="`${t('assets.assignTo')} *`" dense outlined :rules="[required]" />
+            <EmployeeSelect v-model="assignForm.employee_id" :label="`${t('assets.assignTo')} *`" dense outlined :rules="[required]" />
             <q-input v-model="assignForm.expected_return_date" :label="t('assets.expectedReturnDate')" type="date" dense outlined />
             <q-input v-model="assignForm.notes" :label="t('common.notes')" type="textarea" dense outlined autogrow />
             <div class="row justify-end q-gutter-sm">
@@ -231,7 +231,7 @@ import { useI18n } from 'vue-i18n'
 import QRCode from 'qrcode'
 import JsBarcode from 'jsbarcode'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
-import UserSelect from 'src/components/common/UserSelect.vue'
+import EmployeeSelect from 'src/components/common/EmployeeSelect.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
 import StatusBadge from 'src/components/common/StatusBadge.vue'
@@ -267,7 +267,7 @@ const barcodeCanvas = ref(null)
 
 const assignOpen = ref(false)
 const transferOpen = ref(false)
-const assignForm = reactive({ assigned_to_user_id: null, expected_return_date: null, notes: '' })
+const assignForm = reactive({ employee_id: null, expected_return_date: null, notes: '' })
 const transferForm = reactive({ to_campus_id: null, to_faculty_id: null, to_department_id: null, to_building_id: null, to_floor_id: null, to_room_id: null, notes: '' })
 const busy = reactive({ assign: false, transfer: false, return: false })
 const uploadDocInput = ref(null)
@@ -332,32 +332,38 @@ function renderCodes() {
 }
 
 async function doAssign() {
+  if (busy.assign) return // prevent duplicate submissions
   busy.assign = true
   try {
     await assignmentService.assign(asset.value.id, { ...assignForm })
+    // Success: notify -> close -> refresh.
     assignOpen.value = false
-    $q.notify({ type: 'positive', message: t('assets.assignedSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.assignedSuccess') })
     await load()
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
+    // Failure: dialog stays open, entered data preserved.
+    $q.notify({ type: 'negative', icon: 'error', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
   } finally {
     busy.assign = false
   }
 }
 
-async function returnAsset() {
+function returnAsset() {
   $q.dialog({
     title: t('assets.returnAsset'),
-    message: t('assets.returnConfirm', { name: asset.value.name, assignee: activeAssignment.value?.assignee_name || t('common.user') }),
-    cancel: true, persistent: true,
+    message: t('assets.returnConfirm', { name: asset.value.name, assignee: activeAssignment.value?.employee_name || activeAssignment.value?.assignee_name || t('common.user') }),
+    cancel: { label: t('common.cancel'), flat: true },
+    ok: { label: t('assets.returnAsset'), color: 'primary', icon: 'undo' },
+    persistent: true,
   }).onOk(async () => {
+    if (busy.return) return
     busy.return = true
     try {
       await assignmentService.returnAsset(activeAssignment.value.id, { condition_on_return: 'good' })
-      $q.notify({ type: 'positive', message: t('assets.returnedSuccess') })
+      $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.returnedSuccess') })
       await load()
     } catch (e) {
-      $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
+      $q.notify({ type: 'negative', icon: 'error', message: e.message || t('common.saveFailed') })
     } finally {
       busy.return = false
     }
@@ -369,7 +375,7 @@ async function doTransfer() {
   try {
     await transferService.store(asset.value.id, { ...transferForm })
     transferOpen.value = false
-    $q.notify({ type: 'positive', message: t('assets.transferCreated') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.transferCreated') })
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
   } finally {
@@ -383,7 +389,7 @@ async function uploadDocument(e) {
   if (!file) return
   try {
     await assetService.uploadDocument(asset.value.id, { kind: 'other', file: { filename: file.name, mime: file.type, size: file.size } })
-    $q.notify({ type: 'positive', message: t('assets.documentUploaded') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.documentUploaded') })
     documents.value = (await assetService.documents(asset.value.id)).data?.data || []
   } catch (err) {
     $q.notify({ type: 'negative', message: err.message || t('common.saveFailed') })
@@ -396,7 +402,7 @@ async function uploadImage(e) {
   if (!file) return
   try {
     await assetService.uploadImage(asset.value.id, { file: { filename: file.name, path: URL.createObjectURL(file), mime: file.type, size: file.size } })
-    $q.notify({ type: 'positive', message: t('assets.imageUploaded') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.imageUploaded') })
     images.value = (await assetService.images(asset.value.id)).data?.data || []
   } catch (err) {
     $q.notify({ type: 'negative', message: err.message || t('common.saveFailed') })
@@ -408,7 +414,7 @@ function removeDocument(doc) {
     .onOk(async () => {
       await assetService.deleteDocument(doc.id)
       documents.value = (await assetService.documents(asset.value.id)).data?.data || []
-      $q.notify({ type: 'positive', message: t('assets.documentDeleted') })
+      $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.documentDeleted') })
     })
 }
 
@@ -417,7 +423,7 @@ function removeImage(img) {
     .onOk(async () => {
       await assetService.deleteImage(img.id)
       images.value = (await assetService.images(asset.value.id)).data?.data || []
-      $q.notify({ type: 'positive', message: t('assets.imageDeleted') })
+      $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.imageDeleted') })
     })
 }
 

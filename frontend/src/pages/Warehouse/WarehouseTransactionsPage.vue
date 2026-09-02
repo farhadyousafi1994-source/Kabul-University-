@@ -12,7 +12,7 @@
       :title="t('nav.items.warehouseTransactions')"
     />
 
-    <div class="row items-center q-col-gutter-sm q-mb-sm print-hide">
+    <div class="ku-toolbar row items-center q-col-gutter-sm print-hide">
       <div class="col-12 col-md-3">
         <q-select v-model="filters.warehouse_id" :options="warehouseOptions" :label="t('warehouse.warehouses.entity')" dense outlined clearable emit-value map-options options-dense />
       </div>
@@ -29,7 +29,7 @@
     <template v-else>
       <div class="print-area">
       <div class="print-title text-h6 q-mb-xs">{{ t('warehouse.transactions.title') }}</div>
-      <q-table :rows="rows" :columns="columns" row-key="id" flat bordered dense hide-bottom wrap-cells :pagination="{ rowsPerPage: perPage }" class="q-mt-sm">
+      <q-table :rows="rows" :columns="columns" row-key="id" flat dense hide-bottom wrap-cells :pagination="{ rowsPerPage: perPage }" class="q-mt-sm data-table">
         <template v-slot:body-cell-type="props">
           <q-td :props="props">
             <q-chip size="sm" :color="props.row.type === 'in' ? 'positive' : 'deep-orange'" text-color="white" dense>{{ props.row.type === 'in' ? 'IN' : 'OUT' }}</q-chip>
@@ -116,7 +116,7 @@ const { warehouses, opts } = useOptions()
 const warehouseOptions = computed(() => opts(warehouses.value))
 
 const barActions = computed(() => [
-  {key: 'record', icon: 'swap_vert', label: t('warehouse.transactions.newTransaction'), color: 'teal', show: canTransfer.value, handler: () => { recordOpen.value = true }},
+  {key: 'record', icon: 'swap_vert', label: t('warehouse.transactions.newTransaction'), color: 'primary', show: canTransfer.value, handler: () => { recordOpen.value = true }},
   {key: 'transfer', icon: 'swap_horiz', label: t('assets.transferAsset'), color: 'info', show: canTransfer.value, handler: () => { transferOpen.value = true }},
 ])
 
@@ -180,11 +180,12 @@ watch(recordOpen, (open) => { if (open) { Object.assign(recordForm, { asset_id: 
 watch(transferOpen, (open) => { if (open) { Object.assign(transferForm, { asset_id: null, from_warehouse_id: null, to_warehouse_id: null, quantity: 1 }); loadAssets() } })
 
 async function doRecord() {
+  if (saving.value) return // prevent duplicate submissions
   saving.value = true
   try {
     await warehouseActions.record({ ...recordForm })
     recordOpen.value = false
-    $q.notify({ type: 'positive', message: t('common.createdSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.createdSuccessEntity', { entity: t('common.entities.stockTransaction') }) })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
@@ -194,11 +195,12 @@ async function doRecord() {
 }
 
 async function doTransfer() {
+  if (saving.value) return // prevent duplicate submissions
   saving.value = true
   try {
     await warehouseActions.transfer({ ...transferForm })
     transferOpen.value = false
-    $q.notify({ type: 'positive', message: t('assets.transferCreated') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.transferCreated') })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })

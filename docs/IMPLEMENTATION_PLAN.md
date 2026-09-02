@@ -38,9 +38,11 @@ Auth errors: 401 `{success:false, message:"Unauthenticated"}`; forbidden: 403; v
 ## 2. Database Architecture (36 tables)
 
 **Auth & Users**
-`users` (extended skeleton) — add `username`, `phone`, `employee_number`,
-`department_id`, `status`, `avatar`; soft deletes. Spatie: `roles`, `permissions`,
-`model_has_roles`, `model_has_permissions`, `role_has_permissions`.
+`users` (extended skeleton) — add `username`, `phone`, `department_id`,
+`status`, `avatar`; soft deletes. `users` is a pure authentication/accounts
+table: employee/HR data lives exclusively in the dedicated `employees` table
+(see HR below), linked optionally through `employees.user_id`. Spatie: `roles`,
+`permissions`, `model_has_roles`, `model_has_permissions`, `role_has_permissions`.
 
 **Organization (location hierarchy)**
 `campuses` → `faculties` → `departments` → `buildings` → `floors` → `rooms`
@@ -56,7 +58,7 @@ status, condition, location FKs, created_by, soft deletes) ·
 `asset_images` · `asset_documents` (kind: invoice/warranty/maintenance/disposal).
 
 **Asset operations (immutable history)**
-`asset_assignments` (assigned_to_user, assigned_by, dates, status Active/Returned/Overdue) ·
+`asset_assignments` (employee — the assignee from `employees`, legacy user mirror, assigned_by, dates, status Active/Returned/Overdue) ·
 `asset_transfers` (from/to location FKs, requested_by, approved_by, workflow
 Draft→Requested→Approved→In Transit→Completed→Rejected) ·
 `asset_location_histories` (immutable rows: full location snapshot + moved_by + reason) ·

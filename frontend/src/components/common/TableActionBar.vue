@@ -127,7 +127,7 @@ async function doPdf() {
   try {
     const cols = exportColumns()
     await downloadPdf(baseFilename.value, props.rows, cols.length ? cols : null, { title: reportTitle.value })
-    $q.notify({ type: 'positive', message: t('common.pdfExported') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.pdfExported') })
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.exportFailed') })
   } finally {
@@ -141,7 +141,7 @@ async function doExcel() {
   try {
     const cols = exportColumns()
     await downloadExcel(baseFilename.value, props.rows, cols.length ? cols : null, { sheetName: reportTitle.value })
-    $q.notify({ type: 'positive', message: t('common.excelExported') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.excelExported') })
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.exportFailed') })
   } finally {
@@ -174,7 +174,7 @@ async function doExcel() {
   transition: background .15s ease, transform .15s ease
 
   &:hover:not(:disabled)
-    background: rgba(0, 0, 0, .05)
+    background: color-mix(in srgb, var(--q-primary) 8%, transparent)
     transform: translateY(-1px)
 
   &:disabled
@@ -188,7 +188,7 @@ async function doExcel() {
     display: flex
     align-items: center
     justify-content: center
-    box-shadow: 0 4px 10px rgba(0, 0, 0, .18)
+    box-shadow: var(--ku-shadow-sm)
     background: color-mix(in srgb, currentColor 14%, #fff)
     border: 2px solid currentColor
 

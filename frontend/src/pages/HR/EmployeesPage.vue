@@ -17,7 +17,7 @@
         <StatCard :label="t('hr.statInactive')" :value="stats.inactive" icon="do_not_disturb_on" color="grey-7" :side="sideOf(stats.inactive, stats.total)" />
       </div>
       <div class="col-6 col-sm-4 col-md-2">
-        <StatCard :label="t('hr.statWithAssets')" :value="stats.with_assets" icon="devices" color="teal" :side="sideOf(stats.with_assets, stats.total)" />
+        <StatCard :label="t('hr.statWithAssets')" :value="stats.with_assets" icon="devices" color="primary" :side="sideOf(stats.with_assets, stats.total)" />
       </div>
       <div class="col-6 col-sm-4 col-md-2">
         <StatCard :label="t('hr.statAssets')" :value="stats.assets" icon="inventory_2" color="secondary" />
@@ -35,7 +35,7 @@
     />
 
     <!-- Toolbar: search + filters -->
-    <div class="row items-center q-col-gutter-sm q-mb-sm print-hide">
+    <div class="ku-toolbar row items-center q-col-gutter-sm print-hide">
       <div class="col-12 col-md-4">
         <q-input v-model="search" dense outlined clearable debounce="350" :placeholder="t('hr.searchPlaceholder')">
           <template #prepend><q-icon name="search" /></template>
@@ -319,7 +319,7 @@ const exportColumns = computed(() => [
 ])
 
 const barActions = computed(() => [
-  { key: 'add', icon: 'add', label: t('hr.add'), color: 'teal', show: canCreate.value, handler: openCreate },
+  { key: 'add', icon: 'add', label: t('hr.add'), color: 'primary', show: canCreate.value, handler: openCreate },
 ])
 
 // ----- data loading ---------------------------------------------------------
@@ -402,6 +402,7 @@ function openEdit(row) {
 }
 
 async function save() {
+  if (saving.value) return // prevent duplicate submissions
   saving.value = true
   resetErrors()
   try {
@@ -409,10 +410,10 @@ async function save() {
     if (!payload.employee_code) delete payload.employee_code
     if (editing.value) {
       await employeeService.update(editing.value.id, payload)
-      $q.notify({ type: 'positive', message: t('common.updatedSuccess') })
+      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.updatedSuccessEntity', { entity: t('common.entities.employee') }) })
     } else {
       await employeeService.create(payload)
-      $q.notify({ type: 'positive', message: t('common.createdSuccess') })
+      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.createdSuccessEntity', { entity: t('common.entities.employee') }) })
     }
     dialogOpen.value = false
     await Promise.all([load(), loadStats()])
@@ -430,11 +431,11 @@ async function save() {
 // ----- delete ---------------------------------------------------------------
 async function doDelete() {
   const row = pendingDelete.value
-  if (!row || deletingId.value) return
+  if (!row || deletingId.value) return // duplicate guard
   deletingId.value = row.id
   try {
     await employeeService.remove(row.id)
-    $q.notify({ type: 'positive', message: t('common.deletedSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.deletedSuccessEntity', { entity: t('common.entities.employee') }) })
     pendingDelete.value = null
     await Promise.all([load(), loadStats()])
   } catch (e) {

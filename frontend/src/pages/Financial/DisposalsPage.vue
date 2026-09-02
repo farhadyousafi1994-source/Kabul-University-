@@ -12,7 +12,7 @@
       :title="t('nav.items.disposals')"
     />
 
-    <div class="row items-center q-col-gutter-sm q-mb-sm print-hide">
+    <div class="ku-toolbar row items-center q-col-gutter-sm print-hide">
       <div class="col-12 col-md-4">
         <q-input v-model="search" dense outlined clearable debounce="350" :placeholder="t('assets.searchPlaceholder')">
           <template #prepend><q-icon name="search" /></template>
@@ -31,7 +31,7 @@
     <template v-else>
       <div class="print-area">
       <div class="print-title text-h6 q-mb-xs">{{ t('financial.disposals.title') }}</div>
-      <q-table :rows="rows" :columns="columns" row-key="id" flat bordered dense hide-bottom wrap-cells :pagination="{ rowsPerPage: perPage }" class="q-mt-sm">
+      <q-table :rows="rows" :columns="columns" row-key="id" flat dense hide-bottom wrap-cells :pagination="{ rowsPerPage: perPage }" class="q-mt-sm data-table">
         <template v-slot:body-cell-status="props">
           <q-td :props="props"><StatusBadge :value="props.row.status" /></q-td>
         </template>
@@ -181,11 +181,12 @@ watch(dialogOpen, async (open) => {
 })
 
 async function doCreate() {
+  if (saving.value) return // prevent duplicate submissions
   saving.value = true
   try {
     await disposalService.store({ ...form })
     dialogOpen.value = false
-    $q.notify({ type: 'positive', message: t('common.createdSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.createdSuccessEntity', { entity: t('common.entities.disposal') }) })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
@@ -203,7 +204,7 @@ async function inspect(row) {
   }).onOk(async (notes) => {
     try {
       await disposalService.inspect(row.id, { notes })
-      $q.notify({ type: 'positive', message: t('common.savedSuccess') })
+      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.savedSuccessEntity', { entity: t('common.entities.disposal') }) })
       await load()
     } catch (e) {
       $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
@@ -216,7 +217,7 @@ async function approve(row) {
     .onOk(async () => {
       try {
         await disposalService.approve(row.id)
-        $q.notify({ type: 'positive', message: t('common.savedSuccess') })
+        $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.savedSuccessEntity', { entity: t('common.entities.disposal') }) })
         await load()
       } catch (e) {
         $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
@@ -229,7 +230,7 @@ async function reject(row) {
     .onOk(async () => {
       try {
         await disposalService.approve(row.id, false)
-        $q.notify({ type: 'positive', message: t('common.savedSuccess') })
+        $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.savedSuccessEntity', { entity: t('common.entities.disposal') }) })
         await load()
       } catch (e) {
         $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
@@ -245,7 +246,7 @@ async function execute(row) {
   }).onOk(async () => {
     try {
       await disposalService.execute(row.id, {})
-      $q.notify({ type: 'positive', message: t('common.savedSuccess') })
+      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.savedSuccessEntity', { entity: t('common.entities.disposal') }) })
       await load()
     } catch (e) {
       $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })

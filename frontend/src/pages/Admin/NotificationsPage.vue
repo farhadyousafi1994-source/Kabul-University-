@@ -2,12 +2,12 @@
   <div class="page-container q-pa-md q-pa-lg-md">
     <div class="nf-wrap q-pa-sm">
       <!-- Header ------------------------------------------------------------->
-      <div class="nf-head">
-        <div class="nf-head__title">
-          <q-icon name="notifications" size="26px" />
-          <span>{{ t('nav.items.notifications') }}</span>
-          <q-badge v-if="unreadCount" class="q-ml-xs" color="red-6" rounded>{{ unreadCount }}</q-badge>
-        </div>
+      <AppPageHeader
+        :title="t('nav.items.notifications')"
+        icon="notifications"
+        :meta="unreadMeta"
+      >
+        <template #actions>
         <q-btn flat round dense icon="more_horiz" color="grey-7">
           <q-menu auto-close>
             <q-list dense style="min-width: 220px">
@@ -26,7 +26,8 @@
             </q-list>
           </q-menu>
         </q-btn>
-      </div>
+        </template>
+      </AppPageHeader>
 
       <!-- Tabs ---------------------------------------------------------------->
       <div class="nf-tabs scroll-x">
@@ -110,6 +111,7 @@
 </template>
 
 <script setup>
+import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import { computed, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
@@ -157,6 +159,7 @@ const groups = computed(() => {
 })
 
 const unreadCount = computed(() => items.value.filter((n) => !n.read_at).length)
+const unreadMeta = computed(() => (unreadCount.value ? [{ icon: 'mark_email_unread', label: String(unreadCount.value) }] : []))
 
 const categoryOf = (n) => notificationCategory(n.type)
 
@@ -185,7 +188,7 @@ async function markAll() {
   try {
     await notificationService.markAllRead()
     items.value.forEach((n) => { n.read_at = n.read_at || new Date().toISOString() })
-    $q.notify({ type: 'positive', message: t('admin.notifications.markAllDone') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.notifications.markAllDone') })
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
   }
@@ -202,7 +205,7 @@ async function clearRead() {
     try {
       await notificationService.clearRead()
       items.value = items.value.filter((n) => !n.read_at)
-      $q.notify({ type: 'positive', message: t('admin.notifications.clearedDone') })
+      $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.notifications.clearedDone') })
     } catch (e) {
       $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
     }
@@ -213,7 +216,7 @@ async function removeOne(n) {
   try {
     await notificationService.remove(n.id)
     items.value = items.value.filter((x) => x.id !== n.id)
-    $q.notify({ type: 'positive', message: t('common.deletedSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.deletedSuccessEntity', { entity: t('common.entities.notification') }) })
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
   }

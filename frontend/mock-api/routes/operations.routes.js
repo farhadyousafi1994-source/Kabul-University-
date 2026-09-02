@@ -21,17 +21,21 @@ export function assignmentRoutes(router) {
     const params = []
     if (ctx.query.status) { where += ' AND a.status = ?'; params.push(ctx.query.status) }
     if (ctx.query.asset_id) { where += ' AND a.asset_id = ?'; params.push(Number(ctx.query.asset_id)) }
+    if (ctx.query.employee_id) { where += ' AND a.employee_id = ?'; params.push(Number(ctx.query.employee_id)) }
     if (ctx.query.assigned_to_user_id) { where += ' AND a.assigned_to_user_id = ?'; params.push(Number(ctx.query.assigned_to_user_id)) }
     if (ctx.query.search) {
-      where += ' AND (asset.name LIKE ? OR asset.asset_code LIKE ? OR u.name LIKE ?)'
-      params.push(`%${ctx.query.search}%`, `%${ctx.query.search}%`, `%${ctx.query.search}%`)
+      where += " AND (asset.name LIKE ? OR asset.asset_code LIKE ? OR e.first_name LIKE ? OR e.last_name LIKE ? OR (e.first_name || ' ' || e.last_name) LIKE ? OR u.name LIKE ?)"
+      params.push(`%${ctx.query.search}%`, `%${ctx.query.search}%`, `%${ctx.query.search}%`, `%${ctx.query.search}%`, `%${ctx.query.search}%`, `%${ctx.query.search}%`)
     }
-    const total = ctx.db.prepare(`SELECT COUNT(*) AS c FROM asset_assignments a LEFT JOIN assets asset ON asset.id = a.asset_id LEFT JOIN users u ON u.id = a.assigned_to_user_id WHERE ${where}`).get(...params).c
+    const total = ctx.db.prepare(`SELECT COUNT(*) AS c FROM asset_assignments a LEFT JOIN assets asset ON asset.id = a.asset_id LEFT JOIN employees e ON e.id = a.employee_id LEFT JOIN users u ON u.id = a.assigned_to_user_id WHERE ${where}`).get(...params).c
     const rows = ctx.db.prepare(
       `SELECT a.*, asset.name AS asset_name, asset.asset_code, asset.status AS asset_status,
+              TRIM(e.first_name || ' ' || e.last_name) AS employee_name,
+              e.employee_code AS employee_code,
               u.name AS assignee_name, u.username AS assignee_username
        FROM asset_assignments a
        LEFT JOIN assets asset ON asset.id = a.asset_id
+       LEFT JOIN employees e ON e.id = a.employee_id
        LEFT JOIN users u ON u.id = a.assigned_to_user_id
        WHERE ${where} ORDER BY a.created_at DESC LIMIT ? OFFSET ?`,
     ).all(...params, perPage, (page - 1) * perPage)
@@ -57,13 +61,31 @@ export function assignmentRoutes(router) {
     const active = ctx.db.prepare("SELECT id FROM asset_assignments WHERE asset_id = ? AND status = 'active'").get(asset.id)
     if (active) throw new HttpError(422, 'Validation failed', { asset_id: ['This asset already has an active assignment.'] })
 
+    // The assignee is an EMPLOYEE from the dedicated employees table.
+    let employee = null
+    if (ctx.body.employee_id) {
+      employee = ctx.db.prepare('SELECT * FROM employees WHERE id = ? AND deleted_at IS NULL').get(Number(ctx.body.employee_id))
+      if (!employee) throw new HttpError(422, 'Validation failed', { employee_id: ['The selected employee does not exist.'] })
+    } else if (ctx.body.assigned_to_user_id) {
+      // Backward compatibility: resolve the employee through the user link.
+      employee = ctx.db.prepare('SELECT * FROM employees WHERE user_id = ? AND deleted_at IS NULL').get(Number(ctx.body.assigned_to_user_id))
+      if (!employee) throw new HttpError(422, 'Validation failed', { employee_id: ['The selected employee does not exist.'] })
+    } else {
+      throw new HttpError(422, 'Validation failed', { employee_id: ['The employee field is required.'] })
+    }
+
     const now = new Date().toISOString()
     const info = ctx.db.prepare(
-      'INSERT INTO asset_assignments (asset_id, assigned_to_user_id, assigned_by, assigned_date, expected_return_date, status, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    ).run(asset.id, Number(ctx.body.assigned_to_user_id), ctx.user.id, now.slice(0, 10), ctx.body.expected_return_date || null, 'active', ctx.body.notes || null, now, now)
-    ctx.db.prepare("UPDATE assets SET status = 'assigned', updated_at = ? WHERE id = ?").run(now, asset.id)
-    log(ctx, 'assigned', 'Assignments', { id: Number(info.lastInsertRowid), name: asset.name })
-    return ok('Asset assigned successfully.', ctx.db.prepare('SELECT * FROM asset_assignments WHERE id = ?').get(Number(info.lastInsertRowid)), null, 201)
+      'INSERT INTO asset_assignments (asset_id, employee_id, assigned_to_user_id, assigned_by, assigned_date, expected_return_date, status, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ).run(asset.id, employee.id, employee.user_id || null, ctx.user.id, now.slice(0, 10), ctx.body.expected_return_date || null, 'active', ctx.body.notes || null, now, now)
+    // Mirror onto assets.employee_id so the asset is assigned to the employee.
+    ctx.db.prepare("UPDATE assets SET status = 'assigned', employee_id = ?, updated_at = ? WHERE id = ?").run(employee.id, now, asset.id)
+    log(ctx, 'assigned', 'Assignments', { id: Number(info.lastInsertRowid), name: asset.name, employee_id: employee.id })
+    const created = ctx.db.prepare(
+      `SELECT a.*, TRIM(e.first_name || ' ' || e.last_name) AS employee_name, e.employee_code
+       FROM asset_assignments a LEFT JOIN employees e ON e.id = a.employee_id WHERE a.id = ?`,
+    ).get(Number(info.lastInsertRowid))
+    return ok('Asset assigned successfully.', created, null, 201)
   }, { auth: true, permission: 'assets.assign' })
 
   // POST /api/asset-assignments/:id/return
@@ -79,7 +101,8 @@ export function assignmentRoutes(router) {
     const now = new Date().toISOString()
     ctx.db.prepare("UPDATE asset_assignments SET status = 'returned', returned_date = ?, condition_on_return = ?, notes = ?, updated_at = ? WHERE id = ?")
       .run(ctx.body.returned_date || now.slice(0, 10), condition, ctx.body.notes || assignment.notes, now, assignment.id)
-    ctx.db.prepare("UPDATE assets SET status = 'available', condition = ?, updated_at = ? WHERE id = ?")
+    // Return = unassign: the asset becomes available and loses its employee.
+    ctx.db.prepare("UPDATE assets SET status = 'available', condition = ?, employee_id = NULL, updated_at = ? WHERE id = ?")
       .run(condition, now, assignment.asset_id)
     log(ctx, 'returned', 'Assignments', { id: assignment.id, name: `asset#${assignment.asset_id}` })
     return ok('Asset returned successfully.', ctx.db.prepare('SELECT * FROM asset_assignments WHERE id = ?').get(assignment.id))

@@ -12,7 +12,7 @@
       :title="t('nav.items.requests')"
     />
 
-    <div class="row items-center q-col-gutter-sm q-mb-sm print-hide">
+    <div class="ku-toolbar row items-center q-col-gutter-sm print-hide">
       <div class="col-12 col-md-4">
         <q-input v-model="search" dense outlined clearable debounce="350" :placeholder="t('assets.searchPlaceholder')">
           <template #prepend><q-icon name="search" /></template>
@@ -34,7 +34,7 @@
     <template v-else>
       <div class="print-area">
       <div class="print-title text-h6 q-mb-xs">{{ t('requests.title') }}</div>
-      <q-table :rows="rows" :columns="columns" row-key="id" flat bordered dense hide-bottom wrap-cells :pagination="{ rowsPerPage: perPage }" class="q-mt-sm">
+      <q-table :rows="rows" :columns="columns" row-key="id" flat dense hide-bottom wrap-cells :pagination="{ rowsPerPage: perPage }" class="q-mt-sm data-table">
         <template v-slot:body-cell-status="props">
           <q-td :props="props"><StatusBadge :value="props.row.status" /></q-td>
         </template>
@@ -105,7 +105,7 @@ const departmentOptions = computed(() => opts(departments.value))
 const categoryOptions = computed(() => opts(categories.value))
 
 const barActions = computed(() => [
-  {key: 'add', icon: 'add', label: t('requests.newRequest'), color: 'teal', show: canCreate.value, handler: () => { dialogOpen.value = true }},
+  {key: 'add', icon: 'add', label: t('requests.newRequest'), color: 'primary', show: canCreate.value, handler: () => { dialogOpen.value = true }},
 ])
 
 const rows = ref([])
@@ -176,13 +176,14 @@ watch(search, () => { page.value = 1; load() })
 watch(() => [filters.status, filters.request_type], () => { page.value = 1; load() })
 
 async function doCreate() {
+  if (saving.value) return // prevent duplicate submissions
   saving.value = true
   try {
     const { data } = await assetRequestService.store({ ...form })
     dialogOpen.value = false
-    $q.notify({ type: 'positive', message: t('common.createdSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.createdSuccessEntity', { entity: t('common.entities.request') }) })
     await assetRequestService.submit(data.id)
-    $q.notify({ type: 'info', message: t('common.updatedSuccess') })
+    $q.notify({ type: 'info', icon: 'send', message: t('requests.submittedSuccess') })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
@@ -192,10 +193,10 @@ async function doCreate() {
 }
 
 async function departmentApprove(row, approve) {
-  await act(() => assetRequestService.departmentApprove(row.id, approve), row, t('common.updatedSuccess'))
+  await act(() => assetRequestService.departmentApprove(row.id, approve), row, t('common.updatedSuccessEntity', { entity: t('common.entities.request') }))
 }
 async function managerApprove(row, approve) {
-  await act(() => assetRequestService.managerApprove(row.id, approve), row, t('common.updatedSuccess'))
+  await act(() => assetRequestService.managerApprove(row.id, approve), row, t('common.updatedSuccessEntity', { entity: t('common.entities.request') }))
 }
 async function reject(row) {
   await act(() => assetRequestService.managerApprove(row.id, false), row, t('status.rejected'))
@@ -207,7 +208,7 @@ async function complete(row) {
 async function act(fn, row, msg) {
   try {
     await fn()
-    $q.notify({ type: 'positive', message: msg })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: msg })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })

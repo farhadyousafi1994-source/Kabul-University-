@@ -17,15 +17,21 @@ class MarkOverdueAssignments extends Command
     {
         $overdue = AssignmentService::markOverdue();
 
-        // Notify assignees of newly overdue items.
+        // Notify the assignees' linked login accounts of newly overdue items
+        // (employees without a login account have no inbox to notify).
         $assignments = AssetAssignment::where('status', AssetAssignment::STATUS_OVERDUE)
-            ->with('asset')
+            ->with(['asset', 'employee.user'])
             ->whereHas('asset')
             ->get();
 
         foreach ($assignments as $assignment) {
+            $userId = $assignment->employee?->user_id ?? $assignment->assigned_to_user_id;
+            if (! $userId) {
+                continue;
+            }
+
             NotificationService::send(
-                $assignment->assigned_to_user_id,
+                (int) $userId,
                 'assignment_overdue',
                 'Asset assignment overdue',
                 "{$assignment->asset->name} ({$assignment->asset->asset_code}) was due for return on {$assignment->expected_return_date?->toDateString()}.",

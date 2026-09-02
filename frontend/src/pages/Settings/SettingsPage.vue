@@ -139,12 +139,13 @@ async function load() {
 }
 
 async function save() {
+  if (saving.value) return // prevent duplicate submissions
   saving.value = true
   try {
     const payload = {}
     for (const g of groups.value) Object.assign(payload, draft[g])
     await settingsService.update(payload)
-    $q.notify({ type: 'positive', message: t('admin.settings.settingsSaved') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.settings.settingsSaved') })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })

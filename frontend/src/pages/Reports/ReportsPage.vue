@@ -47,8 +47,8 @@
         <ErrorState v-else-if="resultError" :message="resultError" @retry="() => open(current)" />
         <div v-else class="print-area">
           <div class="print-title text-h6 q-mb-xs">{{ currentTitle }}</div>
-          <q-table :rows="resultRows" :columns="resultColumns" row-key="__id" flat bordered dense hide-bottom wrap-cells
-            :pagination="{ rowsPerPage: 15 }" class="q-mt-sm">
+          <q-table :rows="resultRows" :columns="resultColumns" row-key="__id" flat dense hide-bottom wrap-cells
+            :pagination="{ rowsPerPage: 15 }" class="q-mt-sm data-table">
             <template v-if="!resultRows.length" v-slot:no-data>
               <EmptyState icon="bar_chart" :title="t('common.noData')" :message="t('admin.reports.noReportData')" />
             </template>
@@ -112,7 +112,7 @@ async function exportCsv() {
     anchor.click()
     anchor.remove()
     setTimeout(() => URL.revokeObjectURL(url), 4000)
-    $q.notify({ type: 'positive', message: t('common.exportedSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.exportedSuccess') })
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.exportFailed') })
   } finally {
@@ -125,7 +125,7 @@ const barActions = computed(() => [
     key: 'csv',
     icon: 'file_download',
     label: t('admin.reports.exportCsv'),
-    color: 'teal',
+    color: 'primary',
     show: !!current.value && !resultLoading.value,
     handler: exportCsv,
   },
@@ -171,5 +171,5 @@ onMounted(loadList)
 <style lang="sass">
 .selected-report
   border: 2px solid $primary !important
-  background: rgba(27, 94, 32, .05)
+  background: color-mix(in srgb, var(--q-primary) 6%, transparent)
 </style>

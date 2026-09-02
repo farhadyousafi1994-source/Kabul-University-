@@ -12,7 +12,7 @@
       :title="t('nav.items.depreciation')"
     />
 
-    <div class="row items-center q-col-gutter-sm q-mb-sm print-hide">
+    <div class="ku-toolbar row items-center q-col-gutter-sm print-hide">
       <div class="col-12 col-md-4">
         <q-input v-model="search" dense outlined clearable debounce="350" :placeholder="t('assets.searchPlaceholder')">
           <template #prepend><q-icon name="search" /></template>
@@ -31,7 +31,7 @@
     <template v-else>
       <div class="print-area">
       <div class="print-title text-h6 q-mb-xs">{{ t('financial.depreciation.title') }}</div>
-      <q-table :rows="rows" :columns="columns" row-key="id" flat bordered dense hide-bottom wrap-cells :pagination="{ rowsPerPage: perPage }" class="q-mt-sm">
+      <q-table :rows="rows" :columns="columns" row-key="id" flat dense hide-bottom wrap-cells :pagination="{ rowsPerPage: perPage }" class="q-mt-sm data-table">
         <template v-slot:body-cell-original_value="props"><q-td :props="props">{{ currency(props.row.original_value) }}</q-td></template>
         <template v-slot:body-cell-accumulated_depreciation="props"><q-td :props="props">{{ currency(props.row.accumulated_depreciation) }}</q-td></template>
         <template v-slot:body-cell-book_value="props"><q-td :props="props" class="text-weight-medium">{{ currency(props.row.book_value) }}</q-td></template>
@@ -67,7 +67,7 @@ const $q = useQuasar()
 const authStore = useAuthStore()
 
 const barActions = computed(() => [
-  {key: 'calculate', icon: 'calculate', label: t('financial.depreciation.calculate'), color: 'teal', show: canCalculate.value, handler: calculate},
+  {key: 'calculate', icon: 'calculate', label: t('financial.depreciation.calculate'), color: 'primary', show: canCalculate.value, handler: calculate},
 ])
 
 const rows = ref([])
@@ -118,7 +118,7 @@ async function calculate() {
   calcLoading.value = true
   try {
     const { data } = await depreciationService.calculate({ period: filters.period || undefined })
-    $q.notify({ type: 'positive', message: t('common.success') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('financial.depreciation.calculated', { period: data?.meta?.period || filters.period || t('financial.depreciation.currentPeriod') }) })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })

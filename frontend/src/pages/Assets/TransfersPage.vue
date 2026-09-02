@@ -12,7 +12,7 @@
       :title="t('nav.items.transfers')"
     />
 
-    <div class="row items-center q-col-gutter-sm q-mb-sm print-hide">
+    <div class="ku-toolbar row items-center q-col-gutter-sm print-hide">
       <div class="col-12 col-md-4">
         <q-input v-model="search" dense outlined clearable debounce="350" :placeholder="t('assets.searchPlaceholder')">
           <template #prepend><q-icon name="search" /></template>
@@ -31,7 +31,7 @@
     <template v-else>
       <div class="print-area">
       <div class="print-title text-h6 q-mb-xs">{{ t('transfers.title') }}</div>
-      <q-table :rows="rows" :columns="columns" row-key="id" flat bordered dense hide-bottom wrap-cells :pagination="{ rowsPerPage: perPage }" class="q-mt-sm">
+      <q-table :rows="rows" :columns="columns" row-key="id" flat dense hide-bottom wrap-cells :pagination="{ rowsPerPage: perPage }" class="q-mt-sm data-table">
         <template v-slot:body-cell-status="props">
           <q-td :props="props"><StatusBadge :value="props.row.status" /></q-td>
         </template>
@@ -110,7 +110,7 @@ const floorOptions = computed(() => opts(floors.value))
 const roomOptions = computed(() => opts(rooms.value))
 
 const barActions = computed(() => [
-  {key: 'add', icon: 'add', label: t('transfers.newTransfer'), color: 'teal', show: canTransfer.value, handler: () => { dialogOpen.value = true }},
+  {key: 'add', icon: 'add', label: t('transfers.newTransfer'), color: 'primary', show: canTransfer.value, handler: () => { dialogOpen.value = true }},
 ])
 
 const rows = ref([])
@@ -172,11 +172,12 @@ watch(search, () => { page.value = 1; load() })
 watch(() => filters.status, () => { page.value = 1; load() })
 
 async function doCreate() {
+  if (saving.value) return // prevent duplicate submissions
   saving.value = true
   try {
     await transferService.store(form.asset_id, { ...form })
     dialogOpen.value = false
-    $q.notify({ type: 'positive', message: t('assets.transferCreated') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.transferCreated') })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
@@ -188,7 +189,7 @@ async function doCreate() {
 async function transition(row, status) {
   try {
     await transferService.transition(row.id, status)
-    $q.notify({ type: 'positive', message: t('common.updatedSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.updatedSuccessEntity', { entity: t('common.entities.transfer') }) })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })

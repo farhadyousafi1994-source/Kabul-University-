@@ -137,7 +137,7 @@
         <div class="bk-list__head">
           <q-icon name="history" size="18px" />
           <span>{{ t('admin.backup.historyTitle') }}</span>
-          <q-chip dense color="teal-1" text-color="teal-9" class="bk-list__chip">
+          <q-chip dense color="blue-grey-1" text-color="blue-grey-8" class="bk-list__chip">
             {{ backups.length }} · {{ fileSize(meta.total_size) }}
           </q-chip>
           <div class="q-space" />
@@ -153,7 +153,7 @@
 
         <div v-else class="bk-rows">
           <div v-for="row in backups" :key="row.id" class="bk-row">
-            <q-icon name="description" size="19px" class="text-teal-7" />
+            <q-icon name="description" size="19px" class="text-blue-grey-7" />
             <div class="bk-row__body">
               <div class="bk-row__name">{{ row.filename }}</div>
               <div class="bk-row__meta">
@@ -296,7 +296,7 @@ async function takeBackup() {
       backupService.downloadUrl(data.id),
       data.filename || `ku-ams-backup.${format.value === 'json' ? 'json' : 'sqlite'}`,
     )
-    $q.notify({ type: 'positive', message: t('admin.backup.takenSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.backup.takenSuccess') })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.error') })
@@ -310,7 +310,7 @@ async function download(row) {
   downloadingId.value = row.id
   try {
     await backupService.downloadFile(backupService.downloadUrl(row.id), row.filename || 'ku-ams-backup')
-    $q.notify({ type: 'positive', message: t('admin.backup.downloadedSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.backup.downloadedSuccess') })
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.error') })
   } finally {
@@ -323,7 +323,7 @@ async function downloadFreshTemplate() {
   try {
     const stamp = new Date().toISOString().slice(0, 10)
     await backupService.downloadFile(backupService.freshTemplateUrl, `ku-ams-fresh-start-${stamp}.json`)
-    $q.notify({ type: 'positive', message: t('admin.backup.freshTemplateDownloaded') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.backup.freshTemplateDownloaded') })
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.error') })
   } finally {
@@ -340,7 +340,7 @@ async function doRestore() {
   restoring.value = true
   try {
     await backupService.restore(snapshot.value)
-    $q.notify({ type: 'positive', message: t('admin.backup.restoredSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.backup.restoredSuccess') })
     confirmRestore.value = false
     clearFile()
     await load()
@@ -358,7 +358,7 @@ async function doDelete() {
   deletingId.value = row.id
   try {
     await backupService.remove(row.id)
-    $q.notify({ type: 'positive', message: t('admin.backup.deletedSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.backup.deletedSuccess') })
     pendingDelete.value = null
     await load()
   } catch (e) {
@@ -478,7 +478,7 @@ onMounted(load)
     align-items: center
     justify-content: center
     color: $primary
-    background: rgba(27, 94, 32, .10)
+    background: color-mix(in srgb, var(--q-primary) 10%, transparent)
     margin-bottom: 12px
 
   &__title

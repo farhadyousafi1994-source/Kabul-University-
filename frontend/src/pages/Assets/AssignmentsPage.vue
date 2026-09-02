@@ -12,7 +12,7 @@
       :title="t('nav.items.assignments')"
     />
 
-    <div class="row items-center q-col-gutter-sm q-mb-sm print-hide">
+    <div class="ku-toolbar row items-center q-col-gutter-sm print-hide">
       <div class="col-12 col-md-4">
         <q-input v-model="search" dense outlined clearable debounce="350" :placeholder="t('assets.searchPlaceholder')">
           <template #prepend><q-icon name="search" /></template>
@@ -21,8 +21,8 @@
       <div class="col-6 col-md-2">
         <q-select v-model="filters.status" :options="statusOptions" :label="t('common.status')" dense outlined clearable emit-value map-options options-dense />
       </div>
-      <div class="col-6 col-md-2">
-        <UserSelect v-model="filters.assigned_to_user_id" :label="t('assignments.assignedTo')" dense outlined clearable />
+      <div class="col-12 col-md-3">
+        <EmployeeSelect v-model="filters.employee_id" :label="t('assignments.assignedTo')" :active-only="false" dense outlined clearable />
       </div>
     </div>
 
@@ -34,13 +34,13 @@
     <template v-else>
       <div class="print-area">
       <div class="print-title text-h6 q-mb-xs">{{ t('assignments.title') }}</div>
-      <q-table :rows="rows" :columns="columns" row-key="id" flat bordered dense hide-bottom wrap-cells :pagination="{ rowsPerPage: perPage }" class="q-mt-sm">
+      <q-table :rows="rows" :columns="columns" row-key="id" flat dense hide-bottom wrap-cells :pagination="{ rowsPerPage: perPage }" class="q-mt-sm data-table">
         <template v-slot:body-cell-status="props">
           <q-td :props="props"><StatusBadge :value="props.row.status" /></q-td>
         </template>
         <template v-slot:body-cell-actions="props">
           <q-td :props="props">
-            <q-btn v-if="canReturn && props.row.status === 'active'" flat dense round size="sm" color="teal" icon="undo" @click="returnAsset(props.row)">
+            <q-btn v-if="canReturn && props.row.status === 'active'" flat dense round size="sm" color="primary" icon="undo" @click="returnAsset(props.row)">
               <q-tooltip>{{ t('assets.returnAsset') }}</q-tooltip>
             </q-btn>
           </q-td>
@@ -67,7 +67,7 @@
         <q-card-section>
           <q-form @submit="doAssign" class="column q-gutter-md">
             <q-select v-model="form.asset_id" :options="assignableAssets" :label="`${t('assignments.asset')} *`" dense outlined emit-value map-options options-dense :rules="[required]" />
-            <UserSelect v-model="form.assigned_to_user_id" :label="`${t('assets.assignTo')} *`" dense outlined :rules="[required]" />
+            <EmployeeSelect v-model="form.employee_id" :label="`${t('assets.assignTo')} *`" dense outlined :rules="[required]" :error="Boolean(fieldErrors.employee_id)" :error-message="fieldErrors.employee_id" />
             <q-input v-model="form.expected_return_date" :label="t('assets.expectedReturnDate')" type="date" dense outlined />
             <q-input v-model="form.notes" :label="t('common.notes')" type="textarea" dense outlined autogrow />
             <div class="row justify-end q-gutter-sm">
@@ -90,7 +90,7 @@ import TableActionBar from 'src/components/common/TableActionBar.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
 import StatusBadge from 'src/components/common/StatusBadge.vue'
-import UserSelect from 'src/components/common/UserSelect.vue'
+import EmployeeSelect from 'src/components/common/EmployeeSelect.vue'
 import { assignmentService } from 'src/services/operations.service'
 import { assetService } from 'src/services/assets.service'
 import { useAuthStore } from 'src/stores/auth'
@@ -101,7 +101,7 @@ const $q = useQuasar()
 const authStore = useAuthStore()
 
 const barActions = computed(() => [
-  {key: 'add', icon: 'add', label: t('assignments.assignAsset'), color: 'teal', show: canAssign.value, handler: openAssign},
+  {key: 'add', icon: 'add', label: t('assignments.assignAsset'), color: 'primary', show: canAssign.value, handler: openAssign},
 ])
 
 const rows = ref([])
@@ -114,8 +114,9 @@ const loading = ref(false)
 const error = ref('')
 const saving = ref(false)
 const dialogOpen = ref(false)
-const form = reactive({ asset_id: null, assigned_to_user_id: null, expected_return_date: null, notes: '' })
-const filters = reactive({ status: null, assigned_to_user_id: null })
+const form = reactive({ asset_id: null, employee_id: null, expected_return_date: null, notes: '' })
+const filters = reactive({ status: null, employee_id: null })
+const fieldErrors = reactive({})
 const assignableAssets = ref([])
 
 const statusOptions = computed(() => [
@@ -131,7 +132,7 @@ const canReturn = computed(() => authStore.hasPermission('assets.return'))
 const columns = computed(() => [
   { name: 'asset_code', label: t('assets.assetCode'), field: 'asset_code', align: 'left' },
   { name: 'asset_name', label: t('assignments.asset'), field: 'asset_name', align: 'left' },
-  { name: 'assignee_name', label: t('assignments.assignedTo'), field: 'assignee_name', align: 'left' },
+  { name: 'employee_name', label: t('assignments.assignedTo'), field: 'employee_name', align: 'left', format: (v, row) => v || row.assignee_name || '—' },
   { name: 'assigned_date', label: t('assignments.assignedDate'), field: 'assigned_date', align: 'left', format: (v) => date(v) },
   { name: 'expected_return_date', label: t('assets.expectedReturnDate'), field: 'expected_return_date', align: 'left', format: (v) => date(v) },
   { name: 'returned_date', label: t('assignments.returnDate'), field: 'returned_date', align: 'left', format: (v) => date(v) },
@@ -146,7 +147,7 @@ async function load() {
     const params = { page: page.value, per_page: perPage.value }
     if (search.value) params.search = search.value
     if (filters.status) params.status = filters.status
-    if (filters.assigned_to_user_id) params.assigned_to_user_id = filters.assigned_to_user_id
+    if (filters.employee_id) params.employee_id = filters.employee_id
     const { data } = await assignmentService.list(params)
     rows.value = data?.data || []
     total.value = data?.meta?.total || 0
@@ -160,13 +161,14 @@ async function load() {
 
 watch(page, load)
 watch(search, () => { page.value = 1; load() })
-watch(() => [filters.status, filters.assigned_to_user_id], () => { page.value = 1; load() })
+watch(() => [filters.status, filters.employee_id], () => { page.value = 1; load() })
 
 async function openAssign() {
   form.asset_id = null
-  form.assigned_to_user_id = null
+  form.employee_id = null
   form.expected_return_date = null
   form.notes = ''
+  Object.keys(fieldErrors).forEach((k) => delete fieldErrors[k])
   dialogOpen.value = true
   try {
     const { data } = await assetService.list({ status: 'available', per_page: 100 })
@@ -175,14 +177,21 @@ async function openAssign() {
 }
 
 async function doAssign() {
+  if (saving.value) return // prevent duplicate submissions
   saving.value = true
+  Object.keys(fieldErrors).forEach((k) => delete fieldErrors[k])
   try {
     await assignmentService.assign(form.asset_id, { ...form })
+    // Success: notify -> close -> refresh.
     dialogOpen.value = false
-    $q.notify({ type: 'positive', message: t('assets.assignedSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.assignedSuccess') })
     await load()
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
+    // Failure: dialog stays open, entered data preserved.
+    for (const [k, v] of Object.entries(e.errors || {})) {
+      if (Array.isArray(v) && v.length) fieldErrors[k] = v[0]
+    }
+    $q.notify({ type: 'negative', icon: 'error', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
   } finally {
     saving.value = false
   }
@@ -191,15 +200,17 @@ async function doAssign() {
 function returnAsset(row) {
   $q.dialog({
     title: t('assets.returnAsset'),
-    message: t('assets.returnConfirm', { name: row.asset_name, assignee: row.assignee_name }),
-    cancel: true, persistent: true,
+    message: t('assets.returnConfirm', { name: row.asset_name, assignee: row.employee_name || row.assignee_name }),
+    cancel: { label: t('common.cancel'), flat: true },
+    ok: { label: t('assets.returnAsset'), color: 'primary', icon: 'undo' },
+    persistent: true,
   }).onOk(async () => {
     try {
       await assignmentService.returnAsset(row.id, { condition_on_return: 'good' })
-      $q.notify({ type: 'positive', message: t('assets.returnedSuccess') })
+      $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.returnedSuccess') })
       await load()
     } catch (e) {
-      $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
+      $q.notify({ type: 'negative', icon: 'error', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
     }
   })
 }

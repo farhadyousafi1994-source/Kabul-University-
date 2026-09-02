@@ -55,7 +55,7 @@
           <StatCard :label="t('hr.underMaintenance')" :value="summary.under_maintenance" icon="build" color="warning" />
         </div>
         <div class="col-6 col-sm-3">
-          <StatCard :label="t('hr.totalValue')" :value="currency(summary.total_value)" icon="payments" color="teal" small />
+          <StatCard :label="t('hr.totalValue')" :value="currency(summary.total_value)" icon="payments" color="primary" small />
         </div>
       </div>
 
@@ -261,7 +261,7 @@ async function doUnassign() {
   unassigningId.value = row.id
   try {
     await assetService.update(row.id, { employee_id: null })
-    $q.notify({ type: 'positive', message: t('hr.unassignedSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('hr.unassignedSuccess') })
     pendingUnassign.value = null
     // Refresh both the list and the summary counters.
     const { data } = await employeeService.get(route.params.id)

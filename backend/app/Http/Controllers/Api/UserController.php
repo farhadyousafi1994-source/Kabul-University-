@@ -23,7 +23,6 @@ class UserController extends Controller
             ->search($request->get('search'))
             ->when($request->get('status'), fn ($q, $s) => $q->where('status', $s))
             ->when($request->get('department_id'), fn ($q, $v) => $q->where('department_id', (int) $v))
-            ->when($request->get('hire_type'), fn ($q, $v) => $q->where('hire_type', $v))
             ->when($request->get('role'), fn ($q, $r) => $q->role($r))
             ->latest();
 
@@ -86,7 +85,6 @@ class UserController extends Controller
             'rows.*.department_id' => ['nullable', 'integer', 'exists:departments,id'],
             'rows.*.position' => ['nullable', 'string', 'max:255'],
             'rows.*.hire_type' => ['sometimes', \Illuminate\Validation\Rule::in(['permanent', 'contract'])],
-            'rows.*.salary' => ['sometimes', 'nullable', 'integer', 'min:0'],
         ]);
 
         [$created, $errors] = UserService::bulkImport($request->input('rows'));

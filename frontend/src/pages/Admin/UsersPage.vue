@@ -38,7 +38,6 @@ const roleOptions = computed(() => opts(roles.value))
 const departmentOptions = computed(() => opts(departments.value))
 
 const columns = computed(() => [
-  { name: 'employee_number', label: t('common.code'), field: 'employee_number', align: 'left' },
   { name: 'name', label: t('admin.users.fullName'), field: 'name', align: 'left' },
   { name: 'username', label: t('admin.users.username'), field: 'username', align: 'left' },
   { name: 'email', label: t('common.email'), field: 'email', align: 'left' },
@@ -54,7 +53,6 @@ const createForm = computed(() => ({
     { key: 'username', label: t('admin.users.username'), type: 'text', required: true },
     { key: 'email', label: t('common.email'), type: 'text', required: true },
     { key: 'password', label: t('auth.password'), type: 'password', required: true, hint: t('auth.passwordMinLength') },
-    { key: 'employee_number', label: t('common.code'), type: 'text' },
     { key: 'phone', label: t('common.phone'), type: 'text' },
     { key: 'department_id', label: t('common.department'), type: 'select', options: departmentOptions.value },
     roleField.value,
@@ -67,7 +65,6 @@ const editForm = computed(() => ({
     { key: 'name', label: t('admin.users.fullName'), type: 'text', required: true },
     { key: 'email', label: t('common.email'), type: 'text', required: true },
     { key: 'phone', label: t('common.phone'), type: 'text' },
-    { key: 'employee_number', label: t('common.code'), type: 'text' },
     { key: 'department_id', label: t('common.department'), type: 'select', options: departmentOptions.value },
     { key: 'password', label: t('auth.newPassword'), type: 'password' },
     roleField.value,
@@ -93,7 +90,7 @@ function toggle(row, activate) {
     try {
       if (activate) await userActions.activate(row.id)
       else await userActions.deactivate(row.id)
-      $q.notify({ type: 'positive', message: t('common.updatedSuccess') })
+      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.updatedSuccessEntity', { entity: t('common.entities.user') }) })
     } catch (e) {
       $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
     }

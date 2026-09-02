@@ -82,7 +82,7 @@ async function submit() {
   error.value = null
   try {
     await authStore.changePassword(form.value)
-    $q.notify({ type: 'positive', message: t('auth.passwordChangedSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('auth.passwordChangedSuccess') })
     emit('done')
   } catch (e) {
     error.value = e.message
