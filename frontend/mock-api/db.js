@@ -1,8 +1,11 @@
 import { DatabaseSync } from 'node:sqlite'
-import { copyFileSync, mkdirSync, statSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, rmSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { hashPassword } from './server.js'
+// Imported from the leaf module, never from './server.js' — that would make
+// db.js and server.js mutually dependent and break any script that imports
+// db.js first (see mock-api/crypto.js).
+import { hashPassword } from './crypto.js'
 
 // ---------------------------------------------------------------------------
 // KU-AMS development database (SQLite via node:sqlite).
@@ -11,7 +14,12 @@ import { hashPassword } from './server.js'
 // foreign keys and constraints.
 // ---------------------------------------------------------------------------
 
-const DATA_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'data')
+// The development database lives next to this file. KU_AMS_MOCK_DATA_DIR
+// points it somewhere else, which is how scripts/schema-drift.spec.mjs tests
+// the upgrade path without ever touching a developer's real database.
+const DATA_DIR = process.env.KU_AMS_MOCK_DATA_DIR
+  ? path.resolve(process.env.KU_AMS_MOCK_DATA_DIR)
+  : path.join(path.dirname(fileURLToPath(import.meta.url)), 'data')
 mkdirSync(DATA_DIR, { recursive: true })
 export const DB_PATH = path.join(DATA_DIR, 'ku-ams.sqlite')
 export const BACKUP_DIR = path.join(DATA_DIR, 'backups')
@@ -1513,6 +1521,10 @@ function seedBackupHistory(db) {
 // PRIMARY KEY / UNIQUE, and NOT NULL columns carry a non-null default.
 // ---------------------------------------------------------------------------
 
+// Columns that used to be listed by hand. The expected shape is now derived
+// straight from SCHEMA (see `expectedColumns()`), but these entries are kept —
+// and take precedence — so a column can still be given a tailor-made
+// definition when the generated one is not what an existing database needs.
 const EXPECTED_COLUMNS = {
   users: [
     ['username', 'TEXT'],
@@ -1530,12 +1542,194 @@ const EXPECTED_COLUMNS = {
   ],
 }
 
+// ---------------------------------------------------------------------------
+// SQL tooling
+//
+// SCHEMA is one big script, but it cannot be handed to `db.exec()` as a single
+// block any more: it contains CREATE INDEX statements, and an index over a
+// column that an older development database does not have yet aborts the
+// whole script with "no such column: <column>" — which took the dev server
+// down before the drift repair below ever ran. The helpers here split the
+// script so tables, repairs and indexes can be applied in the right order.
+// ---------------------------------------------------------------------------
+
+// Splits on `separator`, ignoring anything nested in parentheses or inside a
+// quoted literal (CHECK (status IN ('a,b')), DEFAULT 'x;y', ...). SQL comments
+// are removed first: apostrophes inside them ("the employee's account") would
+// otherwise be mistaken for the start of a string literal.
+function splitTopLevel(text, separator) {
+  const parts = []
+  let current = ''
+  let depth = 0
+  let quote = null
+
+  for (const ch of text) {
+    if (quote) {
+      current += ch
+      if (ch === quote) quote = null
+      continue
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      quote = ch
+      current += ch
+      continue
+    }
+    if (ch === '(') depth += 1
+    else if (ch === ')') depth = Math.max(0, depth - 1)
+
+    if (ch === separator && depth === 0) {
+      parts.push(current)
+      current = ''
+      continue
+    }
+    current += ch
+  }
+  parts.push(current)
+
+  return parts
+}
+
+const splitSqlStatements = (sql) => splitTopLevel(stripSqlComments(sql), ';')
+  .map((statement) => stripSqlComments(statement).trim())
+  .filter(Boolean)
+
+// Drops `-- …` comment lines so a documented statement/column still parses.
+const stripSqlComments = (sql) => sql
+  .split('\n')
+  .filter((line) => !/^\s*--/.test(line))
+  .join('\n')
+  .trim()
+
+const isIndexStatement = (sql) => /^CREATE\s+(UNIQUE\s+)?INDEX\b/i.test(stripSqlComments(sql))
+
+// Returns the text between the parenthesis at `openIndex` and its match.
+function readParenthesisedBody(sql, openIndex) {
+  let depth = 0
+  let quote = null
+
+  for (let i = openIndex; i < sql.length; i += 1) {
+    const ch = sql[i]
+    if (quote) {
+      if (ch === quote) quote = null
+      continue
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      quote = ch
+      continue
+    }
+    if (ch === '(') depth += 1
+    else if (ch === ')' && --depth === 0) return sql.slice(openIndex + 1, i)
+  }
+
+  return null
+}
+
+const TABLE_CONSTRAINT = /^(CONSTRAINT|FOREIGN\s+KEY|PRIMARY\s+KEY|UNIQUE|CHECK)\b/i
+
+// Reads the column definitions out of the CREATE TABLE statements of SCHEMA:
+// { table: [[column, definition], …] }. Deriving them (instead of maintaining a
+// hand-written list) means every column added to the schema from now on is
+// repaired automatically on databases created by an older revision.
+function parseSchemaColumns(schemaSql) {
+  // Comments are stripped up front: an apostrophe inside one ("the employee's
+  // account") would look like the start of a string literal to the scanner.
+  const sql = stripSqlComments(schemaSql)
+  const tables = {}
+  const pattern = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?["'`]?(\w+)["'`]?\s*\(/gi
+  let match
+
+  while ((match = pattern.exec(sql)) !== null) {
+    const body = readParenthesisedBody(sql, pattern.lastIndex - 1)
+    if (body === null) continue
+
+    const columns = []
+    for (const raw of splitTopLevel(body, ',')) {
+      const definition = stripSqlComments(raw).trim()
+      // Table-level constraints (FOREIGN KEY (…), PRIMARY KEY (…), …) are not
+      // columns and cannot be added with ALTER TABLE anyway.
+      if (!definition || TABLE_CONSTRAINT.test(definition)) continue
+
+      const parsed = /^["'`[\]]?([A-Za-z_]\w*)["'`[\]]?\s*([\s\S]*)$/.exec(definition)
+      if (!parsed) continue
+      columns.push([parsed[1], parsed[2].replace(/[,\s]+$/, '').trim()])
+    }
+    tables[match[1]] = columns
+  }
+
+  return tables
+}
+
+// ALTER TABLE ADD COLUMN is far more restrictive than CREATE TABLE, so the
+// definition taken from SCHEMA is reduced to what SQLite accepts:
+//   • PRIMARY KEY / UNIQUE / AUTOINCREMENT / generated columns — not addable,
+//   • a REFERENCES column must default to NULL (PRAGMA foreign_keys is ON),
+//   • a NOT NULL column needs a non-NULL default,
+//   • DEFAULT CURRENT_TIMESTAMP (and friends) is rejected.
+// Returns null when the column cannot be added at all.
+function columnDefinitionForAlter(ddl) {
+  let definition = String(ddl ?? '')
+    .replace(/\s+/g, ' ')
+    .replace(/[,\s]+$/, '')
+    .trim()
+  if (!definition) return null
+
+  if (/\bGENERATED\s+ALWAYS\b/i.test(definition)) return null
+  if (/\bAS\s*\(/i.test(definition)) return null
+  if (/\bAUTOINCREMENT\b/i.test(definition)) return null
+
+  definition = definition
+    .replace(/\bPRIMARY\s+KEY(\s+(ASC|DESC))?/i, '')
+    .replace(/\bUNIQUE\b/i, '')
+    .replace(/\bDEFAULT\s+CURRENT_(TIMESTAMP|DATE|TIME)\b/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  // With foreign keys enabled a REFERENCES column has to default to NULL.
+  if (/\bREFERENCES\b/i.test(definition)) {
+    definition = definition
+      .replace(/\bNOT\s+NULL\b/i, '')
+      .replace(/\bDEFAULT\s+\S+/i, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+
+  if (/\bNOT\s+NULL\b/i.test(definition) && !/\bDEFAULT\b/i.test(definition)) {
+    const type = (/^[A-Za-z]+/.exec(definition) || [''])[0].toUpperCase()
+    const fallback = /(REAL|FLOA|DOUB|NUMERIC|DECIMAL|INT|BOOL)/.test(type) ? '0' : "''"
+    definition = `${definition} DEFAULT ${fallback}`
+  }
+
+  return definition.replace(/\s+/g, ' ').trim() || null
+}
+
+let cachedExpectedColumns = null
+
+// The columns every table should have: everything SCHEMA declares, with the
+// hand-written EXPECTED_COLUMNS entries overriding the generated definition.
+function expectedColumns() {
+  if (cachedExpectedColumns) return cachedExpectedColumns
+
+  const merged = parseSchemaColumns(SCHEMA)
+  for (const [table, columns] of Object.entries(EXPECTED_COLUMNS)) {
+    const list = merged[table] ? [...merged[table]] : []
+    for (const [column, ddl] of columns) {
+      const index = list.findIndex(([name]) => name === column)
+      if (index >= 0) list[index] = [column, ddl]
+      else list.push([column, ddl])
+    }
+    merged[table] = list
+  }
+
+  cachedExpectedColumns = merged
+  return merged
+}
+
 // Returns the columns it had to add, as `${table}.${column}` — an empty array
 // for a database that is already up to date.
 export function repairSchemaDrift(db) {
   const added = []
 
-  for (const [table, columns] of Object.entries(EXPECTED_COLUMNS)) {
+  for (const [table, columns] of Object.entries(expectedColumns())) {
     const exists = db
       .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")
       .get(table)
@@ -1544,8 +1738,19 @@ export function repairSchemaDrift(db) {
     const present = new Set(db.prepare(`PRAGMA table_info("${table}")`).all().map((c) => c.name))
     for (const [column, ddl] of columns) {
       if (present.has(column)) continue
-      db.exec(`ALTER TABLE "${table}" ADD COLUMN "${column}" ${ddl}`)
-      added.push(`${table}.${column}`)
+
+      const definition = columnDefinitionForAlter(ddl)
+      if (!definition) continue
+
+      try {
+        db.exec(`ALTER TABLE "${table}" ADD COLUMN "${column}" ${definition}`)
+        present.add(column)
+        added.push(`${table}.${column}`)
+      } catch (err) {
+        // One column that SQLite refuses to add must never stop the dev
+        // server from booting — warn and keep going.
+        console.warn(`[mock-api] Could not add column ${table}.${column}: ${err.message}`)
+      }
     }
   }
 
@@ -1577,17 +1782,56 @@ function backfillSeedUserFields(db, repaired) {
   }
 }
 
-export function openDb() {
-  const db = new DatabaseSync(DB_PATH)
+// Creates the indexes of SCHEMA one by one. They run after the drift repair,
+// so an index over a freshly added column always finds it; if one still fails
+// (a database older than anything the repair can reconstruct) it is reported
+// instead of taking the dev server down with it.
+function createIndexes(db, statements) {
+  const failed = []
+
+  for (const statement of statements) {
+    try {
+      db.exec(statement)
+    } catch (err) {
+      failed.push(`${stripSqlComments(statement).split('\n')[0]} — ${err.message}`)
+    }
+  }
+
+  if (failed.length) {
+    console.warn(
+      `[mock-api] ${failed.length} development index(es) could not be created `
+      + '(the database is older than the current schema):\n  - ' + failed.join('\n  - '),
+    )
+  }
+
+  return failed
+}
+
+function prepareDatabase(db) {
   db.exec('PRAGMA journal_mode = WAL')
   db.exec('PRAGMA foreign_keys = ON')
-  db.exec(SCHEMA)
+
+  // The order below is what makes an older development database boot again:
+  //
+  //   1. tables and columns — CREATE TABLE IF NOT EXISTS is a no-op on a
+  //      database that already exists, which is precisely why step 2 exists,
+  //   2. drift repair — ALTER TABLE ADD COLUMN brings that database up to the
+  //      shape the current SCHEMA describes,
+  //   3. indexes — they MUST come last. `CREATE INDEX … ON t(col)` fails with
+  //      "no such column: col" when `t` predates `col`, and SCHEMA declares
+  //      `idx_assignments_employee` over `asset_assignments(employee_id)`.
+  //      Executing SCHEMA as one script therefore aborted `npm run dev` with
+  //      `no such column: employee_id` before the repair could ever run.
+  const statements = splitSqlStatements(SCHEMA)
+  db.exec(statements.filter((statement) => !isIndexStatement(statement)).join(';\n'))
 
   // Databases created by an older revision of the mock API keep their old
   // shape (CREATE TABLE IF NOT EXISTS never alters an existing table), so
   // bring them up to date before anything reads or writes them.
   const repaired = repairSchemaDrift(db)
   if (repaired.length) backfillSeedUserFields(db, repaired)
+
+  createIndexes(db, statements.filter(isIndexStatement))
 
   const userCount = db.prepare('SELECT COUNT(*) AS c FROM users').get().c
   if (userCount === 0) {
@@ -1608,4 +1852,59 @@ export function openDb() {
   ensureEmployeeModule(db)
 
   return db
+}
+
+// Keeps a copy of a database that cannot be opened/upgraded and removes the
+// original (plus its WAL sidecars) so the next attempt starts from scratch.
+function quarantineDatabase() {
+  try {
+    if (existsSync(DB_PATH)) {
+      const target = `${DB_PATH}.broken-${backupStamp()}`
+      copyFileSync(DB_PATH, target)
+      for (const file of [DB_PATH, `${DB_PATH}-wal`, `${DB_PATH}-shm`]) {
+        rmSync(file, { force: true })
+      }
+      return target
+    }
+    // Nothing was ever written (the failure happened on an empty file), so
+    // there is no data to preserve — only the WAL sidecars to clear away.
+    for (const file of [`${DB_PATH}-wal`, `${DB_PATH}-shm`]) {
+      rmSync(file, { force: true })
+    }
+    return null
+  } catch (err) {
+    throw new Error(`could not quarantine ${DB_PATH}: ${err.message}`)
+  }
+}
+
+let recoveringFromBrokenDatabase = false
+
+export function openDb() {
+  let db
+  try {
+    db = new DatabaseSync(DB_PATH)
+    return prepareDatabase(db)
+  } catch (err) {
+    try {
+      db?.close()
+    } catch {}
+
+    // The mock database is a disposable development artefact. If it cannot be
+    // upgraded at all, keep a copy of it and start from a fresh one rather
+    // than leaving the developer with a dev server that refuses to boot.
+    if (recoveringFromBrokenDatabase) throw err
+    recoveringFromBrokenDatabase = true
+    try {
+      const copy = quarantineDatabase()
+      console.warn(`[mock-api] The development database could not be opened (${err.message}).`)
+      console.warn(
+        copy
+          ? `[mock-api] A copy has been kept at ${copy} and a fresh database will be created.`
+          : '[mock-api] A fresh database will be created.',
+      )
+      return openDb()
+    } finally {
+      recoveringFromBrokenDatabase = false
+    }
+  }
 }

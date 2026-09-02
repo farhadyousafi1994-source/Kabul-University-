@@ -6,6 +6,10 @@ dist
 mock-api/data/*.sqlite
 mock-api/data/*.sqlite-journal
 
+# Databases the mock API set aside because it could not upgrade them
+# (see quarantineDatabase() in mock-api/db.js) — kept for inspection only
+mock-api/data/*.sqlite.broken-*
+
 # SQLite WAL sidecar files (dev mock API)
 mock-api/data/*.sqlite-shm
 mock-api/data/*.sqlite-wal

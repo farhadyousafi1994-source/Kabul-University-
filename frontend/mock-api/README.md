@@ -62,13 +62,29 @@ explicit `status` is sent). Deleting an employee never touches user accounts.
 `mock-api/data/ku-ams.sqlite` survives across sessions, so it can easily outlive
 the schema that created it. Every boot, `openDb()` therefore:
 
-1. applies `SCHEMA` (`CREATE TABLE IF NOT EXISTS` — never destructive),
+1. applies the table/column half of `SCHEMA`
+   (`CREATE TABLE IF NOT EXISTS` — never destructive),
 2. runs `repairSchemaDrift()`, which `ALTER TABLE … ADD COLUMN`s whatever a
-   newer revision introduced (`users.position` / `hire_type` / `salary`,
-   `assets.employee_id`, …) and backfills the seeded accounts with their
+   newer revision introduced and backfills the seeded accounts with their
    canonical values,
-3. seeds the database when it is empty, then
-4. runs the idempotent Employees migration (transactional, per-record checks).
+3. creates the indexes of `SCHEMA`,
+4. seeds the database when it is empty, then
+5. runs the idempotent Employees migration (transactional, per-record checks).
+
+**The order matters.** Indexes have to come last: `CREATE INDEX … ON t(col)`
+fails with `no such column: col` when `t` predates `col`, and `SCHEMA` declares
+`idx_assignments_employee` over `asset_assignments(employee_id)`. Applying
+`SCHEMA` as one script used to abort `npm run dev` with
+`Error: no such column: employee_id` on every database written before the
+Employees module existed — before the repair could ever run.
+
+The expected shape is not a hand-written list: `repairSchemaDrift()` parses the
+column definitions straight out of the `CREATE TABLE` statements in `SCHEMA`, so
+any column added from now on is repaired on old databases automatically.
+Definitions are reduced to what `ALTER TABLE ADD COLUMN` allows (no
+`PRIMARY KEY` / `UNIQUE` / `AUTOINCREMENT` / generated columns, `REFERENCES`
+columns default to `NULL`, `NOT NULL` columns get a default), and a column
+SQLite refuses to add is warned about rather than taking the dev server down.
 
 All shared writes bind through `sqlValue()`, which converts values
 `node:sqlite` refuses to bind (`undefined`, booleans, `Date`s, plain objects)
@@ -76,11 +92,26 @@ into something it accepts. A missing column used to surface at startup as
 `TypeError: Provided value cannot be bound to SQLite parameter N` and stop the
 dev server from booting at all.
 
+If a database cannot be upgraded even after the repair, it is copied aside as
+`ku-ams.sqlite.broken-<timestamp>` and a fresh one is created, so the dev server
+always starts; nothing is destroyed silently.
+
 To discard the dev data and start from the seed instead, delete the data
 directory (it is gitignored):
 
 ```bash
 rm -rf frontend/mock-api/data        # Windows: rmdir /s /q frontend\mock-api\data
+```
+
+## Regression test
+
+`scripts/schema-drift.spec.mjs` rebuilds a database in the pre-`employee_id`
+shape and asserts that the upgrade restores the columns, the indexes and the
+rows. It runs in a throwaway directory (`KU_AMS_MOCK_DATA_DIR`), so your own
+dev database is never touched:
+
+```bash
+node scripts/schema-drift.spec.mjs
 ```
 
 ## Switching to the real Laravel API
