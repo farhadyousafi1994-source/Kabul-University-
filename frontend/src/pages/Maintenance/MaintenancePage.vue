@@ -244,11 +244,12 @@ async function openRequest() {
 }
 
 async function doCreate() {
+  if (saving.value) return // prevent duplicate submissions
   saving.value = true
   try {
     await maintenanceService.createRequest({ ...form })
     dialogOpen.value = false
-    $q.notify({ type: 'positive', message: t('common.createdSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.createdSuccessEntity', { entity: t('common.entities.maintenance') }) })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
@@ -260,7 +261,7 @@ async function doCreate() {
 async function approveRequest(row) {
   try {
     await maintenanceService.approveRequest(row.id)
-    $q.notify({ type: 'positive', message: t('common.updatedSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.updatedSuccessEntity', { entity: t('common.entities.maintenance') }) })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
@@ -275,7 +276,7 @@ async function createOrder(row) {
   }).onOk(async () => {
     try {
       await maintenanceService.create({ asset_id: row.asset_id, maintenance_request_id: row.id, maintenance_type: row.maintenance_type })
-      $q.notify({ type: 'positive', message: t('common.createdSuccess') })
+      $q.notify({ type: 'positive', icon: 'check_circle', message: t('maintenance.workOrderCreated') })
       await load()
     } catch (e) {
       $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
@@ -293,7 +294,7 @@ async function assignTechnician(row) {
     const tech = userOptions.value.find((o) => o.label.toLowerCase().includes(name.toLowerCase()))?.value || null
     try {
       await maintenanceService.transition(row.id, { status: 'assigned', technician_id: tech })
-      $q.notify({ type: 'positive', message: t('common.updatedSuccess') })
+      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.updatedSuccessEntity', { entity: t('common.entities.maintenance') }) })
       await load()
     } catch (e) {
       $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
@@ -304,7 +305,7 @@ async function assignTechnician(row) {
 async function transition(row, status) {
   try {
     await maintenanceService.transition(row.id, { status })
-    $q.notify({ type: 'positive', message: t('common.updatedSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.updatedSuccessEntity', { entity: t('common.entities.maintenance') }) })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
@@ -327,7 +328,7 @@ async function completeOrder(row) {
     })
     try {
       await maintenanceService.transition(row.id, { status: 'completed', result, cost: costInput })
-      $q.notify({ type: 'positive', message: t('maintenance.workOrderCompleted') })
+      $q.notify({ type: 'positive', icon: 'check_circle', message: t('maintenance.workOrderCompleted') })
       await load()
     } catch (e) {
       $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })

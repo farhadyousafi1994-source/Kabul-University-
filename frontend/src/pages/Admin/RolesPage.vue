@@ -142,12 +142,13 @@ function openEdit(role) {
 
 async function save() {
   if (!form.name) { $q.notify({ type: 'negative', message: t('common.required') }); return }
+  if (saving.value) return // prevent duplicate submissions
   saving.value = true
   try {
     if (editing.value) await roleService.update(editing.value.id, { name: form.name, permission_ids: form.permission_ids })
     else await roleService.create({ name: form.name, permission_ids: form.permission_ids })
     dialogOpen.value = false
-    $q.notify({ type: 'positive', message: editing.value ? t('common.updatedSuccess') : t('common.createdSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: editing.value ? t('common.updatedSuccessEntity', { entity: t('common.entities.role') }) : t('common.createdSuccessEntity', { entity: t('common.entities.role') }) })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
@@ -164,7 +165,7 @@ function remove(role) {
   }).onOk(async () => {
     try {
       await roleService.remove(role.id)
-      $q.notify({ type: 'positive', message: t('common.deletedSuccess') })
+      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.deletedSuccessEntity', { entity: t('common.entities.role') }) })
       await load()
     } catch (e) {
       $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })

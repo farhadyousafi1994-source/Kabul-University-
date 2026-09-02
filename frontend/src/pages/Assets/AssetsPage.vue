@@ -99,8 +99,8 @@
         </q-card-section>
         <q-card-section>
           <q-form @submit="save" class="row q-col-gutter-md">
-            <q-input v-model="form.name" :label="`${t('common.name')} *`" dense outlined class="col-12" :rules="[required]"/>
-            <q-select v-model="form.category_id" :options="categoryOptions" :label="`${t('common.category')} *`" dense outlined emit-value map-options options-dense class="col-12 col-md-6" :rules="[required]"/>
+            <q-input v-model="form.name" :label="`${t('common.name')} *`" dense outlined class="col-12" :rules="[required]" :error="Boolean(fieldErrors.name)" :error-message="fieldErrors.name" @update:model-value="delete fieldErrors.name"/>
+            <q-select v-model="form.category_id" :options="categoryOptions" :label="`${t('common.category')} *`" dense outlined emit-value map-options options-dense class="col-12 col-md-6" :rules="[required]" :error="Boolean(fieldErrors.category_id)" :error-message="fieldErrors.category_id" @update:model-value="delete fieldErrors.category_id"/>
             <q-select v-model="form.subcategory_id" :options="subcategoryOptions" :label="t('common.subcategory')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6"/>
             <q-input v-model="form.brand" :label="t('assets.brand')" dense outlined class="col-6 col-md-3"/>
             <q-input v-model="form.model" :label="t('assets.model')" dense outlined class="col-6 col-md-3"/>
@@ -114,7 +114,19 @@
             <q-input v-model="form.warranty_expiry_date" :label="t('assets.warrantyExpiry')" type="date" dense outlined class="col-6 col-md-3"/>
             <q-select v-model="form.status" :options="statusOptions" :label="t('common.status')" dense outlined emit-value map-options options-dense class="col-6 col-md-3"/>
             <q-select v-model="form.condition" :options="conditionOptions" :label="t('common.condition')" dense outlined emit-value map-options options-dense class="col-6 col-md-3"/>
-            <EmployeeSelect v-model="form.employee_id" :label="t('assets.assignedTo')" dense outlined class="col-12 col-md-6"/>
+            <EmployeeSelect
+              v-model="form.employee_id"
+              :label="t('assets.assignTo')"
+              :disable="saving"
+              dense
+              outlined
+              clearable
+              class="col-12 col-md-6"
+            >
+              <template #after>
+                <span v-if="!form.employee_id" class="text-caption text-grey-6">{{ t('assets.unassigned') }}</span>
+              </template>
+            </EmployeeSelect>
             <q-select v-model="form.campus_id" :options="campusOptions" :label="t('common.campus')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-4"/>
             <q-select v-model="form.faculty_id" :options="facultyOptions" :label="t('common.faculty')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-4"/>
             <q-select v-model="form.department_id" :options="departmentOptions" :label="t('common.department')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-4"/>
@@ -123,8 +135,10 @@
             <q-select v-model="form.room_id" :options="roomOptions" :label="t('common.room')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-4"/>
             <q-input v-model="form.description" :label="t('common.description')" type="textarea" dense outlined autogrow class="col-12"/>
             <div class="col-12 row justify-end q-gutter-sm">
-              <q-btn :label="t('common.cancel')" flat color="grey-7" @click="dialogOpen = false"/>
-              <q-btn :label="t('common.save')" type="submit" color="primary" :loading="saving"/>
+              <q-btn :label="t('common.cancel')" flat color="grey-7" :disable="saving" @click="dialogOpen = false"/>
+              <q-btn :label="editing ? t('common.update') : t('common.save')" type="submit" color="primary" :loading="saving">
+                <template #loading><q-spinner-dots /></template>
+              </q-btn>
             </div>
           </q-form>
         </q-card-section>
@@ -142,7 +156,7 @@
         <q-card-section>
           <div class="text-caption text-grey-7 q-mb-sm">{{ assignTarget?.name }} · {{ assignTarget?.asset_code }}</div>
           <q-form @submit="doAssign" class="column q-gutter-md">
-            <UserSelect v-model="assignForm.assigned_to_user_id" :label="`${t('assets.assignTo')} *`" dense outlined :rules="[required]"/>
+            <EmployeeSelect v-model="assignForm.employee_id" :label="`${t('assets.assignTo')} *`" dense outlined :rules="[required]" :error="Boolean(fieldErrors.employee_id)" :error-message="fieldErrors.employee_id" />
             <q-input v-model="assignForm.expected_return_date" :label="t('assets.expectedReturnDate')" type="date" dense outlined/>
             <q-input v-model="assignForm.notes" :label="t('common.notes')" type="textarea" dense outlined autogrow/>
             <div class="row justify-end q-gutter-sm">
@@ -162,7 +176,6 @@ import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import TableActionBar from 'src/components/common/TableActionBar.vue'
-import UserSelect from 'src/components/common/UserSelect.vue'
 import EmployeeSelect from 'src/components/common/EmployeeSelect.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
@@ -224,7 +237,11 @@ const form = reactive({ status: 'available', condition: 'good', useful_life: 5 }
 const assignOpen = ref(false)
 const assigning = ref(false)
 const assignTarget = ref(null)
-const assignForm = reactive({ assigned_to_user_id: null, expected_return_date: null, notes: '' })
+const assignForm = reactive({ employee_id: null, expected_return_date: null, notes: '' })
+const fieldErrors = reactive({})
+function resetErrors() {
+  Object.keys(fieldErrors).forEach((k) => delete fieldErrors[k])
+}
 
 const filters = reactive({ status: null, category_id: null, department_id: null, code: '' })
 const scanCode = ref('')
@@ -246,7 +263,7 @@ const columns = computed(() => [
   { name: 'purchase_price', label: t('common.price'), field: 'purchase_price', align: 'right', format: (v) => currency(v) },
   { name: 'current_value', label: t('common.value'), field: 'current_value', align: 'right', format: (v) => currency(v) },
   { name: 'department_name', label: t('common.department'), field: 'department_name', align: 'left' },
-  { name: 'employee_name', label: t('assets.assignedTo'), field: 'employee_name', align: 'left', format: (v) => v || '—' },
+  { name: 'employee_name', label: t('assets.assignedTo'), field: 'employee_name', align: 'left', format: (v, row) => v ? `${v}${row.employee_code ? ' (' + row.employee_code + ')' : ''}` : t('assets.unassigned') },
   { name: 'status', label: t('common.status'), field: 'status', align: 'left' },
   { name: 'condition', label: t('common.condition'), field: 'condition', align: 'left' },
   { name: 'purchase_date', label: t('assets.purchaseDate'), field: 'purchase_date', align: 'left', format: (v) => date(v) },
@@ -286,12 +303,14 @@ function applyScan() {
 
 function openCreate() {
   editing.value = null
+  resetErrors()
   Object.assign(form, { name: '', category_id: null, subcategory_id: null, brand: '', model: '', serial_number: '', supplier_id: null, purchase_date: '', purchase_price: null, current_value: null, salvage_value: 0, useful_life: 5, warranty_expiry_date: '', status: 'available', condition: 'good', campus_id: null, faculty_id: null, department_id: null, building_id: null, floor_id: null, room_id: null, employee_id: null, description: '' })
   dialogOpen.value = true
 }
 
 function openEdit(row) {
   editing.value = row
+  resetErrors()
   Object.assign(form, {
     name: row.name, category_id: row.category_id, subcategory_id: row.subcategory_id,
     brand: row.brand, model: row.model, serial_number: row.serial_number,
@@ -306,38 +325,62 @@ function openEdit(row) {
 }
 
 async function save() {
+  if (saving.value) return // prevent duplicate submissions
   saving.value = true
+  resetErrors()
   try {
     if (editing.value) await assetService.update(editing.value.id, { ...form })
     else await assetService.create({ ...form })
+    // Success: notify -> close -> refresh.
     dialogOpen.value = false
-    $q.notify({ type: 'positive', message: editing.value ? t('common.updatedSuccess') : t('common.createdSuccess') })
+    $q.notify({
+      type: 'positive',
+      icon: 'check_circle',
+      message: editing.value
+        ? t('common.updatedSuccess', { entity: t('common.entities.asset') })
+        : t('common.createdSuccess', { entity: t('common.entities.asset') }),
+    })
     await load()
   } catch (e) {
+    // Failure: dialog stays open, entered data is preserved.
+    applyFieldErrors(e.errors)
     const msg = e.errors ? Object.values(e.errors).flat().join(' · ') : e.message
-    $q.notify({ type: 'negative', message: msg || t('common.saveFailed') })
+    $q.notify({ type: 'negative', icon: 'error', message: msg || t('common.saveFailed') })
   } finally {
     saving.value = false
   }
 }
 
+/** Map server validation errors onto the form fields that can show them. */
+function applyFieldErrors(errors = {}) {
+  const showable = ['name', 'category_id', 'employee_id', 'serial_number', 'barcode', 'qr_code', 'subcategory_id', 'supplier_id']
+  for (const [k, v] of Object.entries(errors)) {
+    if (showable.includes(k) && Array.isArray(v) && v.length) fieldErrors[k] = v[0]
+  }
+}
+
 function openAssign(row) {
   assignTarget.value = row
-  assignForm.assigned_to_user_id = null
+  resetErrors()
+  assignForm.employee_id = null
   assignForm.expected_return_date = null
   assignForm.notes = ''
   assignOpen.value = true
 }
 
 async function doAssign() {
+  if (assigning.value) return // prevent duplicate submissions
   assigning.value = true
+  resetErrors()
   try {
     await assignmentService.assign(assignTarget.value.id, { ...assignForm })
+    // Success: notify -> close -> refresh.
     assignOpen.value = false
-    $q.notify({ type: 'positive', message: t('assets.assignedSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.assignedSuccess') })
     await load()
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
+    applyFieldErrors(e.errors)
+    $q.notify({ type: 'negative', icon: 'error', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
   } finally {
     assigning.value = false
   }
@@ -346,15 +389,17 @@ async function doAssign() {
 function confirmArchive(row) {
   $q.dialog({
     title: t('common.confirmArchiveTitle'),
-    message: t('common.confirmArchiveMessage'),
-    cancel: true, persistent: true, color: 'negative',
+    message: t('common.confirmArchiveMessage', { entity: t('common.entities.asset'), name: row.name }),
+    cancel: { label: t('common.cancel'), flat: true },
+    ok: { label: t('common.archive'), color: 'negative', icon: 'archive' },
+    persistent: true, color: 'negative',
   }).onOk(async () => {
     try {
       await assetService.remove(row.id)
-      $q.notify({ type: 'positive', message: t('common.archivedSuccess') })
+      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.archivedSuccess', { entity: t('common.entities.asset') }) })
       await load()
     } catch (e) {
-      $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
+      $q.notify({ type: 'negative', icon: 'error', message: e.message || t('common.saveFailed') })
     }
   })
 }

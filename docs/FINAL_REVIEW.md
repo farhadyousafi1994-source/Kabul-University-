@@ -38,6 +38,14 @@ environment, known limitations, and the go-live checklist.
     `permission:` middleware as appropriate,
   - Spatie permission tables migration added so `migrate --seed` works
     without vendor-publish,
+  - **Employee/user separation review (2026-09-02):** `users` is a pure
+    auth/accounts table; all staff data lives in the dedicated `employees`
+    table linked via `employees.user_id`. Migration path
+    `2026_09_02_000010 → 000020 → 000030` copies staff data out of `users`,
+    adds `employee_id` FKs to `assets`/`asset_assignments`, backfills every
+    existing assignment and mirrors `assets.employee_id`, then drops
+    `employee_number`/`position`/`hire_type`/`salary` from `users`
+    (reversible; no user or asset rows are ever deleted).
   - 17 test classes/unit tests authored against the real route/request/service
     contracts (run them with `php artisan test` once deployed).
 - **Mock API:** contract-identical to the backend routes; 40+ endpoint smoke
@@ -45,6 +53,11 @@ environment, known limitations, and the go-live checklist.
 - **Frontend (Quasar):** 28 pages, all with loading/empty/error states,
   search, pagination, filters, responsive layout, permission checks;
   `vite build` passes; dev server compiles all modules.
+- **Employee assignment flow (2026-09-02):** `node scripts/api-contract-check.mjs`
+  → 22/22 PASS (assign → mirror → assets.employee_id, employee-scoped lists,
+  unassign, delete-block while assets assigned); `node scripts/employee-select.spec.mjs`
+  → 10/10 PASS (searchable `EmployeeSelect` QSelect renders `CODE — Name — Dept`
+  labels, emits the real `employees.id`, preselects on edit, clears to null).
 
 ## 3. Known limitations (accepted for this milestone)
 

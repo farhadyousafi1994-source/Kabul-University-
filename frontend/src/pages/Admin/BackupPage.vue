@@ -296,7 +296,7 @@ async function takeBackup() {
       backupService.downloadUrl(data.id),
       data.filename || `ku-ams-backup.${format.value === 'json' ? 'json' : 'sqlite'}`,
     )
-    $q.notify({ type: 'positive', message: t('admin.backup.takenSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.backup.takenSuccess') })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.error') })
@@ -310,7 +310,7 @@ async function download(row) {
   downloadingId.value = row.id
   try {
     await backupService.downloadFile(backupService.downloadUrl(row.id), row.filename || 'ku-ams-backup')
-    $q.notify({ type: 'positive', message: t('admin.backup.downloadedSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.backup.downloadedSuccess') })
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.error') })
   } finally {
@@ -323,7 +323,7 @@ async function downloadFreshTemplate() {
   try {
     const stamp = new Date().toISOString().slice(0, 10)
     await backupService.downloadFile(backupService.freshTemplateUrl, `ku-ams-fresh-start-${stamp}.json`)
-    $q.notify({ type: 'positive', message: t('admin.backup.freshTemplateDownloaded') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.backup.freshTemplateDownloaded') })
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.error') })
   } finally {
@@ -340,7 +340,7 @@ async function doRestore() {
   restoring.value = true
   try {
     await backupService.restore(snapshot.value)
-    $q.notify({ type: 'positive', message: t('admin.backup.restoredSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.backup.restoredSuccess') })
     confirmRestore.value = false
     clearFile()
     await load()
@@ -358,7 +358,7 @@ async function doDelete() {
   deletingId.value = row.id
   try {
     await backupService.remove(row.id)
-    $q.notify({ type: 'positive', message: t('admin.backup.deletedSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.backup.deletedSuccess') })
     pendingDelete.value = null
     await load()
   } catch (e) {

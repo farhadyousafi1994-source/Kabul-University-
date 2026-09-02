@@ -402,6 +402,7 @@ function openEdit(row) {
 }
 
 async function save() {
+  if (saving.value) return // prevent duplicate submissions
   saving.value = true
   resetErrors()
   try {
@@ -409,10 +410,10 @@ async function save() {
     if (!payload.employee_code) delete payload.employee_code
     if (editing.value) {
       await employeeService.update(editing.value.id, payload)
-      $q.notify({ type: 'positive', message: t('common.updatedSuccess') })
+      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.updatedSuccessEntity', { entity: t('common.entities.employee') }) })
     } else {
       await employeeService.create(payload)
-      $q.notify({ type: 'positive', message: t('common.createdSuccess') })
+      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.createdSuccessEntity', { entity: t('common.entities.employee') }) })
     }
     dialogOpen.value = false
     await Promise.all([load(), loadStats()])
@@ -430,11 +431,11 @@ async function save() {
 // ----- delete ---------------------------------------------------------------
 async function doDelete() {
   const row = pendingDelete.value
-  if (!row || deletingId.value) return
+  if (!row || deletingId.value) return // duplicate guard
   deletingId.value = row.id
   try {
     await employeeService.remove(row.id)
-    $q.notify({ type: 'positive', message: t('common.deletedSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.deletedSuccessEntity', { entity: t('common.entities.employee') }) })
     pendingDelete.value = null
     await Promise.all([load(), loadStats()])
   } catch (e) {

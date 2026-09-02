@@ -24,15 +24,18 @@ class UserResource extends JsonResource
             'username' => $this->username,
             'email' => $this->email,
             'phone' => $this->phone,
-            'employee_number' => $this->employee_number,
             'department_id' => $this->department_id,
-            'position' => $this->position,
-            'hire_type' => $this->hire_type,
-            'salary' => (int) $this->salary,
             'department' => $this->whenLoaded('department', fn () => [
                 'id' => $this->department->id,
                 'name' => $this->department->name,
             ]),
+            // Optional link to the staff profile — employee data itself lives
+            // in the dedicated `employees` table (single source of truth).
+            'employee' => $this->whenLoaded('employee', fn () => $this->employee ? [
+                'id' => $this->employee->id,
+                'employee_code' => $this->employee->employee_code,
+                'full_name' => $this->employee->full_name,
+            ] : null),
             'status' => $this->status,
             'avatar' => $this->avatar,
             'roles' => $roles,

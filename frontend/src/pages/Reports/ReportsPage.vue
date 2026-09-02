@@ -112,7 +112,7 @@ async function exportCsv() {
     anchor.click()
     anchor.remove()
     setTimeout(() => URL.revokeObjectURL(url), 4000)
-    $q.notify({ type: 'positive', message: t('common.exportedSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.exportedSuccess') })
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.exportFailed') })
   } finally {

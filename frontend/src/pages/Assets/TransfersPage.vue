@@ -172,11 +172,12 @@ watch(search, () => { page.value = 1; load() })
 watch(() => filters.status, () => { page.value = 1; load() })
 
 async function doCreate() {
+  if (saving.value) return // prevent duplicate submissions
   saving.value = true
   try {
     await transferService.store(form.asset_id, { ...form })
     dialogOpen.value = false
-    $q.notify({ type: 'positive', message: t('assets.transferCreated') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.transferCreated') })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
@@ -188,7 +189,7 @@ async function doCreate() {
 async function transition(row, status) {
   try {
     await transferService.transition(row.id, status)
-    $q.notify({ type: 'positive', message: t('common.updatedSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.updatedSuccessEntity', { entity: t('common.entities.transfer') }) })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })

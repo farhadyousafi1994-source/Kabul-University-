@@ -2,6 +2,10 @@ import http from './api'
 
 /**
  * Module 8/9/10 — Assignments, transfers, asset requests.
+ *
+ * Assignments are made to EMPLOYEES (the dedicated `employees` table), never
+ * to user accounts: the payload carries the selected `employee_id` and the
+ * backend mirrors it onto `assets.employee_id`.
  */
 export const assignmentService = {
   list: (params = {}) => http.get('/asset-assignments', params),

@@ -127,7 +127,7 @@ async function doPdf() {
   try {
     const cols = exportColumns()
     await downloadPdf(baseFilename.value, props.rows, cols.length ? cols : null, { title: reportTitle.value })
-    $q.notify({ type: 'positive', message: t('common.pdfExported') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.pdfExported') })
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.exportFailed') })
   } finally {
@@ -141,7 +141,7 @@ async function doExcel() {
   try {
     const cols = exportColumns()
     await downloadExcel(baseFilename.value, props.rows, cols.length ? cols : null, { sheetName: reportTitle.value })
-    $q.notify({ type: 'positive', message: t('common.excelExported') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.excelExported') })
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.exportFailed') })
   } finally {

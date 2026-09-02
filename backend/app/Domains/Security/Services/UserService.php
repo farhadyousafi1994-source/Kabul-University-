@@ -2,6 +2,7 @@
 
 namespace App\Domains\Security\Services;
 
+use App\Domains\HR\Models\Employee;
 use App\Domains\System\Services\ActivityLogService;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
@@ -20,11 +21,7 @@ class UserService
             'username' => $data['username'],
             'email' => $data['email'],
             'phone' => $data['phone'] ?? null,
-            'employee_number' => $data['employee_number'] ?? null,
             'department_id' => $data['department_id'] ?? null,
-            'position' => $data['position'] ?? null,
-            'hire_type' => $data['hire_type'] ?? 'permanent',
-            'salary' => (int) ($data['salary'] ?? 0),
             'status' => $data['status'] ?? User::STATUS_ACTIVE,
             'password' => Hash::make($data['password']),
         ]);
@@ -48,11 +45,7 @@ class UserService
             'username' => $data['username'] ?? $user->username,
             'email' => $data['email'] ?? $user->email,
             'phone' => array_key_exists('phone', $data) ? $data['phone'] : $user->phone,
-            'employee_number' => array_key_exists('employee_number', $data) ? $data['employee_number'] : $user->employee_number,
             'department_id' => array_key_exists('department_id', $data) ? $data['department_id'] : $user->department_id,
-            'position' => array_key_exists('position', $data) ? $data['position'] : $user->position,
-            'hire_type' => $data['hire_type'] ?? $user->hire_type,
-            'salary' => array_key_exists('salary', $data) ? (int) ($data['salary'] ?? 0) : $user->salary,
             'status' => $data['status'] ?? $user->status,
         ]);
 
@@ -103,15 +96,19 @@ class UserService
     }
 
     /**
-     * Bulk-import employees from a CSV payload. Each row:
-     * name, email, phone, department_id, position, hire_type, salary.
+     * Bulk-import staff from a CSV payload. Each row:
+     * name, email, phone, department_id, position, hire_type.
+     *
+     * Creates the login account (users) AND the linked staff profile
+     * (employees) — HR data belongs to the employees table, authentication
+     * data to users.
+     *
      * Returns [created, errors] where errors is [{row, reason}].
      */
     public static function bulkImport(array $rows): array
     {
         $created = 0;
         $errors = [];
-        $count = User::query()->withTrashed()->count();
 
         foreach ($rows as $i => $row) {
             $name = trim((string) ($row['name'] ?? ''));
@@ -127,7 +124,7 @@ class UserService
             }
 
             $base = strtolower(preg_replace('/[^a-z]+/', '.', $name));
-            $base = trim($base, '.') ?: ('employee' . ($count + 1));
+            $base = trim($base, '.') ?: ('employee' . (User::query()->withTrashed()->count() + 1));
             $username = $base;
             $suffix = 1;
             while (User::query()->withTrashed()->where('username', $username)->orWhere('email', $email)->exists()) {
@@ -135,17 +132,12 @@ class UserService
                 $username = $base . $suffix;
             }
 
-            $count++;
             $user = User::create([
                 'name' => $name,
                 'username' => $username,
                 'email' => $email,
                 'phone' => $row['phone'] ?? null,
-                'employee_number' => 'KU-' . str_pad((string) $count, 4, '0', STR_PAD_LEFT),
                 'department_id' => $row['department_id'] ?? null,
-                'position' => $row['position'] ?? null,
-                'hire_type' => $row['hire_type'] ?? 'permanent',
-                'salary' => (int) ($row['salary'] ?? 0),
                 'status' => User::STATUS_ACTIVE,
                 'password' => Hash::make('password123'),
             ]);
@@ -154,6 +146,24 @@ class UserService
             if ($role) {
                 $user->assignRole($role->name);
             }
+
+            // Staff profile in the dedicated employees table, linked to the
+            // new account through employees.user_id.
+            $nameParts = preg_split('/\s+/', $name) ?: [];
+            Employee::create([
+                'employee_code' => Employee::nextCode(),
+                'first_name' => array_shift($nameParts) ?: $name,
+                'last_name' => implode(' ', $nameParts),
+                'email' => $email,
+                'phone' => $row['phone'] ?? null,
+                'department_id' => $row['department_id'] ?? null,
+                'position' => $row['position'] ?? null,
+                'job_title' => $row['position'] ?? null,
+                'employment_type' => ($row['hire_type'] ?? null) === 'contract' ? 'contract' : 'full_time',
+                'status' => Employee::STATUS_ACTIVE,
+                'hire_date' => now()->toDateString(),
+                'user_id' => $user->id,
+            ]);
 
             $created++;
             ActivityLogService::record('created', 'Users (bulk import)', User::class, $user->id, $user->name);

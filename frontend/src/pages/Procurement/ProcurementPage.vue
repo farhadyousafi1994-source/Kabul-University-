@@ -254,11 +254,12 @@ function openPr() {
 }
 
 async function doCreatePr() {
+  if (saving.value) return // prevent duplicate submissions
   saving.value = true
   try {
     await procurementService.createPurchaseRequest({ ...prForm })
     prOpen.value = false
-    $q.notify({ type: 'positive', message: t('common.createdSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.createdSuccessEntity', { entity: t('common.entities.purchaseOrder') }) })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
@@ -274,11 +275,12 @@ function openApprove(row) {
 }
 
 async function doApprove() {
+  if (saving.value) return // prevent duplicate submissions
   saving.value = true
   try {
     await procurementService.approvePurchaseRequest(approveTarget.value.id, { items: approveForm.items })
     approveOpen.value = false
-    $q.notify({ type: 'positive', message: t('common.savedSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.savedSuccessEntity', { entity: t('common.entities.purchaseOrder') }) })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
@@ -302,7 +304,7 @@ async function send(row) {
     .onOk(async () => {
       try {
         await procurementService.sendOrder(row.id)
-        $q.notify({ type: 'positive', message: t('common.savedSuccess') })
+        $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.savedSuccessEntity', { entity: t('common.entities.purchaseOrder') }) })
         await load()
       } catch (e) {
         $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
@@ -318,7 +320,7 @@ async function receive(row) {
   }).onOk(async () => {
     try {
       await procurementService.receive(row.id, {})
-      $q.notify({ type: 'positive', message: t('common.savedSuccess') })
+      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.savedSuccessEntity', { entity: t('common.entities.purchaseOrder') }) })
       await load()
     } catch (e) {
       $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })

@@ -238,11 +238,12 @@ watch(search, () => { page.value = 1; load() })
 watch(() => filters.status, () => { page.value = 1; load() })
 
 async function doCreate() {
+  if (saving.value) return // prevent duplicate submissions
   saving.value = true
   try {
     const { data } = await auditService.store({ ...form })
     dialogOpen.value = false
-    $q.notify({ type: 'positive', message: t('common.createdSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.createdSuccessEntity', { entity: t('common.entities.audit') }) })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
@@ -266,7 +267,7 @@ async function openAudit(row) {
 async function startAudit() {
   try {
     await auditService.start(current.value.id)
-    $q.notify({ type: 'positive', message: t('common.savedSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.savedSuccessEntity', { entity: t('common.entities.audit') }) })
     await openAudit(current.value)
     await load()
   } catch (e) {
@@ -313,7 +314,7 @@ async function complete(audit) {
     try {
       await auditService.complete(audit.id)
       runOpen.value = false
-      $q.notify({ type: 'positive', message: t('common.savedSuccess') })
+      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.savedSuccessEntity', { entity: t('common.entities.audit') }) })
       await load()
     } catch (e) {
       $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
@@ -330,7 +331,7 @@ async function cancel(audit) {
     try {
       await auditService.cancel(audit.id)
       runOpen.value = false
-      $q.notify({ type: 'positive', message: t('common.savedSuccess') })
+      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.savedSuccessEntity', { entity: t('common.entities.audit') }) })
       await load()
     } catch (e) {
       $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })

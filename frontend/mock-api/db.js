@@ -30,11 +30,7 @@ CREATE TABLE IF NOT EXISTS users (
   username TEXT NOT NULL UNIQUE,
   email TEXT NOT NULL UNIQUE,
   phone TEXT,
-  employee_number TEXT UNIQUE,
   department_id INTEGER,
-  position TEXT,
-  hire_type TEXT NOT NULL DEFAULT 'permanent',
-  salary REAL NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'active',
   password_hash TEXT NOT NULL,
   avatar TEXT,
@@ -264,7 +260,10 @@ CREATE TABLE IF NOT EXISTS asset_documents (
 CREATE TABLE IF NOT EXISTS asset_assignments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   asset_id INTEGER NOT NULL,
-  assigned_to_user_id INTEGER NOT NULL,
+  -- The assignee is an EMPLOYEE (employees table). assigned_to_user_id is a
+  -- legacy mirror of the employee's linked login account, when one exists.
+  employee_id INTEGER,
+  assigned_to_user_id INTEGER,
   assigned_by INTEGER NOT NULL,
   assigned_date TEXT,
   expected_return_date TEXT,
@@ -274,10 +273,12 @@ CREATE TABLE IF NOT EXISTS asset_assignments (
   notes TEXT,
   created_at TEXT, updated_at TEXT,
   FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE RESTRICT,
-  FOREIGN KEY (assigned_to_user_id) REFERENCES users(id) ON DELETE RESTRICT,
+  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE SET NULL,
+  FOREIGN KEY (assigned_to_user_id) REFERENCES users(id) ON DELETE SET NULL,
   FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE RESTRICT
 );
 CREATE INDEX IF NOT EXISTS idx_assignments_asset ON asset_assignments(asset_id, status);
+CREATE INDEX IF NOT EXISTS idx_assignments_employee ON asset_assignments(employee_id);
 
 CREATE TABLE IF NOT EXISTS asset_transfers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -647,17 +648,33 @@ function mulberry32(a) {
 // The canonical seeded accounts. Kept at module scope because the schema
 // drift repair backfills these values into databases created before a column
 // existed (see repairSchemaDrift / backfillSeedUserFields).
+// Authentication accounts ONLY — staff/HR attributes (employee code,
+// position, employment type) belong to the `employees` table and are seeded
+// there (see SEED_STAFF_INFO / ensureEmployeeModule).
 const SEED_USERS = [
-  { name: 'Abdul Rahman Ahmadzai', username: 'superadmin', email: 'superadmin@ku.edu.af', phone: '+93 700 000 001', employee_number: 'KU-0001', role: 'Super Admin', position: 'IT Director', hire_type: 'permanent', salary: 45000 },
-  { name: 'Maryam Nazari', username: 'administrator', email: 'admin@ku.edu.af', phone: '+93 700 000 002', employee_number: 'KU-0002', role: 'University Administrator', position: 'Administrator', hire_type: 'permanent', salary: 38000 },
-  { name: 'Hassan Karimi', username: 'assetmanager', email: 'assets@ku.edu.af', phone: '+93 700 000 003', employee_number: 'KU-0003', role: 'Asset Manager', position: 'Asset Manager', hire_type: 'permanent', salary: 32000 },
-  { name: 'Sara Rahimi', username: 'facultymanager', email: 'faculty.cs@ku.edu.af', phone: '+93 700 000 004', employee_number: 'KU-0004', role: 'Faculty Manager', position: 'Lecturer', hire_type: 'permanent', salary: 28000 },
-  { name: 'Omid Stanikzai', username: 'deptmanager', email: 'dept@ku.edu.af', phone: '+93 700 000 005', employee_number: 'KU-0005', role: 'Department Manager', position: 'Department Manager', hire_type: 'contract', salary: 26000 },
-  { name: 'Nadia Wahidi', username: 'warehousemanager', email: 'warehouse@ku.edu.af', phone: '+93 700 000 006', employee_number: 'KU-0006', role: 'Warehouse Manager', position: 'Warehouse Manager', hire_type: 'permanent', salary: 30000 },
-  { name: 'Farid Ahmadi', username: 'technician', email: 'tech@ku.edu.af', phone: '+93 700 000 007', employee_number: 'KU-0007', role: 'Maintenance Technician', position: 'Technician', hire_type: 'contract', salary: 18000 },
-  { name: 'Zarghona Habibi', username: 'auditor', email: 'audit@ku.edu.af', phone: '+93 700 000 008', employee_number: 'KU-0008', role: 'Auditor', position: 'Auditor', hire_type: 'permanent', salary: 34000, status: 'leave' },
-  { name: 'Ahmad Farid', username: 'employee', email: 'employee@ku.edu.af', phone: '+93 700 000 009', employee_number: 'KU-0009', role: 'Employee', position: 'Research Assistant', hire_type: 'contract', salary: 15000 },
+  { name: 'Abdul Rahman Ahmadzai', username: 'superadmin', email: 'superadmin@ku.edu.af', phone: '+93 700 000 001', role: 'Super Admin', status: 'active' },
+  { name: 'Maryam Nazari', username: 'administrator', email: 'admin@ku.edu.af', phone: '+93 700 000 002', role: 'University Administrator', status: 'active' },
+  { name: 'Hassan Karimi', username: 'assetmanager', email: 'assets@ku.edu.af', phone: '+93 700 000 003', role: 'Asset Manager', status: 'active' },
+  { name: 'Sara Rahimi', username: 'facultymanager', email: 'faculty.cs@ku.edu.af', phone: '+93 700 000 004', role: 'Faculty Manager', status: 'active' },
+  { name: 'Omid Stanikzai', username: 'deptmanager', email: 'dept@ku.edu.af', phone: '+93 700 000 005', role: 'Department Manager', status: 'active' },
+  { name: 'Nadia Wahidi', username: 'warehousemanager', email: 'warehouse@ku.edu.af', phone: '+93 700 000 006', role: 'Warehouse Manager', status: 'active' },
+  { name: 'Farid Ahmadi', username: 'technician', email: 'tech@ku.edu.af', phone: '+93 700 000 007', role: 'Maintenance Technician', status: 'active' },
+  { name: 'Zarghona Habibi', username: 'auditor', email: 'audit@ku.edu.af', phone: '+93 700 000 008', role: 'Auditor', status: 'leave' },
+  { name: 'Ahmad Farid', username: 'employee', email: 'employee@ku.edu.af', phone: '+93 700 000 009', role: 'Employee', status: 'active' },
 ]
+
+// HR profile for each seeded account — consumed by ensureEmployeeModule().
+const SEED_STAFF_INFO = {
+  superadmin: { employee_code: 'KU-0001', position: 'IT Director', employment_type: 'full_time' },
+  administrator: { employee_code: 'KU-0002', position: 'Administrator', employment_type: 'full_time' },
+  assetmanager: { employee_code: 'KU-0003', position: 'Asset Manager', employment_type: 'full_time' },
+  facultymanager: { employee_code: 'KU-0004', position: 'Lecturer', employment_type: 'full_time' },
+  deptmanager: { employee_code: 'KU-0005', position: 'Department Manager', employment_type: 'contract' },
+  warehousemanager: { employee_code: 'KU-0006', position: 'Warehouse Manager', employment_type: 'full_time' },
+  technician: { employee_code: 'KU-0007', position: 'Technician', employment_type: 'contract' },
+  auditor: { employee_code: 'KU-0008', position: 'Auditor', employment_type: 'full_time' },
+  employee: { employee_code: 'KU-0009', position: 'Research Assistant', employment_type: 'contract' },
+}
 
 export function seed(db) {
   const now = new Date().toISOString()
@@ -742,8 +759,6 @@ export function seed(db) {
   for (const u of SEED_USERS) {
     const uid = insert(db, 'users', {
       name: u.name, username: u.username, email: u.email, phone: u.phone,
-      employee_number: u.employee_number,
-      position: u.position, hire_type: u.hire_type, salary: u.salary,
       status: u.status || 'active',
       password_hash: hashPassword('password'),
       created_at: daysAgo(400), updated_at: now,
@@ -1369,16 +1384,17 @@ function ensureEmployeeModule(db) {
       .all()
     for (const u of users) {
       const [first, last] = splitName(u.name)
+      const staff = SEED_STAFF_INFO[u.username] || {}
       insert(db, 'employees', {
-        employee_code: u.employee_number || `EMP-${String(u.id).padStart(4, '0')}`,
+        employee_code: staff.employee_code || `EMP-${String(u.id).padStart(4, '0')}`,
         first_name: first,
         last_name: last,
         email: u.email ?? null,
         phone: u.phone ?? null,
         department_id: u.department_id ?? null,
-        position: u.position ?? null,
-        job_title: u.position ?? null,
-        employment_type: u.hire_type === 'contract' ? 'contract' : 'full_time',
+        position: staff.position ?? null,
+        job_title: staff.position ?? null,
+        employment_type: staff.employment_type ?? 'full_time',
         status: u.status === 'leave' ? 'on_leave' : (u.status === 'inactive' ? 'inactive' : 'active'),
         hire_date: String(u.created_at || now).slice(0, 10),
         user_id: u.id ?? null,
@@ -1411,14 +1427,19 @@ function ensureEmployeeModule(db) {
       })
     })
 
-    // Link assets: mirror the active hand-out assignments onto the new
-    // employee relation so "who holds what" is visible immediately.
+    // Link assets: backfill the employee relation on active hand-out
+    // assignments, then mirror it onto the assets so "who holds what" is
+    // visible immediately.
     const activeAssignments = db
-      .prepare("SELECT asset_id, assigned_to_user_id FROM asset_assignments WHERE status = 'active'")
+      .prepare("SELECT id, asset_id, assigned_to_user_id, employee_id FROM asset_assignments WHERE status = 'active'")
       .all()
     for (const a of activeAssignments) {
-      const emp = db.prepare('SELECT id FROM employees WHERE user_id = ?').get(a.assigned_to_user_id)
+      const emp = a.employee_id
+        ? db.prepare('SELECT id FROM employees WHERE id = ?').get(a.employee_id)
+        : db.prepare('SELECT id FROM employees WHERE user_id = ?').get(a.assigned_to_user_id)
       if (emp) {
+        db.prepare('UPDATE asset_assignments SET employee_id = ?, updated_at = ? WHERE id = ? AND employee_id IS NULL')
+          .run(emp.id, now, a.id)
         db.prepare('UPDATE assets SET employee_id = ?, updated_at = ? WHERE id = ? AND employee_id IS NULL')
           .run(emp.id, now, a.asset_id)
       }
@@ -1481,8 +1502,8 @@ function seedBackupHistory(db) {
 //
 // SCHEMA is applied with CREATE TABLE IF NOT EXISTS, so a development database
 // created by an older revision of the mock API keeps its old shape forever:
-// columns introduced later (users.position / hire_type / salary,
-// assets.employee_id, ...) simply do not exist in that file. Reads then come
+// columns introduced later (assets.employee_id,
+// asset_assignments.employee_id, ...) simply do not exist in that file. Reads then come
 // back without those keys — binding `undefined` back into a statement fails
 // with "Provided value cannot be bound to SQLite parameter N" — and writes
 // fail with "no such column". Adding the missing columns in place upgrades the
@@ -1496,16 +1517,15 @@ const EXPECTED_COLUMNS = {
   users: [
     ['username', 'TEXT'],
     ['phone', 'TEXT'],
-    ['employee_number', 'TEXT'],
     ['department_id', 'INTEGER'],
-    ['position', 'TEXT'],
-    ['hire_type', "TEXT NOT NULL DEFAULT 'permanent'"],
-    ['salary', 'REAL NOT NULL DEFAULT 0'],
     ['status', "TEXT NOT NULL DEFAULT 'active'"],
     ['avatar', 'TEXT'],
     ['deleted_at', 'TEXT'],
   ],
   assets: [
+    ['employee_id', 'INTEGER REFERENCES employees(id) ON DELETE SET NULL'],
+  ],
+  asset_assignments: [
     ['employee_id', 'INTEGER REFERENCES employees(id) ON DELETE SET NULL'],
   ],
 }
@@ -1532,10 +1552,10 @@ export function repairSchemaDrift(db) {
   return added
 }
 
-// A freshly added column holds only its ALTER default (NULL / 'permanent' / 0),
-// so the seeded accounts would lose their position, hire type and salary after
-// an upgrade. Restore them — but only for the columns this boot actually added
-// and only for the known seed usernames, so a normal start never overwrites
+// A freshly added column holds only its ALTER default (NULL / 'active'),
+// so the seeded accounts would lose their status after an upgrade. Restore
+// the known values — but only for the columns this boot actually added and
+// only for the known seed usernames, so a normal start never overwrites
 // anything a developer edited.
 function backfillSeedUserFields(db, repaired) {
   const columns = repaired

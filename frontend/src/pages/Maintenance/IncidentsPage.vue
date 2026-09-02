@@ -183,11 +183,12 @@ watch(dialogOpen, async (open) => {
 })
 
 async function doCreate() {
+  if (saving.value) return // prevent duplicate submissions
   saving.value = true
   try {
     await incidentService.store({ ...form })
     dialogOpen.value = false
-    $q.notify({ type: 'positive', message: t('common.createdSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.createdSuccessEntity', { entity: t('common.entities.incident') }) })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
@@ -214,7 +215,7 @@ async function updateStatus(row) {
   }).onOk(async (status) => {
     try {
       await incidentService.updateStatus(row.id, { status, resolution: status === 'resolved' || status === 'closed' ? 'Handled' : null })
-      $q.notify({ type: 'positive', message: t('common.savedSuccess') })
+      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.savedSuccessEntity', { entity: t('common.entities.incident') }) })
       await load()
     } catch (e) {
       $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })

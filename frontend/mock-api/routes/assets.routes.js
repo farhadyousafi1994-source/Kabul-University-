@@ -93,8 +93,16 @@ export function assetRoutes(router) {
     for (const h of ctx.db.prepare('SELECT * FROM asset_location_histories WHERE asset_id = ?').all(assetId)) {
       timeline.push({ date: h.moved_at, type: 'location', title: 'Location change', description: `${h.reason || 'Moved'} — moved by user #${h.moved_by || 'system'}` })
     }
-    for (const a of ctx.db.prepare('SELECT * FROM asset_assignments WHERE asset_id = ?').all(assetId)) {
-      timeline.push({ date: a.assigned_date, type: 'assignment', title: `Assignment ${a.status}`, description: `Assigned to user #${a.assigned_to_user_id}` })
+    for (const a of ctx.db.prepare(
+      `SELECT a.*, TRIM(e.first_name || ' ' || e.last_name) AS employee_name
+       FROM asset_assignments a LEFT JOIN employees e ON e.id = a.employee_id
+       WHERE a.asset_id = ?`).all(assetId)) {
+      timeline.push({
+        date: a.assigned_date,
+        type: 'assignment',
+        title: `Assignment ${a.status}`,
+        description: `Assigned to ${a.employee_name || `user #${a.assigned_to_user_id ?? 'unknown'}`}`,
+      })
     }
     for (const m of ctx.db.prepare('SELECT * FROM asset_maintenances WHERE asset_id = ?').all(assetId)) {
       timeline.push({ date: m.end_date || m.start_date || m.created_at, type: 'maintenance', title: `Maintenance ${m.status}`, description: `${m.maintenance_type} — cost ${m.cost}` })

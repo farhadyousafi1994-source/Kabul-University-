@@ -185,7 +185,7 @@ async function markAll() {
   try {
     await notificationService.markAllRead()
     items.value.forEach((n) => { n.read_at = n.read_at || new Date().toISOString() })
-    $q.notify({ type: 'positive', message: t('admin.notifications.markAllDone') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.notifications.markAllDone') })
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
   }
@@ -202,7 +202,7 @@ async function clearRead() {
     try {
       await notificationService.clearRead()
       items.value = items.value.filter((n) => !n.read_at)
-      $q.notify({ type: 'positive', message: t('admin.notifications.clearedDone') })
+      $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.notifications.clearedDone') })
     } catch (e) {
       $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
     }
@@ -213,7 +213,7 @@ async function removeOne(n) {
   try {
     await notificationService.remove(n.id)
     items.value = items.value.filter((x) => x.id !== n.id)
-    $q.notify({ type: 'positive', message: t('common.deletedSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.deletedSuccessEntity', { entity: t('common.entities.notification') }) })
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
   }

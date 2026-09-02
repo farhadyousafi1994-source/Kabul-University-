@@ -23,12 +23,16 @@ class AssignmentController extends Controller
         AssignmentService::markOverdue();
 
         $query = AssetAssignment::query()
-            ->with(['asset', 'assignee', 'assigner'])
+            ->with(['asset', 'employee.department', 'assignee', 'assigner'])
             ->when($request->get('status'), fn ($q, $s) => $q->where('status', $s))
             ->when($request->get('asset_id'), fn ($q, $v) => $q->where('asset_id', (int) $v))
+            ->when($request->get('employee_id'), fn ($q, $v) => $q->where('employee_id', (int) $v))
             ->when($request->get('assigned_to_user_id'), fn ($q, $v) => $q->where('assigned_to_user_id', (int) $v))
             ->when($request->get('search'), function ($q, $search) {
                 $q->whereHas('asset', fn ($a) => $a->where('name', 'like', "%{$search}%")->orWhere('asset_code', 'like', "%{$search}%"))
+                    ->orWhereHas('employee', fn ($e) => $e->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('employee_code', 'like', "%{$search}%"))
                     ->orWhereHas('assignee', fn ($u) => $u->where('name', 'like', "%{$search}%"));
             })
             ->latest();
@@ -45,7 +49,7 @@ class AssignmentController extends Controller
     {
         $assignment = AssignmentService::assign($asset, $request->validated());
 
-        return ApiResponse::success('Asset assigned successfully.', new AssetAssignmentResource($assignment->load('asset', 'assignee', 'assigner')), null, 201);
+        return ApiResponse::success('Asset assigned successfully.', new AssetAssignmentResource($assignment->load('asset', 'employee', 'assignee', 'assigner')), null, 201);
     }
 
     /**
@@ -55,11 +59,11 @@ class AssignmentController extends Controller
     {
         $assignment = AssignmentService::returnAsset($assignment, $request->validated());
 
-        return ApiResponse::success('Asset returned successfully.', new AssetAssignmentResource($assignment->load('asset', 'assignee', 'assigner')));
+        return ApiResponse::success('Asset returned successfully.', new AssetAssignmentResource($assignment->load('asset', 'employee', 'assignee', 'assigner')));
     }
 
     public function show(AssetAssignment $assignment): JsonResponse
     {
-        return ApiResponse::success('Assignment retrieved successfully.', new AssetAssignmentResource($assignment->load('asset', 'assignee', 'assigner')));
+        return ApiResponse::success('Assignment retrieved successfully.', new AssetAssignmentResource($assignment->load('asset', 'employee', 'assignee', 'assigner')));
     }
 }

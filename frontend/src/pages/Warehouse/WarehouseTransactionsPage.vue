@@ -180,11 +180,12 @@ watch(recordOpen, (open) => { if (open) { Object.assign(recordForm, { asset_id: 
 watch(transferOpen, (open) => { if (open) { Object.assign(transferForm, { asset_id: null, from_warehouse_id: null, to_warehouse_id: null, quantity: 1 }); loadAssets() } })
 
 async function doRecord() {
+  if (saving.value) return // prevent duplicate submissions
   saving.value = true
   try {
     await warehouseActions.record({ ...recordForm })
     recordOpen.value = false
-    $q.notify({ type: 'positive', message: t('common.createdSuccess') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.createdSuccessEntity', { entity: t('common.entities.stockTransaction') }) })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
@@ -194,11 +195,12 @@ async function doRecord() {
 }
 
 async function doTransfer() {
+  if (saving.value) return // prevent duplicate submissions
   saving.value = true
   try {
     await warehouseActions.transfer({ ...transferForm })
     transferOpen.value = false
-    $q.notify({ type: 'positive', message: t('assets.transferCreated') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.transferCreated') })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })

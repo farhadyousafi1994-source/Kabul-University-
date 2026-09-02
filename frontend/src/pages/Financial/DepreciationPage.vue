@@ -118,7 +118,7 @@ async function calculate() {
   calcLoading.value = true
   try {
     const { data } = await depreciationService.calculate({ period: filters.period || undefined })
-    $q.notify({ type: 'positive', message: t('common.success') })
+    $q.notify({ type: 'positive', icon: 'check_circle', message: t('financial.depreciation.calculated', { period: data?.meta?.period || filters.period || t('financial.depreciation.currentPeriod') }) })
     await load()
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })

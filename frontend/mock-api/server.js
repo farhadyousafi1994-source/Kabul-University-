@@ -19,10 +19,12 @@ export class HttpError extends Error {
   }
 }
 
-export const ok = (message, data = null, meta = null) => {
+// `status` mirrors Laravel's ApiResponse::success(..., $status) — 201 for
+// store endpoints, etc. The router reads `__status` and strips it.
+export const ok = (message, data = null, meta = null, status = 200) => {
   const body = { success: true, message, data: data ?? {} }
   if (meta) body.meta = meta
-  return body
+  return status === 200 ? body : { ...body, __status: status }
 }
 
 export const fail = (status, message, errors = null) => ({
@@ -119,7 +121,8 @@ class Router {
         }
         const result = await route.handler(ctx)
         if (result !== undefined && !res.writableEnded) {
-          this.send(res, 200, result)
+          const { __status: status = 200, ...payload } = result || {}
+          this.send(res, status, payload)
         }
       } catch (err) {
         if (err instanceof HttpError) {
@@ -197,17 +200,19 @@ class Router {
       )
       .all(user.id)
       .map((r) => ({ ...r, permissions: this.userPermissions(user) }))
+    // Authentication account only — employee/HR data lives in `employees`.
+    const employee = this.db
+      .prepare('SELECT id, employee_code FROM employees WHERE user_id = ? AND deleted_at IS NULL')
+      .get(user.id)
     return {
       id: user.id,
       name: user.name,
       username: user.username,
       email: user.email,
       phone: user.phone,
-      employee_number: user.employee_number,
       department_id: user.department_id,
-      position: user.position,
-      hire_type: user.hire_type,
-      salary: user.salary,
+      employee_id: employee?.id ?? null,
+      employee_code: employee?.employee_code ?? null,
       status: user.status,
       avatar: user.avatar,
       roles,

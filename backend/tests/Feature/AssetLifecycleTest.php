@@ -6,6 +6,7 @@ use App\Domains\Asset\Models\Asset;
 use App\Domains\Asset\Models\AssetAssignment;
 use App\Domains\Asset\Models\AssetCategory;
 use App\Domains\Asset\Models\AssetTransfer;
+use App\Domains\HR\Models\Employee;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\SeedsPermissions;
@@ -35,7 +36,14 @@ class AssetLifecycleTest extends TestCase
             'assets.view', 'assets.create', 'assets.assign', 'assets.return', 'assets.transfer', 'assets.update',
         ]);
 
-        $assignee = User::factory()->create(['username' => 'assignee', 'status' => 'active']);
+        // The assignee is an EMPLOYEE (optionally linked to a login account).
+        $assigneeUser = User::factory()->create(['username' => 'assignee', 'status' => 'active']);
+        $assignee = Employee::create([
+            'employee_code' => 'EMP-9001',
+            'first_name' => 'Test',
+            'last_name' => 'Assignee',
+            'user_id' => $assigneeUser->id,
+        ]);
 
         // 1. Create
         $response = $this->postJson('/api/assets', [
@@ -67,22 +75,23 @@ class AssetLifecycleTest extends TestCase
         // Location history is recorded on creation.
         $this->assertDatabaseHas('asset_location_histories', ['asset_id' => $assetId, 'reason' => 'Initial registration']);
 
-        // 2. Assign
+        // 2. Assign — the payload carries the employee's database id.
         $this->postJson("/api/assets/{$assetId}/assign", [
-            'assigned_to_user_id' => $assignee->id,
+            'employee_id' => $assignee->id,
             'expected_return_date' => now()->addDays(30)->toDateString(),
             'notes' => 'Lab use',
         ])->assertStatus(201)
             ->assertJsonPath('data.asset_id', $assetId)
+            ->assertJsonPath('data.employee_id', $assignee->id)
             ->assertJsonPath('data.status', 'active');
 
-        $this->assertDatabaseHas('assets', ['id' => $assetId, 'status' => 'assigned']);
+        $this->assertDatabaseHas('assets', ['id' => $assetId, 'status' => 'assigned', 'employee_id' => $assignee->id]);
         $this->assertDatabaseHas('asset_assignments', [
-            'asset_id' => $assetId, 'assigned_to_user_id' => $assignee->id, 'status' => 'active',
+            'asset_id' => $assetId, 'employee_id' => $assignee->id, 'status' => 'active',
         ]);
 
         // Double assignment is rejected.
-        $this->postJson("/api/assets/{$assetId}/assign", ['assigned_to_user_id' => $assignee->id])
+        $this->postJson("/api/assets/{$assetId}/assign", ['employee_id' => $assignee->id])
             ->assertStatus(422);
 
         // 3. Return
@@ -95,6 +104,8 @@ class AssetLifecycleTest extends TestCase
             ->assertJsonPath('data.status', 'returned');
 
         $this->assertDatabaseHas('assets', ['id' => $assetId, 'status' => 'available', 'condition' => 'good']);
+        // Returning the asset unassigns the employee.
+        $this->assertDatabaseHas('assets', ['id' => $assetId, 'employee_id' => null]);
 
         // 4. Transfer
         $campus = \App\Domains\Organization\Models\Campus::create([
@@ -207,8 +218,12 @@ class AssetLifecycleTest extends TestCase
         ]);
 
         // Disposed assets can never be assigned again.
-        $assignee = User::factory()->create(['username' => 'someone', 'status' => 'active']);
-        $this->postJson("/api/assets/{$asset->id}/assign", ['assigned_to_user_id' => $assignee->id])
+        $someone = Employee::create([
+            'employee_code' => 'EMP-9002',
+            'first_name' => 'Some',
+            'last_name' => 'One',
+        ]);
+        $this->postJson("/api/assets/{$asset->id}/assign", ['employee_id' => $someone->id])
             ->assertStatus(422);
 
         // ... and are never hard-deleted: the row (and history) survives.

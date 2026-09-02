@@ -149,7 +149,11 @@
                 :hint="field.hint"
                 dense
                 outlined
+                :disable="saving"
+                :error="Boolean(fieldErrors[field.key])"
+                :error-message="fieldErrors[field.key]"
                 :rules="[(v) => !field.required || (v !== null && v !== undefined && String(v).trim() !== '') || `${field.label} ${t('common.required')}`]"
+                @update:model-value="clearFieldError(field.key)"
               />
               <q-select
                 v-else-if="field.type === 'select'"
@@ -162,10 +166,14 @@
                 emit-value
                 map-options
                 :options-dense="true"
+                :disable="saving"
                 :multiple="!!field.multiple"
                 :use-input="!!field.multiple"
                 hide-selected
+                :error="Boolean(fieldErrors[field.key])"
+                :error-message="fieldErrors[field.key]"
                 :rules="[(v) => !field.required || (field.multiple ? (v && v.length > 0) : !!v) || `${field.label} ${t('common.required')}`]"
+                @update:model-value="clearFieldError(field.key)"
               >
                 <template v-if="field.multiple" v-slot:selected-item="scope">
                   <q-chip removable dense :label="scope.opt.label" @remove="scope.removeAtIndex(scope.index)" />
@@ -179,6 +187,10 @@
                 dense
                 outlined
                 autogrow
+                :disable="saving"
+                :error="Boolean(fieldErrors[field.key])"
+                :error-message="fieldErrors[field.key]"
+                @update:model-value="clearFieldError(field.key)"
               />
               <q-toggle
                 v-else-if="field.type === 'toggle'"
@@ -188,8 +200,10 @@
             </div>
 
             <div class="col-12 row justify-end q-gutter-sm">
-              <q-btn :label="t('common.cancel')" flat color="grey-7" @click="dialogOpen = false" />
-              <q-btn :label="t('common.save')" type="submit" color="primary" :loading="saving" />
+              <q-btn :label="t('common.cancel')" flat color="grey-7" :disable="saving" @click="dialogOpen = false" />
+              <q-btn :label="editing ? t('common.update') : t('common.save')" type="submit" color="primary" :loading="saving">
+                <template #loading><q-spinner-dots /></template>
+              </q-btn>
             </div>
           </q-form>
         </q-card-section>
@@ -250,6 +264,18 @@ const error = ref('')
 const dialogOpen = ref(false)
 const editing = ref(null)
 const saving = ref(false)
+const fieldErrors = reactive({})
+
+function clearFieldError(key) {
+  delete fieldErrors[key]
+}
+
+function applyFieldErrors(errors = {}) {
+  Object.keys(fieldErrors).forEach((k) => delete fieldErrors[k])
+  for (const [k, v] of Object.entries(errors)) {
+    if (Array.isArray(v) && v.length) fieldErrors[k] = v[0]
+  }
+}
 
 const filterValues = reactive({})
 for (const f of props.filters) filterValues[f.key] = null
@@ -307,6 +333,7 @@ watch(() => props.refreshKey, load)
 
 function openCreate() {
   editing.value = null
+  applyFieldErrors({})
   Object.keys(form).forEach((k) => delete form[k])
   Object.assign(form, props.createForm?.defaults || {})
   dialogOpen.value = true
@@ -314,21 +341,33 @@ function openCreate() {
 
 function openEdit(row) {
   editing.value = row
+  applyFieldErrors({})
   Object.keys(form).forEach((k) => delete form[k])
   Object.assign(form, props.editForm?.defaults ? props.editForm.defaults(row) : { ...row })
   dialogOpen.value = true
 }
 
 async function save() {
+  if (saving.value) return // prevent duplicate submissions
   saving.value = true
+  applyFieldErrors({})
   try {
     await props.submit({ ...form }, editing.value)
+    // Success: notify -> close dialog -> refresh the table.
     dialogOpen.value = false
-    $q.notify({ type: 'positive', message: editing.value ? t('common.updatedSuccess') : t('common.createdSuccess') })
+    $q.notify({
+      type: 'positive',
+      icon: 'check_circle',
+      message: editing.value
+        ? t('common.updatedSuccessEntity', { entity: entityName.value })
+        : t('common.createdSuccessEntity', { entity: entityName.value }),
+    })
     await load()
   } catch (e) {
+    // Failure: the dialog stays open, entered data is preserved.
+    applyFieldErrors(e.errors || {})
     const msg = e.errors ? Object.values(e.errors).flat().join(' · ') : e.message
-    $q.notify({ type: 'negative', message: msg || t('common.saveFailed') })
+    $q.notify({ type: 'negative', icon: 'error', message: msg || t('common.saveFailed') })
   } finally {
     saving.value = false
   }
@@ -337,20 +376,29 @@ async function save() {
 function confirmDestroy(row) {
   $q.dialog({
     title: t('common.confirmArchiveTitle'),
-    message: t('common.confirmArchiveMessage'),
-    cancel: true,
+    message: t('common.confirmArchiveMessage', { entity: entityName.value, name: rowName(row) }),
+    cancel: { label: t('common.cancel'), flat: true },
+    ok: { label: t('common.archive'), color: 'negative', icon: 'archive' },
     persistent: true,
     color: 'negative',
   }).onOk(async () => {
     try {
       await props.destroy(row)
-      $q.notify({ type: 'positive', message: t('common.archivedSuccess') })
+      $q.notify({
+        type: 'positive',
+        icon: 'check_circle',
+        message: t('common.archivedSuccessEntity', { entity: entityName.value }),
+      })
       await load()
     } catch (e) {
-      $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
+      $q.notify({ type: 'negative', icon: 'error', message: e.message || t('common.saveFailed') })
     }
   })
 }
+
+const entityName = computed(() => props.entityLabel || t('common.entities.record'))
+
+const rowName = (row) => row?.name || row?.title || row?.full_name || `#${row?.id ?? ''}`
 
 function resetFilters() {
   for (const k of Object.keys(filterValues)) filterValues[k] = null

@@ -2,6 +2,7 @@
 
 namespace App\Domains\Asset\Models;
 
+use App\Domains\HR\Models\Employee;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -16,7 +17,7 @@ class AssetAssignment extends Model
     public const STATUSES = [self::STATUS_ACTIVE, self::STATUS_RETURNED, self::STATUS_OVERDUE];
 
     protected $fillable = [
-        'asset_id', 'assigned_to_user_id', 'assigned_by', 'assigned_date',
+        'asset_id', 'employee_id', 'assigned_to_user_id', 'assigned_by', 'assigned_date',
         'expected_return_date', 'returned_date', 'condition_on_return', 'status', 'notes',
     ];
 
@@ -31,6 +32,13 @@ class AssetAssignment extends Model
         return $this->belongsTo(Asset::class);
     }
 
+    /** The employee who received the asset (authoritative assignee). */
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class);
+    }
+
+    /** Legacy mirror: the employee's linked login account, when it has one. */
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to_user_id');
