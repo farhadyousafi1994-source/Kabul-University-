@@ -57,6 +57,32 @@ Setting `employee_id` on `PUT /api/assets/:id` auto-flips the asset status
 `available ⇄ assigned` (only from available/assigned/reserved and only when no
 explicit `status` is sent). Deleting an employee never touches user accounts.
 
+## Database upgrades (self-healing)
+
+`mock-api/data/ku-ams.sqlite` survives across sessions, so it can easily outlive
+the schema that created it. Every boot, `openDb()` therefore:
+
+1. applies `SCHEMA` (`CREATE TABLE IF NOT EXISTS` — never destructive),
+2. runs `repairSchemaDrift()`, which `ALTER TABLE … ADD COLUMN`s whatever a
+   newer revision introduced (`users.position` / `hire_type` / `salary`,
+   `assets.employee_id`, …) and backfills the seeded accounts with their
+   canonical values,
+3. seeds the database when it is empty, then
+4. runs the idempotent Employees migration (transactional, per-record checks).
+
+All shared writes bind through `sqlValue()`, which converts values
+`node:sqlite` refuses to bind (`undefined`, booleans, `Date`s, plain objects)
+into something it accepts. A missing column used to surface at startup as
+`TypeError: Provided value cannot be bound to SQLite parameter N` and stop the
+dev server from booting at all.
+
+To discard the dev data and start from the seed instead, delete the data
+directory (it is gitignored):
+
+```bash
+rm -rf frontend/mock-api/data        # Windows: rmdir /s /q frontend\mock-api\data
+```
+
 ## Switching to the real Laravel API
 
 ```bash

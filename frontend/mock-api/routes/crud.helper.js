@@ -1,4 +1,5 @@
 import { ok, HttpError } from '../server.js'
+import { sqlValues } from '../db.js'
 
 /**
  * Generic CRUD route registration for a mock entity.
@@ -47,7 +48,9 @@ export function registerCrud(router, { base, table, searchable = [], sortable = 
     const stmt = ctx.db.prepare(
       `INSERT INTO ${table} (${keys.map((k) => `"${k}"`).join(', ')}) VALUES (${keys.map(() => '?').join(', ')})`,
     )
-    const info = stmt.run(...keys.map((k) => data[k]))
+    // Bound through sqlValues(): node:sqlite rejects undefined / boolean / Date
+    // parameters outright, and request bodies are free-form.
+    const info = stmt.run(...sqlValues(keys.map((k) => data[k])))
     const row = ctx.db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(Number(info.lastInsertRowid))
     log(ctx, 'created', logModule, row)
     return ok('Created successfully.', row, null, 201)
@@ -67,7 +70,7 @@ export function registerCrud(router, { base, table, searchable = [], sortable = 
     const data = { ...ctx.body, updated_at: new Date().toISOString() }
     const keys = Object.keys(data)
     ctx.db.prepare(`UPDATE ${table} SET ${keys.map((k) => `"${k}" = ?`).join(', ')} WHERE id = ?`)
-      .run(...keys.map((k) => data[k]), row.id)
+      .run(...sqlValues(keys.map((k) => data[k])), row.id)
     log(ctx, 'updated', logModule, { ...row, ...data })
     return ok('Updated successfully.', ctx.db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(row.id))
   }, { auth: true, permission: `${perms}.update` })
