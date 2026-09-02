@@ -63,7 +63,15 @@
             <q-input v-model="recordForm.notes" :label="t('common.notes')" dense outlined class="col-6 col-md-9" />
             <div class="col-12 row justify-end q-gutter-sm">
               <q-btn :label="t('common.cancel')" flat color="grey-7" @click="recordOpen = false" />
-              <q-btn :label="t('common.save')" type="submit" color="primary" :loading="saving" />
+              <q-btn
+                :label="saving ? t('common.saving') : t('common.save')"
+                type="submit"
+                color="primary"
+                :loading="saving"
+                data-cy="wh-record-submit"
+              >
+                <template #loading><q-spinner-dots class="q-mr-sm" />{{ t('common.saving') }}</template>
+              </q-btn>
             </div>
           </q-form>
         </q-card-section>
@@ -86,7 +94,15 @@
             <q-input v-model.number="transferForm.quantity" :label="t('common.quantity')" type="number" dense outlined class="col-6 col-md-3" :rules="[(v) => Number(v) >= 1 || '>= 1']" />
             <div class="col-12 row justify-end q-gutter-sm">
               <q-btn :label="t('common.cancel')" flat color="grey-7" @click="transferOpen = false" />
-              <q-btn :label="t('assets.transferAsset')" type="submit" color="primary" :loading="saving" />
+              <q-btn
+                :label="transferring ? t('common.working') : t('assets.transferAsset')"
+                type="submit"
+                color="primary"
+                :loading="transferring"
+                data-cy="wh-transfer-submit"
+              >
+                <template #loading><q-spinner-dots class="q-mr-sm" />{{ t('common.working') }}</template>
+              </q-btn>
             </div>
           </q-form>
         </q-card-section>
@@ -97,7 +113,6 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import TableActionBar from 'src/components/common/TableActionBar.vue'
@@ -108,9 +123,10 @@ import { assetService } from 'src/services/assets.service'
 import { useOptions } from 'src/composables/useOptions'
 import { useAuthStore } from 'src/stores/auth'
 import { date } from 'src/utils/format'
+import { notify } from 'src/utils/notify'
+import { useAction } from 'src/composables/useAction'
 
 const { t } = useI18n()
-const $q = useQuasar()
 const authStore = useAuthStore()
 const { warehouses, opts } = useOptions()
 const warehouseOptions = computed(() => opts(warehouses.value))
@@ -127,7 +143,14 @@ const page = ref(1)
 const perPage = ref(20)
 const loading = ref(false)
 const error = ref('')
-const saving = ref(false)
+/**
+ * One action lifecycle per dialog (record stock / transfer stock) so the two
+ * forms can never block or overwrite each other's state.
+ */
+const recordAction = useAction()
+const transferAction = useAction()
+const saving = recordAction.pending
+const transferring = transferAction.pending
 const recordOpen = ref(false)
 const transferOpen = ref(false)
 const recordForm = reactive({ asset_id: null, warehouse_id: null, type: 'in', quantity: 1, notes: '' })
@@ -179,34 +202,35 @@ async function loadAssets() {
 watch(recordOpen, (open) => { if (open) { Object.assign(recordForm, { asset_id: null, warehouse_id: null, type: 'in', quantity: 1, notes: '' }); loadAssets() } })
 watch(transferOpen, (open) => { if (open) { Object.assign(transferForm, { asset_id: null, from_warehouse_id: null, to_warehouse_id: null, quantity: 1 }); loadAssets() } })
 
-async function doRecord() {
-  if (saving.value) return // prevent duplicate submissions
-  saving.value = true
-  try {
-    await warehouseActions.record({ ...recordForm })
-    recordOpen.value = false
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.createdSuccessEntity', { entity: t('common.entities.stockTransaction') }) })
-    await load()
-  } catch (e) {
-    $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-  } finally {
-    saving.value = false
-  }
+function resetRecordForm() {
+  Object.assign(recordForm, { asset_id: null, warehouse_id: null, type: 'in', quantity: 1, notes: '' })
+  recordAction.clearFieldErrors()
 }
 
-async function doTransfer() {
-  if (saving.value) return // prevent duplicate submissions
-  saving.value = true
-  try {
-    await warehouseActions.transfer({ ...transferForm })
-    transferOpen.value = false
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.transferCreated') })
-    await load()
-  } catch (e) {
-    $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-  } finally {
-    saving.value = false
-  }
+function doRecord() {
+  const entity = t('common.entities.stockTransaction')
+  return recordAction.run(() => warehouseActions.record({ ...recordForm }), {
+    successMessage: t('common.createdSuccessEntity', { entity }),
+    errorMessage: t('common.unableToSaveEntity', { entity }),
+    onSuccess: async () => {
+      recordOpen.value = false
+      resetRecordForm()
+      await load()
+    },
+  })
+}
+
+function doTransfer() {
+  const entity = t('common.entities.stockTransaction')
+  return transferAction.run(() => warehouseActions.transfer({ ...transferForm }), {
+    successMessage: t('assets.transferCreated'),
+    errorMessage: t('common.unableToSaveEntity', { entity }),
+    onSuccess: async () => {
+      transferOpen.value = false
+      transferAction.clearFieldErrors()
+      await load()
+    },
+  })
 }
 
 onMounted(load)

@@ -15,6 +15,7 @@
     :edit-form="editForm"
     :submit="submit"
     :destroy="destroy"
+    :refresh-key="refreshKey"
   >
     <template #rowActions="{ row }">
       <q-btn v-if="row.status === 'active'" flat dense round size="sm" color="warning" icon="person_off" @click="toggle(row, false)"><q-tooltip>{{ t('status.inactive') }}</q-tooltip></q-btn>
@@ -24,16 +25,19 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { userService, userActions } from 'src/services/users.service'
 import { useOptions } from 'src/composables/useOptions'
-import { useQuasar } from 'quasar'
 import DataTablePage from 'src/components/common/DataTablePage.vue'
+import { notify } from 'src/utils/notify'
+import { confirmAction } from 'src/utils/confirm'
 
 const { t } = useI18n()
-const $q = useQuasar()
 const { roles, departments, opts } = useOptions()
+
+/** Bumped after a confirmed write so DataTablePage reloads its rows. */
+const refreshKey = ref(0)
 const roleOptions = computed(() => opts(roles.value))
 const departmentOptions = computed(() => opts(departments.value))
 
@@ -81,19 +85,28 @@ const submit = async (values, editing) => {
 
 const destroy = (row) => userService.remove(row.id)
 
+/**
+ * Activate / deactivate a login account.
+ * The confirmation owns the request lifecycle: the OK button spins, a failure
+ * keeps the dialog open, and only a confirmed write refreshes the table.
+ */
 function toggle(row, activate) {
-  $q.dialog({
-    title: activate ? t('status.active') : t('status.inactive'),
-    message: `${activate ? t('status.active') : t('status.inactive')} ${row.name}?`,
-    cancel: true, persistent: true, color: activate ? 'positive' : 'warning',
-  }).onOk(async () => {
-    try {
-      if (activate) await userActions.activate(row.id)
-      else await userActions.deactivate(row.id)
-      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.updatedSuccessEntity', { entity: t('common.entities.user') }) })
-    } catch (e) {
-      $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-    }
+  const entity = t('common.entities.user')
+  return confirmAction({
+    title: activate ? t('users.activateTitle') : t('users.deactivateTitle'),
+    message: activate
+      ? t('users.activateMessage', { name: row.name })
+      : t('users.deactivateMessage', { name: row.name }),
+    okLabel: activate ? t('status.active') : t('status.inactive'),
+    busyLabel: t('common.updating'),
+    icon: activate ? 'check_circle' : 'block',
+    color: activate ? 'positive' : 'warning',
+    errorMessage: t('common.unableToSaveEntity', { entity }),
+    onConfirm: () => (activate ? userActions.activate(row.id) : userActions.deactivate(row.id)),
+    onConfirmed: () => {
+      notify.success(t('common.updatedSuccessEntity', { entity }))
+      refreshKey.value += 1
+    },
   })
 }
 </script>

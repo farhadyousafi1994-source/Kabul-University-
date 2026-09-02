@@ -1,7 +1,7 @@
 <template>
   <q-select
     v-model="model"
-    v-bind="$attrs"
+    v-bind="passthrough"
     :options="options"
     :loading="searching"
     :input-debounce="300"
@@ -12,8 +12,8 @@
     emit-value
     clearable
     :options-dense="true"
-    :error="Boolean(loadError)"
-    :error-message="loadError || undefined"
+    :error="Boolean(loadError) || Boolean(externalError)"
+    :error-message="loadError || externalErrorMessage || undefined"
     :no-option-label="searching ? t('common.loading') : t('common.noData')"
     @input-value="onSearch"
     @clear="onClear"
@@ -54,10 +54,10 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, useAttrs, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useQuasar } from 'quasar'
 import { employeeService } from 'src/services/employees.service'
+import { notify } from 'src/utils/notify'
 
 /**
  * Employee picker — the single source of truth is the dedicated `employees`
@@ -79,10 +79,22 @@ const props = defineProps({
   activeOnly: { type: Boolean, default: true },
 })
 
+// A parent form can drive the invalid state (e.g. "The employee field is
+// required." coming back from the API). Without this the component's own
+// `:error` binding silently swallowed it, so validation errors never showed.
+const attrs = useAttrs()
+const externalError = computed(() => attrs.error || false)
+const externalErrorMessage = computed(() => attrs['error-message'] || attrs.errorMessage || '')
+
+/** Everything except the error bindings, which this component owns. */
+const passthrough = computed(() => {
+  const { error, 'error-message': errorMessage, errorMessage: errorMessage2, ...rest } = attrs
+  return rest
+})
+
 const emit = defineEmits(['update:modelValue', 'options'])
 
 const { t } = useI18n()
-const $q = useQuasar()
 
 const searching = ref(false)
 const options = ref([])
@@ -146,12 +158,7 @@ async function onSearch(term) {
     if (!notifiedError) {
       notifiedError = true
       setTimeout(() => { notifiedError = false }, 4000)
-      $q.notify({
-        type: 'negative',
-        icon: 'cloud_off',
-        message: t('hr.employeesLoadFailed'),
-        caption: loadError.value,
-      })
+      notify.error(t('hr.employeesLoadFailed'), { caption: loadError.value })
     }
   } finally {
     if (seq === searchSeq) searching.value = false

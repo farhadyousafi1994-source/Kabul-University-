@@ -2,7 +2,18 @@
   <div class="page-container q-pa-md q-pa-lg-md">
     <AppPageHeader :title="t('admin.settings.title')" :subtitle="t('admin.settings.subtitle')" icon="settings">
       <template #actions>
-        <q-btn color="primary" size="sm" icon="save" :label="t('admin.settings.saveChanges')" :loading="saving" :disable="!dirty" @click="save" />
+        <q-btn
+          color="primary"
+          size="sm"
+          icon="save"
+          :label="saving ? t('common.saving') : t('admin.settings.saveChanges')"
+          :loading="saving"
+          :disable="!dirty"
+          data-cy="settings-save"
+          @click="save"
+        >
+          <template #loading><q-spinner-dots class="q-mr-sm" />{{ t('common.saving') }}</template>
+        </q-btn>
       </template>
     </AppPageHeader>
 
@@ -80,22 +91,28 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
 import LanguageSwitcher from 'src/components/common/LanguageSwitcher.vue'
 import { useLanguage } from 'src/composables/useLanguage'
 import { settingsService } from 'src/services/system.service'
+import { notify } from 'src/utils/notify'
+import { useAction } from 'src/composables/useAction'
 
 const { t, te } = useI18n()
-const $q = useQuasar()
 const { currentLocale, languages, setLanguage } = useLanguage()
 
 const settings = ref({})
 const draft = reactive({})
 const loading = ref(false)
-const saving = ref(false)
+/**
+ * Shared action lifecycle: loading flag, duplicate-submission guard, specific
+ * success toast, and server validation mapped onto `fieldErrors`.
+ */
+const saveAction = useAction()
+const saving = saveAction.pending
+const fieldErrors = saveAction.fieldErrors
 const error = ref('')
 
 const groups = computed(() => Object.keys(settings.value || {}).sort())
@@ -138,20 +155,21 @@ async function load() {
   }
 }
 
-async function save() {
-  if (saving.value) return // prevent duplicate submissions
-  saving.value = true
-  try {
-    const payload = {}
-    for (const g of groups.value) Object.assign(payload, draft[g])
-    await settingsService.update(payload)
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.settings.settingsSaved') })
-    await load()
-  } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
-  } finally {
-    saving.value = false
-  }
+function save() {
+  const payload = {}
+  for (const g of groups.value) Object.assign(payload, draft[g])
+
+  const entity = t('common.entities.settings')
+  return saveAction.run(() => settingsService.update(payload), {
+    successMessage: t('admin.settings.settingsSaved'),
+    errorMessage: t('common.unableToSaveEntity', { entity }),
+    // Keep the dialog-less page open on failure with the draft intact; on
+    // success reload so the displayed values match what the server stored.
+    onSuccess: () => {
+      saveAction.clearFieldErrors()
+      return load()
+    },
+  })
 }
 
 onMounted(load)

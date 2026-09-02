@@ -328,13 +328,15 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import TableActionBar from 'src/components/common/TableActionBar.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
 import { useAuthStore } from 'src/stores/auth'
+import { useAction } from 'src/composables/useAction'
+import { confirmDelete, confirmAction } from 'src/utils/confirm'
+import { notify } from 'src/utils/notify'
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -366,7 +368,6 @@ const props = defineProps({
 })
 
 const { t } = useI18n()
-const $q = useQuasar()
 const authStore = useAuthStore()
 
 const rows = ref([])
@@ -380,8 +381,13 @@ const loading = ref(false)
 const error = ref('')
 const dialogOpen = ref(false)
 const editing = ref(null)
-const saving = ref(false)
-const fieldErrors = reactive({})
+
+// One shared async-action lifecycle for every create / update / delete on this
+// table: loading flag, duplicate-submission guard, success toast, error toast
+// and server-validation → field mapping. See src/composables/useAction.js.
+const createAction = useAction()
+const saving = createAction.pending
+const fieldErrors = createAction.fieldErrors
 
 // View options ----------------------------------------------------------------
 const comfortable = ref(false)
@@ -411,13 +417,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onFullscreenKey))
 
 function clearFieldError(key) {
   delete fieldErrors[key]
-}
-
-function applyFieldErrors(errors = {}) {
-  Object.keys(fieldErrors).forEach((k) => delete fieldErrors[k])
-  for (const [k, v] of Object.entries(errors)) {
-    if (Array.isArray(v) && v.length) fieldErrors[k] = v[0]
-  }
 }
 
 const filterValues = reactive({})
@@ -478,7 +477,7 @@ watch(() => props.refreshKey, load)
 
 function openCreate() {
   editing.value = null
-  applyFieldErrors({})
+  createAction.clearFieldErrors()
   Object.keys(form).forEach((k) => delete form[k])
   Object.assign(form, props.createForm?.defaults || {})
   dialogOpen.value = true
@@ -486,93 +485,100 @@ function openCreate() {
 
 function openEdit(row) {
   editing.value = row
-  applyFieldErrors({})
+  createAction.clearFieldErrors()
   Object.keys(form).forEach((k) => delete form[k])
   Object.assign(form, props.editForm?.defaults ? props.editForm.defaults(row) : { ...row })
   dialogOpen.value = true
 }
 
+/**
+ * Create / Update.
+ * Loading → API → success (notify → close dialog → reset form → refresh)
+ *               → error   (notify → inline field errors → dialog stays open)
+ */
 async function save() {
-  if (saving.value) return // prevent duplicate submissions
-  saving.value = true
-  applyFieldErrors({})
-  try {
-    await props.submit({ ...form }, editing.value)
-    // Success: notify -> close dialog -> refresh the table.
-    dialogOpen.value = false
-    $q.notify({
-      type: 'positive',
-      icon: 'check_circle',
-      message: editing.value
-        ? t('common.updatedSuccessEntity', { entity: entityName.value })
-        : t('common.createdSuccessEntity', { entity: entityName.value }),
-    })
-    await load()
-  } catch (e) {
-    // Failure: the dialog stays open, entered data is preserved.
-    applyFieldErrors(e.errors || {})
-    const msg = e.errors ? Object.values(e.errors).flat().join(' · ') : e.message
-    $q.notify({ type: 'negative', icon: 'error', message: msg || t('common.saveFailed') })
-  } finally {
-    saving.value = false
-  }
-}
+  const wasEditing = Boolean(editing.value)
+  const payload = { ...form }
 
-function confirmDestroy(row) {
-  $q.dialog({
-    title: t('common.confirmArchiveTitle'),
-    message: t('common.confirmArchiveMessage', { entity: entityName.value, name: rowName(row) }),
-    cancel: { label: t('common.cancel'), flat: true },
-    ok: { label: t('common.archive'), color: 'negative', icon: 'archive' },
-    persistent: true,
-    color: 'negative',
-  }).onOk(async () => {
-    try {
-      await props.destroy(row)
-      $q.notify({
-        type: 'positive',
-        icon: 'check_circle',
-        message: t('common.archivedSuccessEntity', { entity: entityName.value }),
-      })
+  await createAction.run(() => props.submit(payload, editing.value), {
+    successMessage: wasEditing
+      ? notify.updated(entityName.value)
+      : notify.created(entityName.value),
+    errorMessage: wasEditing
+      ? t('common.unableToSaveEntity', { entity: entityName.value })
+      : t('common.unableToSaveEntity', { entity: entityName.value }),
+    onSuccess: async () => {
+      dialogOpen.value = false
+      if (!wasEditing) {
+        // Only reset once the backend has confirmed the write.
+        editing.value = null
+        Object.keys(form).forEach((k) => delete form[k])
+        Object.assign(form, props.createForm?.defaults || {})
+      }
       await load()
-    } catch (e) {
-      $q.notify({ type: 'negative', icon: 'error', message: e.message || t('common.saveFailed') })
-    }
+    },
   })
 }
 
+/**
+ * Archive a single row: confirm → request → ✓ notify → close → refresh.
+ * The confirmation dialog owns the loading state and only closes after the
+ * backend confirms; a rejection keeps it open and shows the error toast.
+ */
+async function confirmDestroy(row) {
+  if (typeof props.destroy !== 'function') return
+  await confirmDelete({
+    entity: entityName.value,
+    name: rowName(row),
+    verb: 'archive',
+    okLabel: t('common.archive'),
+    busyLabel: t('common.archiving'),
+    onConfirm: () => props.destroy(row),
+    onConfirmed: async () => {
+      notify.success(notify.archived(entityName.value))
+      await load()
+    },
+  })
+}
+
+/** Bulk archive: one confirmation, per-row results, partial-failure toast. */
 async function bulkDestroy() {
   if (bulkWorking.value || !props.destroy) return
-  bulkWorking.value = true
   const targets = [...selected.value]
-  $q.dialog({
-    title: t('common.confirmArchiveTitle'),
-    message: t('common.bulkArchiveMessage', { n: targets.length }),
-    cancel: { label: t('common.cancel'), flat: true },
-    ok: { label: t('common.archive'), color: 'negative', icon: 'archive' },
-    persistent: true,
-    color: 'negative',
-  }).onOk(async () => {
-    const results = await Promise.allSettled(targets.map((row) => props.destroy(row)))
-    const failed = results.filter((r) => r.status === 'rejected')
-    if (failed.length) {
-      $q.notify({
-        type: failed.length === targets.length ? 'negative' : 'warning',
-        icon: 'error',
-        message: t('common.bulkArchivePartial', { ok: targets.length - failed.length, failed: failed.length }),
-      })
-    } else {
-      $q.notify({
-        type: 'positive',
-        icon: 'check_circle',
-        message: t('common.bulkArchivedSuccess', { n: targets.length }),
-      })
-    }
-    selected.value = []
-    await load()
-  }).onDismiss(() => {
+  if (!targets.length) return
+
+  bulkWorking.value = true
+  try {
+    const ok = await confirmAction({
+      title: t('common.confirmArchiveTitle'),
+      message: t('common.bulkArchiveMessage', { n: targets.length }),
+      okLabel: t('common.archive'),
+      busyLabel: t('common.archiving'),
+      icon: 'archive',
+      color: 'negative',
+      onConfirm: async () => {
+        const results = await Promise.allSettled(targets.map((row) => props.destroy(row)))
+        const failed = results.filter((r) => r.status === 'rejected')
+        if (failed.length === targets.length) {
+          // Nothing succeeded — surface the first failure and keep the selection.
+          throw failed[0].reason
+        }
+        return failed.length
+      },
+      onConfirmed: async (failedCount) => {
+        if (failedCount) {
+          notify.warning(t('common.bulkArchivePartial', { ok: targets.length - failedCount, failed: failedCount }))
+        } else {
+          notify.success(t('common.bulkArchivedSuccess', { n: targets.length }))
+        }
+        selected.value = []
+        await load()
+      },
+    })
+    if (!ok) selected.value = []
+  } finally {
     bulkWorking.value = false
-  })
+  }
 }
 
 const entityName = computed(() => props.entityLabel || t('common.entities.record'))

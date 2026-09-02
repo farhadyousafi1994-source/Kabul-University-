@@ -151,17 +151,54 @@
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">{{ t('assets.assignAsset') }}</div>
           <q-space />
-          <q-btn flat round dense icon="close" @click="assignOpen = false"/>
+          <q-btn flat round dense icon="close" :disable="assigning" @click="assignOpen = false"/>
         </q-card-section>
         <q-card-section>
           <div class="text-caption text-grey-7 q-mb-sm">{{ assignTarget?.name }} · {{ assignTarget?.asset_code }}</div>
           <q-form @submit="doAssign" class="column q-gutter-md">
-            <EmployeeSelect v-model="assignForm.employee_id" :label="`${t('assets.assignTo')} *`" dense outlined :rules="[required]" :error="Boolean(fieldErrors.employee_id)" :error-message="fieldErrors.employee_id" />
-            <q-input v-model="assignForm.expected_return_date" :label="t('assets.expectedReturnDate')" type="date" dense outlined/>
-            <q-input v-model="assignForm.notes" :label="t('common.notes')" type="textarea" dense outlined autogrow/>
+            <EmployeeSelect
+              v-model="assignForm.employee_id"
+              :label="`${t('assets.assignTo')} *`"
+              dense
+              outlined
+              :rules="[required]"
+              :disable="assigning"
+              :error="Boolean(assignAction.fieldErrors.employee_id)"
+              :error-message="assignAction.fieldErrors.employee_id"
+              data-cy="assign-employee"
+            />
+            <q-input
+              v-model="assignForm.expected_return_date"
+              :label="t('assets.expectedReturnDate')"
+              type="date"
+              dense
+              outlined
+              :disable="assigning"
+              :error="Boolean(assignAction.fieldErrors.expected_return_date)"
+              :error-message="assignAction.fieldErrors.expected_return_date"
+            />
+            <q-input
+              v-model="assignForm.notes"
+              :label="t('common.notes')"
+              type="textarea"
+              dense
+              outlined
+              autogrow
+              :disable="assigning"
+              :error="Boolean(assignAction.fieldErrors.notes)"
+              :error-message="assignAction.fieldErrors.notes"
+            />
             <div class="row justify-end q-gutter-sm">
-              <q-btn :label="t('common.cancel')" flat color="grey-7" @click="assignOpen = false"/>
-              <q-btn :label="t('assets.assignAsset')" type="submit" color="primary" :loading="assigning"/>
+              <q-btn :label="t('common.cancel')" flat color="grey-7" :disable="assigning" @click="assignOpen = false"/>
+              <q-btn
+                :label="assigning ? t('common.working') : t('assets.assignAsset')"
+                type="submit"
+                color="primary"
+                :loading="assigning"
+                data-cy="assign-submit"
+              >
+                <template #loading><q-spinner-dots class="q-mr-sm" />{{ t('common.working') }}</template>
+              </q-btn>
             </div>
           </q-form>
         </q-card-section>
@@ -172,7 +209,6 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import TableActionBar from 'src/components/common/TableActionBar.vue'
@@ -185,9 +221,11 @@ import { assignmentService } from 'src/services/operations.service'
 import { useOptions } from 'src/composables/useOptions'
 import { useAuthStore } from 'src/stores/auth'
 import { currency, date } from 'src/utils/format'
+import { notify } from 'src/utils/notify'
+import { useAction } from 'src/composables/useAction'
+import { confirmDelete } from 'src/utils/confirm'
 
 const { t, te } = useI18n()
-const $q = useQuasar()
 const authStore = useAuthStore()
 const { categories, subcategories, suppliers, campuses, faculties, departments, buildings, floors, rooms, opts } = useOptions()
 
@@ -231,16 +269,31 @@ const loading = ref(false)
 const error = ref('')
 const dialogOpen = ref(false)
 const editing = ref(null)
-const saving = ref(false)
+/**
+ * Shared action lifecycle for the create/edit dialog: loading flag,
+ * duplicate-submission guard, specific success toast, and server validation
+ * mapped onto `fieldErrors`.
+ */
+const saveAction = useAction()
+const saving = saveAction.pending
 const form = reactive({ status: 'available', condition: 'good', useful_life: 5 })
 
 const assignOpen = ref(false)
-const assigning = ref(false)
 const assignTarget = ref(null)
 const assignForm = reactive({ employee_id: null, expected_return_date: null, notes: '' })
-const fieldErrors = reactive({})
+const fieldErrors = saveAction.fieldErrors
+
+/**
+ * The assign dialog has its OWN action lifecycle so assigning an asset can never
+ * be blocked by, or overwrite the error state of, the create/edit dialog.
+ */
+const assignAction = useAction()
+const assigning = assignAction.pending
+
+/** Delegate to the composable so error state can never drift out of sync. */
 function resetErrors() {
-  Object.keys(fieldErrors).forEach((k) => delete fieldErrors[k])
+  saveAction.clearFieldErrors()
+  assignAction.clearFieldErrors()
 }
 
 const filters = reactive({ status: null, category_id: null, department_id: null, code: '' })
@@ -324,40 +377,27 @@ function openEdit(row) {
   dialogOpen.value = true
 }
 
-async function save() {
-  if (saving.value) return // prevent duplicate submissions
-  saving.value = true
-  resetErrors()
-  try {
-    if (editing.value) await assetService.update(editing.value.id, { ...form })
-    else await assetService.create({ ...form })
-    // Success: notify -> close -> refresh.
-    dialogOpen.value = false
-    $q.notify({
-      type: 'positive',
-      icon: 'check_circle',
-      message: editing.value
-        ? t('common.updatedSuccess', { entity: t('common.entities.asset') })
-        : t('common.createdSuccess', { entity: t('common.entities.asset') }),
-    })
-    await load()
-  } catch (e) {
-    // Failure: dialog stays open, entered data is preserved.
-    applyFieldErrors(e.errors)
-    const msg = e.errors ? Object.values(e.errors).flat().join(' · ') : e.message
-    $q.notify({ type: 'negative', icon: 'error', message: msg || t('common.saveFailed') })
-  } finally {
-    saving.value = false
-  }
+function save() {
+  const wasEditing = Boolean(editing.value)
+  const id = editing.value?.id
+  const entity = t('common.entities.asset')
+
+  return saveAction.run(
+    () => (wasEditing ? assetService.update(id, { ...form }) : assetService.create({ ...form })),
+    {
+      successMessage: wasEditing
+        ? t('common.updatedSuccessEntity', { entity })
+        : t('common.createdSuccessEntity', { entity }),
+      errorMessage: t('common.unableToSaveEntity', { entity }),
+      onSuccess: async () => {
+        dialogOpen.value = false
+        editing.value = null
+        await load()
+      },
+    },
+  )
 }
 
-/** Map server validation errors onto the form fields that can show them. */
-function applyFieldErrors(errors = {}) {
-  const showable = ['name', 'category_id', 'employee_id', 'serial_number', 'barcode', 'qr_code', 'subcategory_id', 'supplier_id']
-  for (const [k, v] of Object.entries(errors)) {
-    if (showable.includes(k) && Array.isArray(v) && v.length) fieldErrors[k] = v[0]
-  }
-}
 
 function openAssign(row) {
   assignTarget.value = row
@@ -368,39 +408,38 @@ function openAssign(row) {
   assignOpen.value = true
 }
 
-async function doAssign() {
-  if (assigning.value) return // prevent duplicate submissions
-  assigning.value = true
-  resetErrors()
-  try {
-    await assignmentService.assign(assignTarget.value.id, { ...assignForm })
-    // Success: notify -> close -> refresh.
-    assignOpen.value = false
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.assignedSuccess') })
-    await load()
-  } catch (e) {
-    applyFieldErrors(e.errors)
-    $q.notify({ type: 'negative', icon: 'error', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-  } finally {
-    assigning.value = false
-  }
+function doAssign() {
+  const target = assignTarget.value
+  if (!target) return Promise.resolve({ ok: false, skipped: true })
+
+  const entity = t('common.entities.assignment')
+  return assignAction.run(() => assignmentService.assign(target.id, { ...assignForm }), {
+    successMessage: t('common.assignedSuccessEntity', { entity }),
+    errorMessage: t('common.unableToSaveEntity', { entity }),
+    onSuccess: async () => {
+      assignOpen.value = false
+      assignTarget.value = null
+      await load()
+    },
+  })
 }
 
+/**
+ * Archive = the destructive action for an asset (records are never hard
+ * deleted). The confirmation owns the request: spinner on OK, dialog stays
+ * open on failure, table refreshes only after the backend confirms.
+ */
 function confirmArchive(row) {
-  $q.dialog({
-    title: t('common.confirmArchiveTitle'),
-    message: t('common.confirmArchiveMessage', { entity: t('common.entities.asset'), name: row.name }),
-    cancel: { label: t('common.cancel'), flat: true },
-    ok: { label: t('common.archive'), color: 'negative', icon: 'archive' },
-    persistent: true, color: 'negative',
-  }).onOk(async () => {
-    try {
-      await assetService.remove(row.id)
-      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.archivedSuccess', { entity: t('common.entities.asset') }) })
+  const entity = t('common.entities.asset')
+  return confirmDelete({
+    entity,
+    name: row.name,
+    verb: 'archive',
+    onConfirm: () => assetService.remove(row.id),
+    onConfirmed: async () => {
+      notify.success(t('common.archivedSuccessEntity', { entity }))
       await load()
-    } catch (e) {
-      $q.notify({ type: 'negative', icon: 'error', message: e.message || t('common.saveFailed') })
-    }
+    },
   })
 }
 

@@ -52,7 +52,6 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import TableActionBar from 'src/components/common/TableActionBar.vue'
@@ -61,9 +60,9 @@ import ErrorState from 'src/components/common/ErrorState.vue'
 import { depreciationService } from 'src/services/financial.service'
 import { useAuthStore } from 'src/stores/auth'
 import { currency } from 'src/utils/format'
+import { notify } from 'src/utils/notify'
 
 const { t } = useI18n()
-const $q = useQuasar()
 const authStore = useAuthStore()
 
 const barActions = computed(() => [
@@ -118,10 +117,10 @@ async function calculate() {
   calcLoading.value = true
   try {
     const { data } = await depreciationService.calculate({ period: filters.period || undefined })
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('financial.depreciation.calculated', { period: data?.meta?.period || filters.period || t('financial.depreciation.currentPeriod') }) })
+    notify.success(t('financial.depreciation.calculated', { period: data?.meta?.period || filters.period || t('financial.depreciation.currentPeriod') }))
     await load()
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
+    notify.error(e.message || t('common.saveFailed'))
   } finally {
     calcLoading.value = false
   }

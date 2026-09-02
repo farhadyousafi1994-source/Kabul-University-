@@ -58,12 +58,11 @@
 <script setup>
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
+import { notify } from 'src/utils/notify'
 
 const emit = defineEmits(['done'])
 const { t } = useI18n()
-const $q = useQuasar()
 const authStore = useAuthStore()
 
 const form = ref({
@@ -82,7 +81,7 @@ async function submit() {
   error.value = null
   try {
     await authStore.changePassword(form.value)
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('auth.passwordChangedSuccess') })
+    notify.success(t('auth.passwordChangedSuccess'))
     emit('done')
   } catch (e) {
     error.value = e.message

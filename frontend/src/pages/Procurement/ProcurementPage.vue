@@ -69,16 +69,35 @@
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">{{ t('procurement.newPurchaseRequest') }}</div>
           <q-space />
-          <q-btn flat round dense icon="close" @click="prOpen = false" />
+          <q-btn flat round dense icon="close" :disable="saving" @click="prOpen = false" />
         </q-card-section>
         <q-card-section>
           <q-form @submit="doCreatePr" class="row q-col-gutter-md">
             <q-select v-model="prForm.department_id" :options="departmentOptions" :label="t('organization.departments.entity')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
             <q-select v-model="prForm.supplier_id" :options="supplierOptions" :label="t('catalog.suppliers.entity')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
-            <q-input v-model="prForm.notes" :label="t('common.notes')" type="textarea" dense outlined autogrow class="col-12" />
+            <q-input
+              v-model="prForm.notes"
+              :label="t('common.notes')"
+              type="textarea"
+              dense
+              outlined
+              autogrow
+              :disable="saving"
+              :error="Boolean(prAction.fieldErrors.notes)"
+              :error-message="prAction.fieldErrors.notes"
+              class="col-12"
+            />
             <div class="col-12 row justify-end q-gutter-sm">
-              <q-btn :label="t('common.cancel')" flat color="grey-7" @click="prOpen = false" />
-              <q-btn :label="t('common.create')" type="submit" color="primary" :loading="saving" />
+              <q-btn :label="t('common.cancel')" flat color="grey-7" :disable="saving" @click="prOpen = false" />
+              <q-btn
+                :label="saving ? t('common.working') : t('common.create')"
+                type="submit"
+                color="primary"
+                :loading="saving"
+                data-cy="pr-submit"
+              >
+                <template #loading><q-spinner-dots class="q-mr-sm" />{{ t('common.working') }}</template>
+              </q-btn>
             </div>
           </q-form>
         </q-card-section>
@@ -91,7 +110,7 @@
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">{{ t('requests.approve') }}</div>
           <q-space />
-          <q-btn flat round dense icon="close" @click="approveOpen = false" />
+          <q-btn flat round dense icon="close" :disable="approving" @click="approveOpen = false" />
         </q-card-section>
         <q-card-section>
           <div class="text-caption text-grey-7 q-mb-sm">{{ approveTarget?.pr_number }}</div>
@@ -104,8 +123,16 @@
           </div>
           <q-btn flat dense size="sm" color="primary" icon="add" :label="t('common.create')" @click="approveForm.items.push({ name: '', asset_category_id: null, quantity: 1, unit_price: 0 })" />
           <div class="row justify-end q-gutter-sm q-mt-md">
-            <q-btn :label="t('common.cancel')" flat color="grey-7" @click="approveOpen = false" />
-            <q-btn :label="t('requests.approve')" color="positive" :loading="saving" @click="doApprove" />
+            <q-btn :label="t('common.cancel')" flat color="grey-7" :disable="approving" @click="approveOpen = false" />
+            <q-btn
+              :label="approving ? t('common.processing') : t('requests.approve')"
+              color="positive"
+              :loading="approving"
+              data-cy="approve-submit"
+              @click="doApprove"
+            >
+              <template #loading><q-spinner-dots class="q-mr-sm" />{{ t('common.processing') }}</template>
+            </q-btn>
           </div>
         </q-card-section>
       </q-card>
@@ -131,7 +158,6 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import TableActionBar from 'src/components/common/TableActionBar.vue'
@@ -142,9 +168,11 @@ import { procurementService } from 'src/services/procurement.service'
 import { useOptions } from 'src/composables/useOptions'
 import { useAuthStore } from 'src/stores/auth'
 import { date } from 'src/utils/format'
+import { notify } from 'src/utils/notify'
+import { useAction } from 'src/composables/useAction'
+import { confirmAction } from 'src/utils/confirm'
 
 const { t } = useI18n()
-const $q = useQuasar()
 const authStore = useAuthStore()
 const { departments, suppliers, categories, opts } = useOptions()
 const departmentOptions = computed(() => opts(departments.value))
@@ -164,7 +192,16 @@ const perPage = ref(20)
 const search = ref('')
 const loading = ref(false)
 const error = ref('')
-const saving = ref(false)
+/**
+ * One action lifecycle per dialog, so the purchase-request form and the
+ * approval form can never block or overwrite each other's state. Each gives us
+ * the loading flag, the duplicate-submission guard, the specific success toast
+ * and server validation mapped onto `fieldErrors`.
+ */
+const prAction = useAction()
+const approveAction = useAction()
+const saving = prAction.pending
+const approving = approveAction.pending
 const prOpen = ref(false)
 const approveOpen = ref(false)
 const poOpen = ref(false)
@@ -253,19 +290,22 @@ function openPr() {
   prOpen.value = true
 }
 
-async function doCreatePr() {
-  if (saving.value) return // prevent duplicate submissions
-  saving.value = true
-  try {
-    await procurementService.createPurchaseRequest({ ...prForm })
-    prOpen.value = false
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.createdSuccessEntity', { entity: t('common.entities.purchaseOrder') }) })
-    await load()
-  } catch (e) {
-    $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-  } finally {
-    saving.value = false
-  }
+function resetPrForm() {
+  Object.assign(prForm, { department_id: null, supplier_id: null, notes: '' })
+  prAction.clearFieldErrors()
+}
+
+function doCreatePr() {
+  const entity = t('common.entities.purchaseRequest')
+  return prAction.run(() => procurementService.createPurchaseRequest({ ...prForm }), {
+    successMessage: t('common.createdSuccessEntity', { entity }),
+    errorMessage: t('common.unableToSaveEntity', { entity }),
+    onSuccess: async () => {
+      prOpen.value = false
+      resetPrForm()
+      await load()
+    },
+  })
 }
 
 function openApprove(row) {
@@ -274,19 +314,23 @@ function openApprove(row) {
   approveOpen.value = true
 }
 
-async function doApprove() {
-  if (saving.value) return // prevent duplicate submissions
-  saving.value = true
-  try {
-    await procurementService.approvePurchaseRequest(approveTarget.value.id, { items: approveForm.items })
-    approveOpen.value = false
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.savedSuccessEntity', { entity: t('common.entities.purchaseOrder') }) })
-    await load()
-  } catch (e) {
-    $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-  } finally {
-    saving.value = false
-  }
+function doApprove() {
+  const target = approveTarget.value
+  if (!target) return Promise.resolve({ ok: false, skipped: true })
+
+  const entity = t('common.entities.purchaseRequest')
+  return approveAction.run(
+    () => procurementService.approvePurchaseRequest(target.id, { items: approveForm.items }),
+    {
+      successMessage: t('common.savedSuccessEntity', { entity }),
+      errorMessage: t('common.unableToSaveEntity', { entity }),
+      onSuccess: async () => {
+        approveOpen.value = false
+        approveTarget.value = null
+        await load()
+      },
+    },
+  )
 }
 
 async function openPo(row) {
@@ -295,37 +339,42 @@ async function openPo(row) {
     poDetail.value = data
     poOpen.value = true
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || t('common.loadFailed') })
+    notify.error(e.message || t('common.loadFailed'))
   }
 }
 
 async function send(row) {
-  $q.dialog({ title: t('common.submit'), message: `${t('common.submit')}: ${row.po_number}?`, cancel: true, persistent: true })
-    .onOk(async () => {
-      try {
-        await procurementService.sendOrder(row.id)
-        $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.savedSuccessEntity', { entity: t('common.entities.purchaseOrder') }) })
-        await load()
-      } catch (e) {
-        $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-      }
-    })
+  const entity = t('common.entities.purchaseOrder')
+  const confirmed = await confirmAction({
+    title: t('procurement.sendTitle'),
+    message: t('procurement.sendMessage', { number: row.po_number }),
+    okLabel: t('procurement.send'),
+    busyLabel: t('common.submitting'),
+    icon: 'send',
+    color: 'primary',
+    errorMessage: t('common.unableToSaveEntity', { entity }),
+    onConfirm: () => procurementService.sendOrder(row.id),
+  })
+  if (!confirmed) return
+  notify.success(t('common.submittedSuccessEntity', { entity }))
+  await load()
 }
 
 async function receive(row) {
-  $q.dialog({
-    title: t('status.completed'),
-    message: `${t('status.completed')}: ${row.po_number}?`,
-    cancel: true, persistent: true,
-  }).onOk(async () => {
-    try {
-      await procurementService.receive(row.id, {})
-      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.savedSuccessEntity', { entity: t('common.entities.purchaseOrder') }) })
-      await load()
-    } catch (e) {
-      $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-    }
+  const entity = t('common.entities.purchaseOrder')
+  const confirmed = await confirmAction({
+    title: t('procurement.receiveTitle'),
+    message: t('procurement.receiveMessage', { number: row.po_number }),
+    okLabel: t('procurement.receive'),
+    busyLabel: t('common.updating'),
+    icon: 'inventory',
+    color: 'positive',
+    errorMessage: t('common.unableToSaveEntity', { entity }),
+    onConfirm: () => procurementService.receive(row.id, {}),
   })
+  if (!confirmed) return
+  notify.success(t('common.savedSuccessEntity', { entity }))
+  await load()
 }
 
 onMounted(load)

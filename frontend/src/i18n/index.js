@@ -48,11 +48,15 @@ export const SUPPORTED_LANGUAGES = [
   },
 ]
 
-const messages = {
-  en,
-  fa,
-  ps,
-  ar,
+import { deepMerge, extensions } from './extensions.js'
+
+// Base bundles, then the additive keys introduced by the global CRUD /
+// notification layer and the Theme & Appearance center. `deepMerge` walks the
+// tree so existing namespaces (`common`, `assignments`, …) keep every key they
+// already had and only gain the new ones.
+const messages = { en, fa, ps, ar }
+for (const [code, extra] of Object.entries(extensions)) {
+  if (messages[code]) deepMerge(messages[code], extra)
 }
 
 // Get initial locale from localStorage or default to English

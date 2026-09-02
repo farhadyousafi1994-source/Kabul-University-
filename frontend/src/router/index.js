@@ -427,6 +427,20 @@ const routes = [
         },
       },
       {
+        path: 'theme',
+        name: 'theme',
+        component: () => import('src/pages/Settings/ThemeAppearancePage.vue'),
+        meta: {
+          title: 'Theme & Appearance',
+          titleKey: 'theme.title',
+          icon: 'palette',
+          section: 'Administration',
+          sectionKey: 'nav.sections.administration',
+          permission: 'dashboard.view',
+          order: 55,
+        },
+      },
+      {
         path: 'settings',
         name: 'settings',
         component: () => import('src/pages/Settings/SettingsPage.vue'),

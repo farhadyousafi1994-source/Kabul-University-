@@ -46,7 +46,19 @@ export function assignmentRoutes(router) {
   }, { auth: true, permission: 'assets.view' })
 
   router.get('/api/asset-assignments/:id', (ctx) => {
-    const row = ctx.db.prepare('SELECT * FROM asset_assignments WHERE id = ?').get(Number(ctx.params.id))
+    // Same enriched shape as the index route (asset + employee + assignee), so a
+    // client can open a record straight from a deep link without a second call.
+    const row = ctx.db.prepare(
+      `SELECT a.*, asset.name AS asset_name, asset.asset_code, asset.status AS asset_status,
+              TRIM(e.first_name || ' ' || e.last_name) AS employee_name,
+              e.employee_code AS employee_code,
+              u.name AS assignee_name, u.username AS assignee_username
+       FROM asset_assignments a
+       LEFT JOIN assets asset ON asset.id = a.asset_id
+       LEFT JOIN employees e ON e.id = a.employee_id
+       LEFT JOIN users u ON u.id = a.assigned_to_user_id
+       WHERE a.id = ?`,
+    ).get(Number(ctx.params.id))
     if (!row) throw new HttpError(404, 'Assignment not found.')
     return ok('Assignment retrieved successfully.', row)
   }, { auth: true, permission: 'assets.view' })
@@ -73,6 +85,24 @@ export function assignmentRoutes(router) {
     } else {
       throw new HttpError(422, 'Validation failed', { employee_id: ['The employee field is required.'] })
     }
+
+    // Parity with App\Domains\Asset\Requests\AssignmentRequest: an expected
+    // return date in the past (or a malformed one) is rejected up-front rather
+    // than silently stored, so dev and production behave identically.
+    const fieldErrors = {}
+    if (ctx.body.expected_return_date !== undefined && ctx.body.expected_return_date !== null && ctx.body.expected_return_date !== '') {
+      const raw = String(ctx.body.expected_return_date)
+      const parsed = new Date(raw)
+      if (!/^\d{4}-\d{2}-\d{2}/.test(raw) || Number.isNaN(parsed.getTime())) {
+        fieldErrors.expected_return_date = ['The expected return date is not a valid date.']
+      } else if (raw.slice(0, 10) < new Date().toISOString().slice(0, 10)) {
+        fieldErrors.expected_return_date = ['The expected return date must be today or a future date.']
+      }
+    }
+    if (ctx.body.notes !== undefined && ctx.body.notes !== null && String(ctx.body.notes).length > 1000) {
+      fieldErrors.notes = ['The notes may not be greater than 1000 characters.']
+    }
+    if (Object.keys(fieldErrors).length) throw new HttpError(422, 'Validation failed', fieldErrors)
 
     const now = new Date().toISOString()
     const info = ctx.db.prepare(

@@ -172,16 +172,53 @@
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">{{ t('assets.assignAsset') }}</div>
           <q-space />
-          <q-btn flat round dense icon="close" @click="assignOpen = false" />
+          <q-btn flat round dense icon="close" :disable="busy.assign" @click="assignOpen = false" />
         </q-card-section>
         <q-card-section>
           <q-form @submit="doAssign" class="column q-gutter-md">
-            <EmployeeSelect v-model="assignForm.employee_id" :label="`${t('assets.assignTo')} *`" dense outlined :rules="[required]" />
-            <q-input v-model="assignForm.expected_return_date" :label="t('assets.expectedReturnDate')" type="date" dense outlined />
-            <q-input v-model="assignForm.notes" :label="t('common.notes')" type="textarea" dense outlined autogrow />
+            <EmployeeSelect
+              v-model="assignForm.employee_id"
+              :label="`${t('assets.assignTo')} *`"
+              dense
+              outlined
+              :rules="[required]"
+              :disable="busy.assign"
+              :error="Boolean(assignAction.fieldErrors.employee_id)"
+              :error-message="assignAction.fieldErrors.employee_id"
+              data-cy="detail-assign-employee"
+            />
+            <q-input
+              v-model="assignForm.expected_return_date"
+              :label="t('assets.expectedReturnDate')"
+              type="date"
+              dense
+              outlined
+              :disable="busy.assign"
+              :error="Boolean(assignAction.fieldErrors.expected_return_date)"
+              :error-message="assignAction.fieldErrors.expected_return_date"
+            />
+            <q-input
+              v-model="assignForm.notes"
+              :label="t('common.notes')"
+              type="textarea"
+              dense
+              outlined
+              autogrow
+              :disable="busy.assign"
+              :error="Boolean(assignAction.fieldErrors.notes)"
+              :error-message="assignAction.fieldErrors.notes"
+            />
             <div class="row justify-end q-gutter-sm">
-              <q-btn :label="t('common.cancel')" flat color="grey-7" @click="assignOpen = false" />
-              <q-btn :label="t('assets.assignAsset')" type="submit" color="primary" :loading="busy.assign" />
+              <q-btn :label="t('common.cancel')" flat color="grey-7" :disable="busy.assign" @click="assignOpen = false" />
+              <q-btn
+                :label="busy.assign ? t('common.working') : t('assets.assignAsset')"
+                type="submit"
+                color="primary"
+                :loading="busy.assign"
+                data-cy="detail-assign-submit"
+              >
+                <template #loading><q-spinner-dots class="q-mr-sm" />{{ t('common.working') }}</template>
+              </q-btn>
             </div>
           </q-form>
         </q-card-section>
@@ -194,7 +231,7 @@
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">{{ t('assets.transferAsset') }}</div>
           <q-space />
-          <q-btn flat round dense icon="close" @click="transferOpen = false" />
+          <q-btn flat round dense icon="close" :disable="busy.transfer" @click="transferOpen = false" />
         </q-card-section>
         <q-card-section>
           <q-form @submit="doTransfer" class="row q-col-gutter-md">
@@ -204,10 +241,29 @@
             <q-select v-model="transferForm.to_building_id" :options="buildingOptions" :label="t('assets.toBuilding')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
             <q-select v-model="transferForm.to_floor_id" :options="floorOptions" :label="t('assets.toFloor')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
             <q-select v-model="transferForm.to_room_id" :options="roomOptions" :label="t('assets.toRoom')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
-            <q-input v-model="transferForm.notes" :label="t('common.notes')" type="textarea" dense outlined autogrow class="col-12" />
+            <q-input
+              v-model="transferForm.notes"
+              :label="t('common.notes')"
+              type="textarea"
+              dense
+              outlined
+              autogrow
+              :disable="busy.transfer"
+              :error="Boolean(transferAction.fieldErrors.notes)"
+              :error-message="transferAction.fieldErrors.notes"
+              class="col-12"
+            />
             <div class="col-12 row justify-end q-gutter-sm">
-              <q-btn :label="t('common.cancel')" flat color="grey-7" @click="transferOpen = false" />
-              <q-btn :label="t('assets.requestTransfer')" type="submit" color="primary" :loading="busy.transfer" />
+              <q-btn :label="t('common.cancel')" flat color="grey-7" :disable="busy.transfer" @click="transferOpen = false" />
+              <q-btn
+                :label="busy.transfer ? t('common.working') : t('assets.requestTransfer')"
+                type="submit"
+                color="primary"
+                :loading="busy.transfer"
+                data-cy="detail-transfer-submit"
+              >
+                <template #loading><q-spinner-dots class="q-mr-sm" />{{ t('common.working') }}</template>
+              </q-btn>
             </div>
           </q-form>
         </q-card-section>
@@ -226,7 +282,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import QRCode from 'qrcode'
 import JsBarcode from 'jsbarcode'
@@ -240,10 +295,12 @@ import { assignmentService, transferService } from 'src/services/operations.serv
 import { useOptions } from 'src/composables/useOptions'
 import { useAuthStore } from 'src/stores/auth'
 import { currency, date } from 'src/utils/format'
+import { notify } from 'src/utils/notify'
+import { useAction } from 'src/composables/useAction'
+import { confirmAction, confirmDelete } from 'src/utils/confirm'
 
 const { t } = useI18n()
 const route = useRoute()
-const $q = useQuasar()
 const authStore = useAuthStore()
 const { campuses, faculties, departments, buildings, floors, rooms, opts } = useOptions()
 const campusOptions = computed(() => opts(campuses.value))
@@ -269,7 +326,28 @@ const assignOpen = ref(false)
 const transferOpen = ref(false)
 const assignForm = reactive({ employee_id: null, expected_return_date: null, notes: '' })
 const transferForm = reactive({ to_campus_id: null, to_faculty_id: null, to_department_id: null, to_building_id: null, to_floor_id: null, to_room_id: null, notes: '' })
-const busy = reactive({ assign: false, transfer: false, return: false })
+/**
+ * One action lifecycle per operation on this asset, so assigning, returning and
+ * transferring can never block or overwrite each other's state. Each gives the
+ * loading flag, the duplicate-submission guard, the specific success toast and
+ * server validation mapped onto `fieldErrors`.
+ */
+const assignAction = useAction()
+const transferAction = useAction()
+
+/**
+ * The return flow is driven by `confirmAction`, which owns its own request
+ * lifecycle; this flag only drives the toolbar spinner while that dialog is
+ * doing the work.
+ */
+const returning = ref(false)
+
+/** Kept as a single object so the existing template bindings stay readable. */
+const busy = reactive({
+  assign: assignAction.pending,
+  transfer: transferAction.pending,
+  return: returning,
+})
 const uploadDocInput = ref(null)
 const uploadImgInput = ref(null)
 
@@ -314,7 +392,7 @@ async function loadAux() {
     activeAssignment.value = assignments.data?.data?.[0] || null
     renderCodes()
   } catch (e) {
-    $q.notify({ type: 'warning', message: t('common.loadFailed') })
+    notify.warning(t('common.loadFailed'))
   } finally {
     timelineLoading.value = false
   }
@@ -331,56 +409,67 @@ function renderCodes() {
   }
 }
 
-async function doAssign() {
-  if (busy.assign) return // prevent duplicate submissions
-  busy.assign = true
-  try {
-    await assignmentService.assign(asset.value.id, { ...assignForm })
-    // Success: notify -> close -> refresh.
-    assignOpen.value = false
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.assignedSuccess') })
-    await load()
-  } catch (e) {
-    // Failure: dialog stays open, entered data preserved.
-    $q.notify({ type: 'negative', icon: 'error', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-  } finally {
-    busy.assign = false
-  }
-}
+function doAssign() {
+  const target = asset.value
+  if (!target) return Promise.resolve({ ok: false, skipped: true })
 
-function returnAsset() {
-  $q.dialog({
-    title: t('assets.returnAsset'),
-    message: t('assets.returnConfirm', { name: asset.value.name, assignee: activeAssignment.value?.employee_name || activeAssignment.value?.assignee_name || t('common.user') }),
-    cancel: { label: t('common.cancel'), flat: true },
-    ok: { label: t('assets.returnAsset'), color: 'primary', icon: 'undo' },
-    persistent: true,
-  }).onOk(async () => {
-    if (busy.return) return
-    busy.return = true
-    try {
-      await assignmentService.returnAsset(activeAssignment.value.id, { condition_on_return: 'good' })
-      $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.returnedSuccess') })
+  const entity = t('common.entities.assignment')
+  return assignAction.run(() => assignmentService.assign(target.id, { ...assignForm }), {
+    successMessage: t('common.assignedSuccessEntity', { entity }),
+    errorMessage: t('common.unableToSaveEntity', { entity }),
+    onSuccess: async () => {
+      assignOpen.value = false
       await load()
-    } catch (e) {
-      $q.notify({ type: 'negative', icon: 'error', message: e.message || t('common.saveFailed') })
-    } finally {
-      busy.return = false
-    }
+    },
   })
 }
 
-async function doTransfer() {
-  busy.transfer = true
+/**
+ * Return (unassign) the asset currently held by an employee.
+ * `busy.return` drives the toolbar spinner; the confirmation dialog owns the
+ * request itself so a failure keeps it open instead of silently closing.
+ */
+async function returnAsset() {
+  const assignment = activeAssignment.value
+  if (!assignment) return
+
+  returning.value = true
   try {
-    await transferService.store(asset.value.id, { ...transferForm })
-    transferOpen.value = false
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.transferCreated') })
-  } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
+    const confirmed = await confirmAction({
+      title: t('assets.returnAsset'),
+      message: t('assets.returnConfirm', {
+        name: asset.value.name,
+        assignee: assignment.employee_name || assignment.assignee_name || t('common.user'),
+      }),
+      okLabel: t('assets.returnAsset'),
+      busyLabel: t('common.updating'),
+      icon: 'undo',
+      color: 'primary',
+      onConfirm: () => assignmentService.returnAsset(assignment.id, { condition_on_return: 'good' }),
+    })
+    if (!confirmed) return
+    notify.success(t('assets.returnedSuccess'))
+    await load()
   } finally {
-    busy.transfer = false
+    returning.value = false
   }
+}
+
+function doTransfer() {
+  const target = asset.value
+  if (!target) return Promise.resolve({ ok: false, skipped: true })
+
+  const entity = t('common.entities.transfer')
+  return transferAction.run(() => transferService.store(target.id, { ...transferForm }), {
+    successMessage: t('common.createdSuccessEntity', { entity }),
+    errorMessage: t('common.unableToSaveEntity', { entity }),
+    onSuccess: async () => {
+      transferOpen.value = false
+      // The detail view was not refreshed after a transfer before, so the
+      // location/custody panel kept showing the pre-transfer state.
+      await load()
+    },
+  })
 }
 
 async function uploadDocument(e) {
@@ -389,10 +478,10 @@ async function uploadDocument(e) {
   if (!file) return
   try {
     await assetService.uploadDocument(asset.value.id, { kind: 'other', file: { filename: file.name, mime: file.type, size: file.size } })
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.documentUploaded') })
+    notify.success(t('assets.documentUploaded'))
     documents.value = (await assetService.documents(asset.value.id)).data?.data || []
   } catch (err) {
-    $q.notify({ type: 'negative', message: err.message || t('common.saveFailed') })
+    notify.error(err.message || t('common.saveFailed'))
   }
 }
 
@@ -402,29 +491,36 @@ async function uploadImage(e) {
   if (!file) return
   try {
     await assetService.uploadImage(asset.value.id, { file: { filename: file.name, path: URL.createObjectURL(file), mime: file.type, size: file.size } })
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.imageUploaded') })
+    notify.success(t('assets.imageUploaded'))
     images.value = (await assetService.images(asset.value.id)).data?.data || []
   } catch (err) {
-    $q.notify({ type: 'negative', message: err.message || t('common.saveFailed') })
+    notify.error(err.message || t('common.saveFailed'))
   }
 }
 
 function removeDocument(doc) {
-  $q.dialog({ title: t('common.confirmDeleteTitle'), message: t('common.confirmDeleteMessage'), cancel: true, persistent: true, color: 'negative' })
-    .onOk(async () => {
-      await assetService.deleteDocument(doc.id)
+  return confirmDelete({
+    entity: t('assets.document'),
+    name: doc.filename,
+    onConfirm: () => assetService.deleteDocument(doc.id),
+    // The list is re-read only after the delete is confirmed by the backend.
+    onConfirmed: async () => {
       documents.value = (await assetService.documents(asset.value.id)).data?.data || []
-      $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.documentDeleted') })
-    })
+      notify.success(t('assets.documentDeleted'))
+    },
+  })
 }
 
 function removeImage(img) {
-  $q.dialog({ title: t('common.confirmDeleteTitle'), message: t('common.confirmDeleteMessage'), cancel: true, persistent: true, color: 'negative' })
-    .onOk(async () => {
-      await assetService.deleteImage(img.id)
+  return confirmDelete({
+    entity: t('assets.image'),
+    name: img.filename,
+    onConfirm: () => assetService.deleteImage(img.id),
+    onConfirmed: async () => {
       images.value = (await assetService.images(asset.value.id)).data?.data || []
-      $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.imageDeleted') })
-    })
+      notify.success(t('assets.imageDeleted'))
+    },
+  })
 }
 
 onMounted(load)

@@ -224,7 +224,6 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import StatCard from 'src/components/common/StatCard.vue'
@@ -236,9 +235,10 @@ import { useOptions } from 'src/composables/useOptions'
 import { useAuthStore } from 'src/stores/auth'
 import { employeeService } from 'src/services/employees.service'
 import { date as formatDate } from 'src/utils/format'
+import { notify } from 'src/utils/notify'
+import { useAction } from 'src/composables/useAction'
 
 const { t } = useI18n()
-const $q = useQuasar()
 const authStore = useAuthStore()
 const { departments, opts } = useOptions()
 
@@ -258,9 +258,15 @@ const stats = reactive({ total: 0, active: 0, inactive: 0, on_leave: 0, with_ass
 
 const dialogOpen = ref(false)
 const editing = ref(null)
-const saving = ref(false)
+/**
+ * Shared action lifecycle for the create/edit dialog: loading flag,
+ * duplicate-submission guard, specific success toast, and server validation
+ * mapped onto `fieldErrors`.
+ */
+const saveAction = useAction()
+const saving = saveAction.pending
 const form = reactive({})
-const fieldErrors = reactive({})
+const fieldErrors = saveAction.fieldErrors
 
 const pendingDelete = ref(null)
 const deletingId = ref(null)
@@ -371,8 +377,9 @@ watch(search, () => { page.value = 1; load() })
 watch(() => [filters.department_id, filters.status, filters.employment_type], () => { page.value = 1; load() })
 
 // ----- create / edit --------------------------------------------------------
+/** Delegate to the composable so error state can never drift out of sync. */
 function resetErrors() {
-  Object.keys(fieldErrors).forEach((k) => delete fieldErrors[k])
+  saveAction.clearFieldErrors()
 }
 
 function openCreate() {
@@ -401,31 +408,29 @@ function openEdit(row) {
   dialogOpen.value = true
 }
 
-async function save() {
-  if (saving.value) return // prevent duplicate submissions
-  saving.value = true
-  resetErrors()
-  try {
-    const payload = { ...form }
-    if (!payload.employee_code) delete payload.employee_code
-    if (editing.value) {
-      await employeeService.update(editing.value.id, payload)
-      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.updatedSuccessEntity', { entity: t('common.entities.employee') }) })
-    } else {
-      await employeeService.create(payload)
-      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.createdSuccessEntity', { entity: t('common.entities.employee') }) })
-    }
-    dialogOpen.value = false
-    await Promise.all([load(), loadStats()])
-  } catch (e) {
-    for (const [k, v] of Object.entries(e.errors || {})) {
-      if (Array.isArray(v) && v.length) fieldErrors[k] = v[0]
-    }
-    const msg = e.errors ? Object.values(e.errors).flat().join(' · ') : e.message
-    $q.notify({ type: 'negative', message: msg || t('common.saveFailed') })
-  } finally {
-    saving.value = false
-  }
+function save() {
+  const wasEditing = Boolean(editing.value)
+  const id = editing.value?.id
+  const payload = { ...form }
+  // `employee_code` is generated server-side on create; sending an empty string
+  // would trip its uniqueness rule.
+  if (!payload.employee_code) delete payload.employee_code
+
+  const entity = t('common.entities.employee')
+  return saveAction.run(
+    () => (wasEditing ? employeeService.update(id, payload) : employeeService.create(payload)),
+    {
+      successMessage: wasEditing
+        ? t('common.updatedSuccessEntity', { entity })
+        : t('common.createdSuccessEntity', { entity }),
+      errorMessage: t('common.unableToSaveEntity', { entity }),
+      onSuccess: async () => {
+        dialogOpen.value = false
+        editing.value = null
+        await Promise.all([load(), loadStats()])
+      },
+    },
+  )
 }
 
 // ----- delete ---------------------------------------------------------------
@@ -435,11 +440,11 @@ async function doDelete() {
   deletingId.value = row.id
   try {
     await employeeService.remove(row.id)
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.deletedSuccessEntity', { entity: t('common.entities.employee') }) })
+    notify.success(t('common.deletedSuccessEntity', { entity: t('common.entities.employee') }))
     pendingDelete.value = null
     await Promise.all([load(), loadStats()])
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
+    notify.error(e.message || t('common.saveFailed'))
   } finally {
     deletingId.value = null
   }

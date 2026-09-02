@@ -37,10 +37,10 @@
         </template>
         <template v-slot:body-cell-actions="props">
           <q-td :props="props">
-            <q-btn v-if="canTransfer && props.row.status === 'requested'" flat dense round size="sm" color="positive" icon="check" @click="transition(props.row, 'approved')"><q-tooltip>{{ t('status.approved') }}</q-tooltip></q-btn>
-            <q-btn v-if="canTransfer && props.row.status === 'approved'" flat dense round size="sm" color="warning" icon="local_shipping" @click="transition(props.row, 'in_transit')"><q-tooltip>{{ t('status.in_transit') }}</q-tooltip></q-btn>
-            <q-btn v-if="canTransfer && props.row.status === 'in_transit'" flat dense round size="sm" color="positive" icon="flag" @click="transition(props.row, 'completed')"><q-tooltip>{{ t('status.completed') }}</q-tooltip></q-btn>
-            <q-btn v-if="canTransfer && ['requested', 'approved', 'in_transit'].includes(props.row.status)" flat dense round size="sm" color="negative" icon="block" @click="transition(props.row, 'rejected')"><q-tooltip>{{ t('status.rejected') }}</q-tooltip></q-btn>
+            <q-btn v-if="canTransfer && props.row.status === 'requested'" flat dense round size="sm" color="positive" icon="check" :loading="rowBusy" :disable="rowBusy" @click="transition(props.row, 'approved')"><q-tooltip>{{ t('status.approved') }}</q-tooltip></q-btn>
+            <q-btn v-if="canTransfer && props.row.status === 'approved'" flat dense round size="sm" color="warning" icon="local_shipping" :loading="rowBusy" :disable="rowBusy" @click="transition(props.row, 'in_transit')"><q-tooltip>{{ t('status.in_transit') }}</q-tooltip></q-btn>
+            <q-btn v-if="canTransfer && props.row.status === 'in_transit'" flat dense round size="sm" color="positive" icon="flag" :loading="rowBusy" :disable="rowBusy" @click="transition(props.row, 'completed')"><q-tooltip>{{ t('status.completed') }}</q-tooltip></q-btn>
+            <q-btn v-if="canTransfer && ['requested', 'approved', 'in_transit'].includes(props.row.status)" flat dense round size="sm" color="negative" icon="block" :loading="rowBusy" :disable="rowBusy" @click="transition(props.row, 'rejected')"><q-tooltip>{{ t('status.rejected') }}</q-tooltip></q-btn>
           </q-td>
         </template>
         <template v-if="!rows.length" v-slot:no-data>
@@ -60,21 +60,54 @@
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">{{ t('transfers.newTransfer') }}</div>
           <q-space />
-          <q-btn flat round dense icon="close" @click="dialogOpen = false" />
+          <q-btn flat round dense icon="close" :disable="saving" @click="dialogOpen = false" />
         </q-card-section>
         <q-card-section>
           <q-form @submit="doCreate" class="row q-col-gutter-md">
-            <q-select v-model="form.asset_id" :options="assetOptions" :label="`${t('assignments.asset')} *`" dense outlined emit-value map-options options-dense :rules="[required]" class="col-12" />
+            <q-select
+              v-model="form.asset_id"
+              :options="assetOptions"
+              :label="`${t('assignments.asset')} *`"
+              dense
+              outlined
+              emit-value
+              map-options
+              options-dense
+              :rules="[required]"
+              :disable="saving"
+              :error="Boolean(fieldErrors.asset_id)"
+              :error-message="fieldErrors.asset_id"
+              class="col-12"
+            />
             <q-select v-model="form.to_campus_id" :options="campusOptions" :label="t('assets.toCampus')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
             <q-select v-model="form.to_faculty_id" :options="facultyOptions" :label="t('assets.toFaculty')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
             <q-select v-model="form.to_department_id" :options="departmentOptions" :label="t('assets.toDepartment')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
             <q-select v-model="form.to_building_id" :options="buildingOptions" :label="t('assets.toBuilding')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
             <q-select v-model="form.to_floor_id" :options="floorOptions" :label="t('assets.toFloor')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
             <q-select v-model="form.to_room_id" :options="roomOptions" :label="t('assets.toRoom')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
-            <q-input v-model="form.notes" :label="t('common.notes')" type="textarea" dense outlined autogrow class="col-12" />
+            <q-input
+              v-model="form.notes"
+              :label="t('common.notes')"
+              type="textarea"
+              dense
+              outlined
+              autogrow
+              :disable="saving"
+              :error="Boolean(fieldErrors.notes)"
+              :error-message="fieldErrors.notes"
+              class="col-12"
+            />
             <div class="col-12 row justify-end q-gutter-sm">
-              <q-btn :label="t('common.cancel')" flat color="grey-7" @click="dialogOpen = false" />
-              <q-btn :label="t('assets.requestTransfer')" type="submit" color="primary" :loading="saving" />
+              <q-btn :label="t('common.cancel')" flat color="grey-7" :disable="saving" @click="dialogOpen = false" />
+              <q-btn
+                :label="saving ? t('common.submitting') : t('assets.requestTransfer')"
+                type="submit"
+                color="primary"
+                :loading="saving"
+                data-cy="transfer-submit"
+              >
+                <template #loading><q-spinner-dots class="q-mr-sm" />{{ t('common.submitting') }}</template>
+              </q-btn>
             </div>
           </q-form>
         </q-card-section>
@@ -85,7 +118,6 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import TableActionBar from 'src/components/common/TableActionBar.vue'
@@ -97,9 +129,10 @@ import { assetService } from 'src/services/assets.service'
 import { useOptions } from 'src/composables/useOptions'
 import { useAuthStore } from 'src/stores/auth'
 import { date } from 'src/utils/format'
+import { notify } from 'src/utils/notify'
+import { useAction } from 'src/composables/useAction'
 
 const { t } = useI18n()
-const $q = useQuasar()
 const authStore = useAuthStore()
 const { campuses, faculties, departments, buildings, floors, rooms, opts } = useOptions()
 const campusOptions = computed(() => opts(campuses.value))
@@ -121,7 +154,22 @@ const perPage = ref(20)
 const search = ref('')
 const loading = ref(false)
 const error = ref('')
-const saving = ref(false)
+/**
+ * Shared action lifecycle: loading flag, duplicate-submission guard, specific
+ * success toast, and server validation mapped onto `fieldErrors` so the dialog
+ * can render it inline while staying open.
+ */
+const createAction = useAction()
+/**
+ * Inline row actions (approve / reject / transition / verify) share one action
+ * lifecycle: a duplicate-submission guard, the specific success toast, and
+ * server messages surfaced through the standard error handling.
+ */
+const rowAction = useAction()
+const rowBusy = rowAction.pending
+
+const saving = createAction.pending
+const fieldErrors = createAction.fieldErrors
 const dialogOpen = ref(false)
 const form = reactive({ asset_id: null, to_campus_id: null, to_faculty_id: null, to_department_id: null, to_building_id: null, to_floor_id: null, to_room_id: null, notes: '' })
 const filters = reactive({ status: null })
@@ -171,29 +219,34 @@ watch(page, load)
 watch(search, () => { page.value = 1; load() })
 watch(() => filters.status, () => { page.value = 1; load() })
 
-async function doCreate() {
-  if (saving.value) return // prevent duplicate submissions
-  saving.value = true
-  try {
-    await transferService.store(form.asset_id, { ...form })
-    dialogOpen.value = false
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('assets.transferCreated') })
-    await load()
-  } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
-  } finally {
-    saving.value = false
-  }
+function resetForm() {
+  Object.assign(form, {
+    asset_id: null, to_campus_id: null, to_faculty_id: null, to_department_id: null,
+    to_building_id: null, to_floor_id: null, to_room_id: null, notes: '',
+  })
+  createAction.clearFieldErrors()
 }
 
-async function transition(row, status) {
-  try {
-    await transferService.transition(row.id, status)
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.updatedSuccessEntity', { entity: t('common.entities.transfer') }) })
-    await load()
-  } catch (e) {
-    $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-  }
+function doCreate() {
+  const entity = t('common.entities.transfer')
+  return createAction.run(() => transferService.store(form.asset_id, { ...form }), {
+    successMessage: t('assets.transferCreated'),
+    errorMessage: t('common.unableToSaveEntity', { entity }),
+    onSuccess: async () => {
+      dialogOpen.value = false
+      resetForm()
+      await load()
+    },
+  })
+}
+
+function transition(row, status) {
+  const entity = t('common.entities.transfer')
+  return rowAction.run(() => transferService.transition(row.id, status), {
+    successMessage: t('common.updatedSuccessEntity', { entity }),
+    errorMessage: t('common.unableToSaveEntity', { entity }),
+    onSuccess: () => load(),
+  })
 }
 
 watch(dialogOpen, async (open) => {
