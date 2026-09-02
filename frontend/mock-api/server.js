@@ -1,6 +1,7 @@
 import { createServer } from 'node:http'
-import { createHash, randomBytes } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
 import { openDb } from './db.js'
+import { hashPassword, hashToken } from './crypto.js'
 
 // ---------------------------------------------------------------------------
 // KU-AMS development mock API
@@ -32,10 +33,6 @@ export const fail = (status, message, errors = null) => ({
   message,
   ...(errors ? { errors } : {}),
 })
-
-const sha256 = (value) => createHash('sha256').update(value).digest('hex')
-const hashPassword = (password) => sha256(`ku-ams:${password}`)
-export const hashToken = (token) => sha256(`ku-token:${token}`)
 
 const compilePath = (pattern) => {
   const names = []
@@ -261,4 +258,6 @@ export const issueToken = (db, userId) => {
   return token
 }
 
-export { hashPassword }
+// Re-exported from ./crypto.js so routes (and anything else importing the
+// hashing helpers from here) keep working unchanged.
+export { hashPassword, hashToken }

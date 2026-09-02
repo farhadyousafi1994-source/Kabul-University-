@@ -2,7 +2,10 @@ import { DatabaseSync } from 'node:sqlite'
 import { copyFileSync, existsSync, mkdirSync, rmSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { hashPassword } from './server.js'
+// Imported from the leaf module, never from './server.js' — that would make
+// db.js and server.js mutually dependent and break any script that imports
+// db.js first (see mock-api/crypto.js).
+import { hashPassword } from './crypto.js'
 
 // ---------------------------------------------------------------------------
 // KU-AMS development database (SQLite via node:sqlite).
@@ -11,7 +14,12 @@ import { hashPassword } from './server.js'
 // foreign keys and constraints.
 // ---------------------------------------------------------------------------
 
-const DATA_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'data')
+// The development database lives next to this file. KU_AMS_MOCK_DATA_DIR
+// points it somewhere else, which is how scripts/schema-drift.spec.mjs tests
+// the upgrade path without ever touching a developer's real database.
+const DATA_DIR = process.env.KU_AMS_MOCK_DATA_DIR
+  ? path.resolve(process.env.KU_AMS_MOCK_DATA_DIR)
+  : path.join(path.dirname(fileURLToPath(import.meta.url)), 'data')
 mkdirSync(DATA_DIR, { recursive: true })
 export const DB_PATH = path.join(DATA_DIR, 'ku-ams.sqlite')
 export const BACKUP_DIR = path.join(DATA_DIR, 'backups')
