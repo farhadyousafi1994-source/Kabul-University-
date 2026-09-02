@@ -24,24 +24,60 @@ use Illuminate\Support\Facades\Schema;
  * An employee who needs a login keeps the optional `employees.user_id` link
  * (Employee belongsTo User / User hasOne Employee) — employee data is never
  * duplicated inside `users` again.
+ *
+ * Safe to re-run: every drop is gated on Schema::hasColumn / hasIndex.
  */
 return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropUnique(['employee_number']);
-            $table->dropColumn(['employee_number', 'position', 'hire_type', 'salary']);
+        if (! Schema::hasTable('users')) {
+            return;
+        }
+
+        $drop = array_values(array_filter(
+            ['employee_number', 'position', 'hire_type', 'salary'],
+            fn (string $column) => Schema::hasColumn('users', $column),
+        ));
+
+        if ($drop === []) {
+            return;
+        }
+
+        Schema::table('users', function (Blueprint $table) use ($drop) {
+            if (in_array('employee_number', $drop, true)) {
+                try {
+                    if (Schema::hasIndex('users', 'users_employee_number_unique')) {
+                        $table->dropUnique(['employee_number']);
+                    }
+                } catch (\Throwable) {
+                    // Unique index may already have been dropped.
+                }
+            }
+
+            $table->dropColumn($drop);
         });
     }
 
     public function down(): void
     {
+        if (! Schema::hasTable('users')) {
+            return;
+        }
+
         Schema::table('users', function (Blueprint $table) {
-            $table->string('employee_number', 32)->nullable()->unique()->after('phone');
-            $table->string('position')->nullable()->after('department_id');
-            $table->string('hire_type', 20)->default('permanent')->after('position');
-            $table->unsignedInteger('salary')->default(0)->after('hire_type');
+            if (! Schema::hasColumn('users', 'employee_number')) {
+                $table->string('employee_number', 32)->nullable()->unique()->after('phone');
+            }
+            if (! Schema::hasColumn('users', 'position')) {
+                $table->string('position')->nullable();
+            }
+            if (! Schema::hasColumn('users', 'hire_type')) {
+                $table->string('hire_type', 20)->default('permanent');
+            }
+            if (! Schema::hasColumn('users', 'salary')) {
+                $table->unsignedInteger('salary')->default(0);
+            }
         });
     }
 };

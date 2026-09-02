@@ -68,7 +68,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'notifications.view',
         ],
         'Warehouse Manager' => [
-            'dashboard.view', 'assets.view', 'assets.create', 'assets.update',
+            'dashboard.view', 'assets.view', 'assets.create', 'assets.update', 'employees.view',
             'warehouse.view', 'warehouse.create', 'warehouse.update', 'warehouse.transfer',
             'procurement.view', 'suppliers.view', 'reports.view', 'notifications.view',
         ],

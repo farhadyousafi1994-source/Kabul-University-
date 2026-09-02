@@ -617,6 +617,7 @@ CREATE TABLE IF NOT EXISTS appearance_defaults (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   theme_mode TEXT NOT NULL DEFAULT 'system',
   selected_theme TEXT NOT NULL DEFAULT 'softcora',
+  custom_colors TEXT,
   font_family TEXT NOT NULL DEFAULT 'roboto',
   font_size TEXT NOT NULL DEFAULT 'M',
   font_weight INTEGER NOT NULL DEFAULT 400,
@@ -744,6 +745,7 @@ const SEED_STAFF_INFO = {
 export const APPEARANCE_DEFAULTS = {
   theme_mode: 'system',
   selected_theme: 'softcora',
+  custom_colors: null,
   font_family: 'roboto',
   font_size: 'M',
   font_weight: 400,
@@ -797,6 +799,7 @@ export function seed(db) {
   const PERMISSIONS = [
     'dashboard.view',
     'users.view', 'users.create', 'users.update', 'users.delete',
+    'employees.view', 'employees.create', 'employees.update', 'employees.delete',
     'roles.view', 'roles.create', 'roles.update', 'roles.delete',
     'organization.view', 'organization.create', 'organization.update', 'organization.delete',
     'categories.view', 'categories.create', 'categories.update', 'categories.delete',
@@ -827,24 +830,25 @@ export function seed(db) {
     'Asset Manager': [
       'dashboard.view', 'categories.view', 'categories.create', 'categories.update',
       'assets.view', 'assets.create', 'assets.update', 'assets.assign', 'assets.return',
-      'assets.transfer', 'assets.dispose', 'maintenance.view', 'maintenance.create',
+      'assets.transfer', 'assets.dispose', 'employees.view',
+      'maintenance.view', 'maintenance.create',
       'maintenance.update', 'incidents.view', 'incidents.create', 'incidents.update',
       'requests.view', 'requests.create', 'requests.approve', 'audit.view',
       'depreciation.view', 'reports.view', 'notifications.view',
     ],
     'Faculty Manager': [
-      'dashboard.view', 'assets.view', 'assets.assign', 'assets.return',
+      'dashboard.view', 'assets.view', 'assets.assign', 'assets.return', 'employees.view',
       'requests.view', 'requests.create', 'requests.approve',
       'maintenance.view', 'maintenance.create', 'incidents.view', 'incidents.create',
       'reports.view', 'notifications.view',
     ],
     'Department Manager': [
-      'dashboard.view', 'assets.view', 'requests.view', 'requests.create',
+      'dashboard.view', 'assets.view', 'employees.view', 'requests.view', 'requests.create',
       'maintenance.view', 'maintenance.create', 'incidents.view', 'incidents.create',
       'notifications.view',
     ],
     'Warehouse Manager': [
-      'dashboard.view', 'assets.view', 'assets.create', 'assets.update',
+      'dashboard.view', 'assets.view', 'assets.create', 'assets.update', 'employees.view',
       'warehouse.view', 'warehouse.create', 'warehouse.update', 'warehouse.transfer',
       'procurement.view', 'suppliers.view', 'reports.view', 'notifications.view',
     ],
@@ -853,7 +857,7 @@ export function seed(db) {
       'maintenance.update', 'notifications.view',
     ],
     'Auditor': [
-      'dashboard.view', 'assets.view', 'audit.view', 'audit.create', 'audit.complete',
+      'dashboard.view', 'assets.view', 'employees.view', 'audit.view', 'audit.create', 'audit.complete',
       'reports.view', 'notifications.view',
     ],
     'Employee': ['dashboard.view', 'assets.view', 'requests.create', 'notifications.view'],
@@ -1462,6 +1466,7 @@ function ensureEmployeeModule(db) {
     'Asset Manager': ['employees.view', 'employees.update'],
     'Faculty Manager': ['employees.view'],
     'Department Manager': ['employees.view'],
+    'Warehouse Manager': ['employees.view'],
     'Auditor': ['employees.view'],
   }
   for (const p of EMPLOYEE_PERMISSIONS) {
@@ -1862,6 +1867,40 @@ export function repairSchemaDrift(db) {
   return added
 }
 
+// Columns that used to live on `users` before the dedicated `employees`
+// table existed. CREATE TABLE IF NOT EXISTS never drops extras, so an
+// older development database can still have them — which then leaks HR
+// fields through `SELECT u.*`. Try ALTER TABLE DROP COLUMN (SQLite 3.35+)
+// and ignore failures on engines that cannot drop columns.
+const OBSOLETE_COLUMNS = {
+  users: ['employee_number', 'position', 'hire_type', 'salary'],
+}
+
+export function dropObsoleteColumns(db) {
+  const dropped = []
+
+  for (const [table, columns] of Object.entries(OBSOLETE_COLUMNS)) {
+    const exists = db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")
+      .get(table)
+    if (!exists) continue
+
+    const present = new Set(db.prepare(`PRAGMA table_info("${table}")`).all().map((c) => c.name))
+    for (const column of columns) {
+      if (!present.has(column)) continue
+      try {
+        db.exec(`ALTER TABLE "${table}" DROP COLUMN "${column}"`)
+        present.delete(column)
+        dropped.push(`${table}.${column}`)
+      } catch (err) {
+        console.warn(`[mock-api] Could not drop obsolete column ${table}.${column}: ${err.message}`)
+      }
+    }
+  }
+
+  return dropped
+}
+
 // A freshly added column holds only its ALTER default (NULL / 'active'),
 // so the seeded accounts would lose their status after an upgrade. Restore
 // the known values — but only for the columns this boot actually added and
@@ -1935,6 +1974,7 @@ function prepareDatabase(db) {
   // bring them up to date before anything reads or writes them.
   const repaired = repairSchemaDrift(db)
   if (repaired.length) backfillSeedUserFields(db, repaired)
+  dropObsoleteColumns(db)
 
   createIndexes(db, statements.filter(isIndexStatement))
 

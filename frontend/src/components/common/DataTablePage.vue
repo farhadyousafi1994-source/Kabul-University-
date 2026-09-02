@@ -276,7 +276,7 @@
                 :disable="saving"
                 :multiple="!!field.multiple"
                 :use-input="!!field.multiple"
-                hide-selected
+                :hide-selected="Boolean(field.multiple)"
                 :error="Boolean(fieldErrors[field.key])"
                 :error-message="fieldErrors[field.key]"
                 :rules="[(v) => !field.required || (field.multiple ? (v && v.length > 0) : !!v) || `${field.label} ${t('common.required')}`]"

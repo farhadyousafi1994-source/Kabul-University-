@@ -17,6 +17,42 @@ export function assetRoutes(router) {
     if (!emp) throw new HttpError(422, 'Validation failed', { employee_id: ['The selected employee does not exist.'] })
   }
 
+  const coerceEmployeeId = (value) => {
+    if (value === undefined) return undefined
+    if (value === null || value === '') return null
+    return Number(value)
+  }
+
+  /**
+   * Keep assignment rows in step with assets.employee_id.
+   * Closing an active row does NOT flip the asset to `available` (that would
+   * clobber `under_maintenance`). Do not early-return when both current and
+   * target are null if an active assignment still exists.
+   */
+  const syncAssignmentRows = (ctx, assetId, targetEmployeeId) => {
+    const now = new Date().toISOString()
+    const target = coerceEmployeeId(targetEmployeeId) ?? null
+    const actives = ctx.db.prepare(
+      "SELECT * FROM asset_assignments WHERE asset_id = ? AND status = 'active' ORDER BY id DESC",
+    ).all(assetId)
+    const active = actives[0] || null
+    const activeEmp = active?.employee_id != null ? Number(active.employee_id) : null
+    if (target === activeEmp && actives.length <= 1 && (target !== null || !active)) return
+
+    if (actives.length) {
+      ctx.db.prepare(
+        "UPDATE asset_assignments SET status = 'returned', returned_date = ?, updated_at = ? WHERE asset_id = ? AND status = 'active'",
+      ).run(now.slice(0, 10), now, assetId)
+    }
+
+    if (target == null) return
+    const employee = ctx.db.prepare('SELECT * FROM employees WHERE id = ? AND deleted_at IS NULL').get(target)
+    if (!employee) return
+    ctx.db.prepare(
+      'INSERT INTO asset_assignments (asset_id, employee_id, assigned_to_user_id, assigned_by, assigned_date, status, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ).run(assetId, employee.id, employee.user_id || null, ctx.user.id, now.slice(0, 10), 'active', null, now, now)
+  }
+
   // GET /api/assets
   router.get('/api/assets', (ctx) => {
     const page = Math.max(1, Number(ctx.query.page) || 1)
@@ -101,7 +137,7 @@ export function assetRoutes(router) {
         date: a.assigned_date,
         type: 'assignment',
         title: `Assignment ${a.status}`,
-        description: `Assigned to ${a.employee_name || `user #${a.assigned_to_user_id ?? 'unknown'}`}`,
+        description: `Assigned to ${a.employee_name || 'Unassigned'}`,
       })
     }
     for (const m of ctx.db.prepare('SELECT * FROM asset_maintenances WHERE asset_id = ?').all(assetId)) {
@@ -127,6 +163,7 @@ export function assetRoutes(router) {
         category_id: data.category_id ? [] : ['The category field is required.'],
       })
     }
+    if (data.employee_id === '') data.employee_id = null
     checkEmployee(ctx, data.employee_id)
 
     // Asset code generation: KU-{CAT}-{YEAR}-{NNNNNN}
@@ -158,6 +195,8 @@ export function assetRoutes(router) {
         data.building_id || null, data.floor_id || null, data.room_id || null,
         ctx.user.id, now, 'Initial registration', now)
 
+    if (data.employee_id) syncAssignmentRows(ctx, id, data.employee_id)
+
     log(ctx, 'created', 'Assets', { id, name: data.name })
     return ok('Asset created successfully.', ctx.db.prepare(
       `SELECT a.*, TRIM(e.first_name || ' ' || e.last_name) AS employee_name, e.employee_code AS employee_code
@@ -184,6 +223,7 @@ export function assetRoutes(router) {
     const picked = {}
     for (const k of ASSET_COLS) if (ctx.body[k] !== undefined) picked[k] = ctx.body[k]
     const data = { ...picked, updated_at: new Date().toISOString() }
+    if (data.employee_id === '') data.employee_id = null
     checkEmployee(ctx, data.employee_id)
 
     // Keep the status in step with the employee assignment when the caller
@@ -213,6 +253,8 @@ export function assetRoutes(router) {
           data.floor_id ?? asset.floor_id, data.room_id ?? asset.room_id,
           ctx.user.id, new Date().toISOString(), 'Location updated', new Date().toISOString())
     }
+
+    if (data.employee_id !== undefined) syncAssignmentRows(ctx, asset.id, data.employee_id)
 
     log(ctx, 'updated', 'Assets', { id: asset.id, name: data.name || asset.name })
     if (employeeChanged) {

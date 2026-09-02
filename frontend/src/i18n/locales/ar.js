@@ -312,7 +312,7 @@ export default {
     documents: 'المستندات والوثائق',
     images: 'الصور الفوتوغرافية',
     assignAsset: 'تخصيص الأصل (عهدة)',
-    assignTo: 'تخصيص إلى',
+    assignTo: 'تخصيص إلى موظف',
     unassigned: 'غير مخصص',
     assignedTo: 'مخصص إلى (موظف)',
     expectedReturnDate: 'تاريخ الإرجاع المتوقع',

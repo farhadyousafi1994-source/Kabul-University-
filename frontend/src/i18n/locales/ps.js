@@ -312,7 +312,7 @@ export default {
     documents: 'اسناد او فایلونه',
     images: 'عکسونه',
     assignAsset: 'شتمني سپارل',
-    assignTo: 'چا ته سپارل',
+    assignTo: 'کارکوونکي ته سپارل',
     unassigned: 'نه سپارل شوی',
     assignedTo: 'ورکړل شوی (کارکوونکي ته)',
     expectedReturnDate: 'د بېرته سپارلو نېټه',

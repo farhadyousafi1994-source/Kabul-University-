@@ -27,13 +27,11 @@ class AssignmentController extends Controller
             ->when($request->get('status'), fn ($q, $s) => $q->where('status', $s))
             ->when($request->get('asset_id'), fn ($q, $v) => $q->where('asset_id', (int) $v))
             ->when($request->get('employee_id'), fn ($q, $v) => $q->where('employee_id', (int) $v))
-            ->when($request->get('assigned_to_user_id'), fn ($q, $v) => $q->where('assigned_to_user_id', (int) $v))
             ->when($request->get('search'), function ($q, $search) {
                 $q->whereHas('asset', fn ($a) => $a->where('name', 'like', "%{$search}%")->orWhere('asset_code', 'like', "%{$search}%"))
                     ->orWhereHas('employee', fn ($e) => $e->where('first_name', 'like', "%{$search}%")
                         ->orWhere('last_name', 'like', "%{$search}%")
-                        ->orWhere('employee_code', 'like', "%{$search}%"))
-                    ->orWhereHas('assignee', fn ($u) => $u->where('name', 'like', "%{$search}%"));
+                        ->orWhere('employee_code', 'like', "%{$search}%"));
             })
             ->latest();
 

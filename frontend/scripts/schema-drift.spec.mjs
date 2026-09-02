@@ -141,6 +141,42 @@ try {
   check('rows survive the generic repair', db.prepare('SELECT COUNT(*) c FROM assets').get().c === assetRows)
   db.close()
 
+  // ------------------------------------- appearance_defaults.custom_colors
+  rmSync(DB_PATH, { force: true })
+  rmSync(`${DB_PATH}-wal`, { force: true })
+  rmSync(`${DB_PATH}-shm`, { force: true })
+  const withAppearance = openDb()
+  check('fresh database has appearance_defaults.custom_colors', columnsOf(withAppearance, 'appearance_defaults').includes('custom_colors'))
+  withAppearance.close()
+
+  const staleAppearance = new DatabaseSync(DB_PATH)
+  staleAppearance.exec('PRAGMA foreign_keys = OFF')
+  rebuildWithoutColumn(staleAppearance, 'appearance_defaults', 'custom_colors')
+  check(
+    'stale appearance_defaults has no custom_colors',
+    !columnsOf(staleAppearance, 'appearance_defaults').includes('custom_colors'),
+  )
+  staleAppearance.close()
+
+  db = openDb()
+  check('appearance_defaults.custom_colors added by drift repair', columnsOf(db, 'appearance_defaults').includes('custom_colors'))
+  db.close()
+
+  // ------------------------------------- leftover users HR columns
+  const extraHr = new DatabaseSync(DB_PATH)
+  extraHr.exec('PRAGMA foreign_keys = OFF')
+  for (const column of ['employee_number', 'position', 'hire_type', 'salary']) {
+    try { extraHr.exec(`ALTER TABLE users ADD COLUMN "${column}" TEXT`) } catch { /* already present */ }
+  }
+  extraHr.close()
+  db = openDb()
+  const userCols = columnsOf(db, 'users')
+  check('obsolete users.employee_number dropped', !userCols.includes('employee_number'))
+  check('obsolete users.position dropped', !userCols.includes('position'))
+  check('obsolete users.hire_type dropped', !userCols.includes('hire_type'))
+  check('obsolete users.salary dropped', !userCols.includes('salary'))
+  db.close()
+
   console.log(failures === 0 ? '\nALL SCHEMA DRIFT CHECKS PASSED' : `\n${failures} CHECK(S) FAILED`)
 } finally {
   rmSync(workDir, { recursive: true, force: true })

@@ -311,7 +311,7 @@ export default {
     documents: 'Documents',
     images: 'Images',
     assignAsset: 'Assign asset',
-    assignTo: 'Assign To',
+    assignTo: 'Assign To Employee',
     assignedTo: 'Assigned to (employee)',
     unassigned: 'Unassigned',
     expectedReturnDate: 'Expected return date',

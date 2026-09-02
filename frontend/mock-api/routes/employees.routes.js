@@ -145,7 +145,7 @@ export function employeeRoutes(router) {
       data: rows,
       meta: { current_page: page, last_page: Math.max(1, Math.ceil(total / perPage)), per_page: perPage, total },
     })
-  }, { auth: true, permission: 'employees.view' })
+  }, { auth: true, permission: 'employees.view|assets.assign|assets.create|assets.update' })
 
   // POST /api/employees
   router.post('/api/employees', (ctx) => {

@@ -92,7 +92,7 @@ class AssetController extends Controller
                 'date' => $a->assigned_date?->toIso8601String(),
                 'type' => 'assignment',
                 'title' => 'Assignment '.$a->status,
-                'description' => 'Assigned to '.($a->employee?->full_name ?? ('user #'.$a->assigned_to_user_id)),
+                'description' => 'Assigned to '.($a->employee?->full_name ?? 'Unassigned'),
             ]))
             ->merge($asset->maintenanceRecords()->get()->map(fn ($m) => [
                 'date' => ($m->end_date ?? $m->start_date ?? $m->created_at)?->toIso8601String(),
