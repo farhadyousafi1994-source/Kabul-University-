@@ -168,7 +168,7 @@ describe('AssignmentsPage — Assign Asset flow', () => {
 
     // Employees come from the dedicated `employees` table (never `users`).
     expect(employeeListMock).toHaveBeenCalled()
-    const employeeSelect = dialogSelect(w, /Assigned To/i)
+    const employeeSelect = dialogSelect(w, /Assign To Employee/i)
     const empOptions = employeeSelect.props('options')
     expect(empOptions.map((o) => o.label)).toContain('EMP-004 — Sara Karimi')
     expect(empOptions.find((o) => o.label === 'EMP-004 — Sara Karimi').value).toBe(4)
@@ -181,7 +181,7 @@ describe('AssignmentsPage — Assign Asset flow', () => {
 
     await openAssignDialog(w)
     await pickSelect(w, /Asset/i, 9)
-    await pickSelect(w, /Assigned To/i, 4)
+    await pickSelect(w, /Assign To Employee/i, 4)
     await submitAssignForm(w)
 
     expect(assignMock).toHaveBeenCalledTimes(1)
@@ -225,7 +225,7 @@ describe('AssignmentsPage — Assign Asset flow', () => {
 
     await openAssignDialog(w)
     await pickSelect(w, /Asset/i, 9)
-    await pickSelect(w, /Assigned To/i, 4)
+    await pickSelect(w, /Assign To Employee/i, 4)
     await submitAssignForm(w)
 
     expect(assignMock).toHaveBeenCalledTimes(1)
@@ -236,7 +236,7 @@ describe('AssignmentsPage — Assign Asset flow', () => {
     const dialog = openDialog(w)
     expect(dialog, 'dialog must stay open after a failed submit').toBeTruthy()
     expect(dialogSelect(w, /Asset/i).props('modelValue')).toBe(9)
-    expect(dialogSelect(w, /Assigned To/i).props('modelValue')).toBe(4)
+    expect(dialogSelect(w, /Assign To Employee/i).props('modelValue')).toBe(4)
   })
 
   it('shows no Assign button without the assets.assign permission', async () => {

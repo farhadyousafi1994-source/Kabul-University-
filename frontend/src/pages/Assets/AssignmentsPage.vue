@@ -238,7 +238,7 @@
             <!-- Employee picker: dedicated `employees` table, never `users` -->
             <EmployeeSelect
               v-model="form.employee_id"
-              :label="`${t('assignments.assignedTo')} *`"
+              :label="`${t('assets.assignTo')} *`"
               :placeholder="t('assignments.employeePlaceholder')"
               :disable="assigning"
               dense

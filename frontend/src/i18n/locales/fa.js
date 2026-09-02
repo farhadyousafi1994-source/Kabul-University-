@@ -312,7 +312,7 @@ export default {
     documents: 'اسناد و مدارک',
     images: 'تصاویر دارایی',
     assignAsset: 'توزیع و تسلیمی دارایی',
-    assignTo: 'تسلیم به',
+    assignTo: 'تسلیم به کارمند',
     unassigned: 'بدون تخصیص',
     assignedTo: 'اختصاص به (کارمند)',
     expectedReturnDate: 'تاریخ پیش‌بینی بازگشت',

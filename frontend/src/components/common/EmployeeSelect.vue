@@ -1,27 +1,31 @@
 <template>
   <q-select
-    v-model="model"
     v-bind="passthrough"
+    v-model="model"
     :options="options"
     :loading="searching"
+    :disable="isDisabled"
     :input-debounce="300"
     use-input
     fill-input
     hide-selected
     map-options
     emit-value
+    option-value="value"
+    option-label="label"
     clearable
+    behavior="menu"
     :options-dense="true"
+    :popup-content-style="{ zIndex: 8000 }"
     :error="Boolean(loadError) || Boolean(externalError)"
     :error-message="loadError || externalErrorMessage || undefined"
-    :no-option-label="searching ? t('common.loading') : t('common.noData')"
-    @input-value="onSearch"
-    @clear="onClear"
+    :no-option-label="searching ? t('common.loading') : t('hr.noEmployees')"
+    @filter="onFilter"
     @popup-show="onReopen"
+    @clear="onClear"
   >
     <template #prepend><q-icon name="badge" /></template>
 
-    <!-- Empty state: no employees exist yet -->
     <template #no-option>
       <q-item>
         <q-item-section class="text-center text-grey-6">
@@ -54,41 +58,42 @@
 </template>
 
 <script setup>
+/**
+ * Professional employee picker.
+ *
+ * Single source of truth: GET /employees (the dedicated `employees` table).
+ * Never loads from `users`. The submitted value is always `employees.id`
+ * (or `null` when cleared / unassigned).
+ *
+ * Labels render as:  EMP-001 — Ahmad Ahmad — IT Department
+ */
 import { computed, onBeforeUnmount, ref, useAttrs, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { employeeService } from 'src/services/employees.service'
 import { notify } from 'src/utils/notify'
 
-/**
- * Employee picker — the single source of truth is the dedicated `employees`
- * table (`GET /employees`). It is NEVER sourced from `users`.
- *
- * - Server-side search as the user types (employee code, name, department…).
- * - Options render as `EMP-001 — Full Name` with the department beneath; the
- *   value submitted to the API is always the employee's database id.
- * - Clearing the field = Unassigned (`null`).
- * - While editing, the currently assigned employee is fetched by id and kept
- *   visible even when it is not part of the current search page.
- * - Loading, empty and error states are handled (an error notification is
- *   raised once if the employees API cannot be reached).
- */
+defineOptions({ inheritAttrs: false })
+
 const props = defineProps({
-  /** The selected employee's database id (`employees.id`), or null = Unassigned. */
+  /** Selected `employees.id`, or null = Unassigned. */
   modelValue: { type: [Number, String], default: null },
   /** Restrict the dropdown to active employees (default true). */
   activeOnly: { type: Boolean, default: true },
+  disable: { type: Boolean, default: false },
 })
 
-// A parent form can drive the invalid state (e.g. "The employee field is
-// required." coming back from the API). Without this the component's own
-// `:error` binding silently swallowed it, so validation errors never showed.
 const attrs = useAttrs()
 const externalError = computed(() => attrs.error || false)
 const externalErrorMessage = computed(() => attrs['error-message'] || attrs.errorMessage || '')
 
-/** Everything except the error bindings, which this component owns. */
 const passthrough = computed(() => {
-  const { error, 'error-message': errorMessage, errorMessage: errorMessage2, ...rest } = attrs
+  const {
+    error,
+    'error-message': errorMessage,
+    errorMessage: errorMessage2,
+    disable,
+    ...rest
+  } = attrs
   return rest
 })
 
@@ -104,9 +109,11 @@ let searchSeq = 0
 let notifiedError = false
 
 const model = computed({
-  get: () => props.modelValue,
-  set: (v) => emit('update:modelValue', v ?? null),
+  get: () => (props.modelValue === '' || props.modelValue == null ? null : Number(props.modelValue)),
+  set: (v) => emit('update:modelValue', v == null || v === '' ? null : Number(v)),
 })
+
+const isDisabled = computed(() => Boolean(props.disable || attrs.disable))
 
 const initials = (name = '') =>
   String(name).split(/\s+/).slice(0, 2).map((p) => p[0] || '').join('').toUpperCase()
@@ -115,13 +122,11 @@ const employeeStatusLabel = (status) =>
   ({ active: t('hr.active'), inactive: t('hr.inactive'), on_leave: t('hr.onLeave') }[status] || status)
 
 function optionFor(e) {
+  const name = e.full_name || `${e.first_name || ''} ${e.last_name || ''}`.trim()
   return {
-    // "EMP-001 — Ahmad Ahmad — IT Department"
-    label: [e.employee_code, e.full_name || `${e.first_name} ${e.last_name}`.trim(), e.department_name]
-      .filter(Boolean)
-      .join(' — '),
-    value: e.id,
-    name: e.full_name || `${e.first_name} ${e.last_name}`.trim(),
+    label: [e.employee_code, name, e.department_name].filter(Boolean).join(' — '),
+    value: Number(e.id),
+    name,
     code: e.employee_code || '',
     department: e.department_name || '',
     status: e.status,
@@ -129,32 +134,41 @@ function optionFor(e) {
   }
 }
 
-async function onSearch(term) {
+function extractRows(payload) {
+  if (!payload) return []
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload.data)) return payload.data
+  if (Array.isArray(payload.data?.data)) return payload.data.data
+  return []
+}
+
+function mergeSelected(rows) {
+  const list = [...rows]
+  const extra = selectedExtra.value
+  if (extra && !list.some((e) => Number(e.id) === Number(extra.id))) {
+    list.unshift(extra)
+  }
+  return list
+}
+
+async function loadEmployees(term = '') {
   const seq = ++searchSeq
   searching.value = true
   loadError.value = ''
   try {
-    const { data } = await employeeService.list({
+    const payload = await employeeService.list({
       search: term || '',
-      per_page: 30,
+      per_page: 50,
       ...(props.activeOnly ? { status: 'active' } : {}),
     })
-    if (seq !== searchSeq) return // a newer search superseded this one
-    const rows = data?.data || []
-    // Keep a previously selected employee visible even if it is not in the
-    // current search results (e.g. while editing an existing record).
-    const ids = new Set(rows.map((e) => e.id))
-    if (selectedExtra.value && !ids.has(selectedExtra.value.id)) {
-      rows.unshift(selectedExtra.value)
-    }
+    if (seq !== searchSeq) return
+    const rows = mergeSelected(extractRows(payload))
     options.value = rows.map(optionFor)
     emit('options', options.value)
   } catch (e) {
     if (seq !== searchSeq) return
-    options.value = []
+    options.value = selectedExtra.value ? [optionFor(selectedExtra.value)] : []
     loadError.value = e?.message || t('common.loadFailed')
-    // One clear notification per failure burst — the field itself also shows
-    // the error so the user can retry by focusing the field again.
     if (!notifiedError) {
       notifiedError = true
       setTimeout(() => { notifiedError = false }, 4000)
@@ -165,46 +179,62 @@ async function onSearch(term) {
   }
 }
 
-// Reopening the dropdown refreshes the options so newly created employees
-// appear without remounting the component.
+/**
+ * Quasar calls `filter` with the current input text. After a selection,
+ * fill-input writes the LABEL into the field — searching for that full
+ * "CODE — Name — Dept" string would match nothing and empty the menu.
+ * Treat the selected label (and reopen) as an unfiltered list.
+ */
+function onFilter(val, update) {
+  const term = String(val || '').trim()
+  const selectedLabel = options.value.find((o) => Number(o.value) === Number(model.value))?.label
+  const query = selectedLabel && term === selectedLabel ? '' : term
+  loadEmployees(query).then(() => update())
+}
+
 function onReopen() {
-  onSearch('')
+  loadEmployees('')
 }
 
 function onClear() {
+  selectedExtra.value = null
   emit('update:modelValue', null)
 }
 
-// Track the currently selected employee so it always renders.
 watch(
   () => props.modelValue,
   async (id) => {
-    if (!id) {
+    if (id == null || id === '') {
       selectedExtra.value = null
       return
     }
-    const known = options.value.find((o) => o.value === id)
+    const numericId = Number(id)
+    const known = options.value.find((o) => Number(o.value) === numericId)
     if (known) {
       selectedExtra.value = known.raw
       return
     }
     try {
-      const { data } = await employeeService.get(id)
-      selectedExtra.value = data
-      if (!options.value.some((o) => o.value === id)) {
-        options.value = [optionFor(data), ...options.value]
+      const payload = await employeeService.get(numericId)
+      const row = payload?.data && !Array.isArray(payload.data) && payload.data.id
+        ? payload.data
+        : payload
+      if (!row?.id) return
+      selectedExtra.value = row
+      if (!options.value.some((o) => Number(o.value) === numericId)) {
+        options.value = [optionFor(row), ...options.value]
         emit('options', options.value)
       }
     } catch {
-      /* stale id — ignore, the field simply shows empty */
+      /* stale id — the field simply shows empty */
     }
   },
   { immediate: true },
 )
 
-onSearch('')
+loadEmployees('')
 
 onBeforeUnmount(() => {
-  searchSeq++ // invalidate in-flight requests
+  searchSeq += 1
 })
 </script>

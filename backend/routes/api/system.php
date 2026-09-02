@@ -43,7 +43,8 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('users/{user}/leave', [UserController::class, 'leave'])->middleware('permission:users.update');
 
     // Employees (HR directory — separate from user accounts)
-    Route::get('employees', [EmployeeController::class, 'index'])->middleware('permission:employees.view');
+    // Asset assigners need the employee picker without full HR access.
+    Route::get('employees', [EmployeeController::class, 'index'])->middleware('permission:employees.view|assets.assign|assets.create|assets.update');
     Route::post('employees', [EmployeeController::class, 'store'])->middleware('permission:employees.create');
     Route::get('employees/{employee}', [EmployeeController::class, 'show'])->middleware('permission:employees.view');
     Route::put('employees/{employee}', [EmployeeController::class, 'update'])->middleware('permission:employees.update');

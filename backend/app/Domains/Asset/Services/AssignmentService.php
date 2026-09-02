@@ -23,7 +23,7 @@ class AssignmentService
     /**
      * Assign an asset to an employee.
      *
-     * @param  array{employee_id?: int|null, assigned_to_user_id?: int|null, expected_return_date?: string|null, notes?: string|null}  $data
+     * @param  array{employee_id?: int|null, expected_return_date?: string|null, notes?: string|null}  $data
      *
      * @throws ValidationException
      */
@@ -153,23 +153,18 @@ class AssignmentService
     }
 
     /**
-     * Resolve the assignee employee from the payload — either directly via
-     * `employee_id` or, for backward compatibility, through the employee ↔
-     * user link when only `assigned_to_user_id` is given.
+     * Resolve the assignee employee from `employee_id` only.
+     * `assigned_to_user_id` is never an assignment input.
      *
-     * @param  array{employee_id?: int|null, assigned_to_user_id?: int|null}  $data
+     * @param  array{employee_id?: int|null}  $data
      *
      * @throws ValidationException
      */
     public static function resolveEmployee(array $data): Employee
     {
-        if (! empty($data['employee_id'])) {
-            $employee = Employee::find((int) $data['employee_id']);
-        } elseif (! empty($data['assigned_to_user_id'])) {
-            $employee = Employee::where('user_id', (int) $data['assigned_to_user_id'])->first();
-        } else {
-            $employee = null;
-        }
+        $employee = ! empty($data['employee_id'])
+            ? Employee::find((int) $data['employee_id'])
+            : null;
 
         if (! $employee) {
             throw ValidationException::withMessages([

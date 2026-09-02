@@ -22,7 +22,6 @@ export function assignmentRoutes(router) {
     if (ctx.query.status) { where += ' AND a.status = ?'; params.push(ctx.query.status) }
     if (ctx.query.asset_id) { where += ' AND a.asset_id = ?'; params.push(Number(ctx.query.asset_id)) }
     if (ctx.query.employee_id) { where += ' AND a.employee_id = ?'; params.push(Number(ctx.query.employee_id)) }
-    if (ctx.query.assigned_to_user_id) { where += ' AND a.assigned_to_user_id = ?'; params.push(Number(ctx.query.assigned_to_user_id)) }
     if (ctx.query.search) {
       where += " AND (asset.name LIKE ? OR asset.asset_code LIKE ? OR e.first_name LIKE ? OR e.last_name LIKE ? OR (e.first_name || ' ' || e.last_name) LIKE ? OR u.name LIKE ?)"
       params.push(`%${ctx.query.search}%`, `%${ctx.query.search}%`, `%${ctx.query.search}%`, `%${ctx.query.search}%`, `%${ctx.query.search}%`, `%${ctx.query.search}%`)
@@ -74,17 +73,13 @@ export function assignmentRoutes(router) {
     if (active) throw new HttpError(422, 'Validation failed', { asset_id: ['This asset already has an active assignment.'] })
 
     // The assignee is an EMPLOYEE from the dedicated employees table.
-    let employee = null
-    if (ctx.body.employee_id) {
-      employee = ctx.db.prepare('SELECT * FROM employees WHERE id = ? AND deleted_at IS NULL').get(Number(ctx.body.employee_id))
-      if (!employee) throw new HttpError(422, 'Validation failed', { employee_id: ['The selected employee does not exist.'] })
-    } else if (ctx.body.assigned_to_user_id) {
-      // Backward compatibility: resolve the employee through the user link.
-      employee = ctx.db.prepare('SELECT * FROM employees WHERE user_id = ? AND deleted_at IS NULL').get(Number(ctx.body.assigned_to_user_id))
-      if (!employee) throw new HttpError(422, 'Validation failed', { employee_id: ['The selected employee does not exist.'] })
-    } else {
+    // `assigned_to_user_id` is never an assignment input — it is stored later
+    // as an optional audit mirror of employees.user_id.
+    if (!ctx.body.employee_id) {
       throw new HttpError(422, 'Validation failed', { employee_id: ['The employee field is required.'] })
     }
+    const employee = ctx.db.prepare('SELECT * FROM employees WHERE id = ? AND deleted_at IS NULL').get(Number(ctx.body.employee_id))
+    if (!employee) throw new HttpError(422, 'Validation failed', { employee_id: ['The selected employee does not exist.'] })
 
     // Parity with App\Domains\Asset\Requests\AssignmentRequest: an expected
     // return date in the past (or a malformed one) is rejected up-front rather

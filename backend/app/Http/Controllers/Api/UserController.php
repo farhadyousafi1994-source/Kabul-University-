@@ -69,7 +69,7 @@ class UserController extends Controller
 
     public function leave(User $user): JsonResponse
     {
-        return ApiResponse::success('Employee marked as on leave.', new UserResource(UserService::leave($user)->load('roles.permissions', 'department')));
+        return ApiResponse::success('User marked as on leave.', new UserResource(UserService::leave($user)->load('roles.permissions', 'department')));
     }
 
     /**

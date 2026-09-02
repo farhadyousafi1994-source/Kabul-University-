@@ -171,14 +171,14 @@ export function userRoutes(router) {
     return ok('User deactivated successfully.', router.serializeUser(ctx.db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)))
   }, { auth: true, permission: 'users.update' })
 
-  // POST /api/users/:id/leave — send an employee on leave
+  // POST /api/users/:id/leave — mark a user account as on leave
   router.post('/api/users/:id/leave', (ctx) => {
     const user = ctx.db.prepare('SELECT * FROM users WHERE id = ? AND deleted_at IS NULL').get(Number(ctx.params.id))
     if (!user) throw new HttpError(404, 'User not found.')
     if (user.id === ctx.user.id) throw new HttpError(422, 'Validation failed', { id: ['You cannot put your own account on leave.'] })
     ctx.db.prepare("UPDATE users SET status = 'leave', updated_at = ? WHERE id = ?").run(new Date().toISOString(), user.id)
     log(ctx, 'left', 'Users', user)
-    return ok('Employee marked as on leave.', router.serializeUser(ctx.db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)))
+    return ok('User marked as on leave.', router.serializeUser(ctx.db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)))
   }, { auth: true, permission: 'users.update' })
 
   // ---------------- Roles & permissions ----------------

@@ -3,8 +3,10 @@
 namespace App\Domains\Asset\Services;
 
 use App\Domains\Asset\Models\Asset;
+use App\Domains\Asset\Models\AssetAssignment;
 use App\Domains\Asset\Models\AssetCategory;
 use App\Domains\Asset\Models\AssetLocationHistory;
+use App\Domains\HR\Models\Employee;
 use App\Domains\System\Services\ActivityLogService;
 use App\Domains\System\Services\SettingsService;
 use Illuminate\Support\Str;
@@ -72,6 +74,10 @@ class AssetService
         // Initial location history row — every asset must be traceable.
         self::recordLocation($asset, 'Initial registration');
 
+        if (! empty($data['employee_id'])) {
+            self::syncAssignmentRows($asset, $data['employee_id'], $userId);
+        }
+
         ActivityLogService::record('created', 'Assets', Asset::class, $asset->id, $asset->name, null, $asset->toArray(), $userId);
 
         return $asset;
@@ -86,6 +92,10 @@ class AssetService
     public static function update(Asset $asset, array $data): Asset
     {
         $locationChanged = self::locationChanged($asset, $data);
+
+        if (array_key_exists('employee_id', $data) && $data['employee_id'] === '') {
+            $data['employee_id'] = null;
+        }
 
         // Keep status in step with a direct employee (un)assignment when the
         // caller did not choose an explicit status themselves.
@@ -105,6 +115,10 @@ class AssetService
 
         if ($locationChanged) {
             self::recordLocation($asset, 'Location updated');
+        }
+
+        if (array_key_exists('employee_id', $data)) {
+            self::syncAssignmentRows($asset, $data['employee_id']);
         }
 
         ActivityLogService::record('updated', 'Assets', Asset::class, $asset->id, $asset->name, null, $data);
@@ -155,6 +169,63 @@ class AssetService
         self::recordLocation($asset, $reason, $userId);
 
         ActivityLogService::record('transferred', 'Assets', Asset::class, $asset->id, $asset->name, null, $location, $userId);
+    }
+
+    /**
+     * Keep `asset_assignments` in step with `assets.employee_id`.
+     *
+     * Closing an active row here does NOT call AssignmentService::returnAsset:
+     * that helper forces `status = available` and would clobber
+     * `under_maintenance`. Creating a new row here also does not flip status —
+     * the caller already decided that.
+     *
+     * Do not early-return when both the current and target employee are null
+     * if an active assignment still exists (orphan-active-assignment bug).
+     */
+    protected static function syncAssignmentRows(Asset $asset, mixed $targetEmployeeId, ?int $assignedBy = null): void
+    {
+        $target = $targetEmployeeId === null || $targetEmployeeId === ''
+            ? null
+            : (int) $targetEmployeeId;
+
+        $actives = $asset->assignments()
+            ->where('status', AssetAssignment::STATUS_ACTIVE)
+            ->orderByDesc('id')
+            ->get();
+
+        $active = $actives->first();
+        $activeEmployeeId = $active?->employee_id !== null ? (int) $active->employee_id : null;
+
+        if ($target === $activeEmployeeId && $actives->count() <= 1 && ($target !== null || $active === null)) {
+            return;
+        }
+
+        if ($actives->isNotEmpty()) {
+            AssetAssignment::query()
+                ->whereIn('id', $actives->pluck('id'))
+                ->update([
+                    'status' => AssetAssignment::STATUS_RETURNED,
+                    'returned_date' => now()->toDateString(),
+                ]);
+        }
+
+        if ($target === null) {
+            return;
+        }
+
+        $employee = Employee::query()->find($target);
+        if (! $employee) {
+            return;
+        }
+
+        AssetAssignment::create([
+            'asset_id' => $asset->id,
+            'employee_id' => $employee->id,
+            'assigned_to_user_id' => $employee->user_id,
+            'assigned_by' => $assignedBy ?? auth('sanctum')->id(),
+            'assigned_date' => now()->toDateString(),
+            'status' => AssetAssignment::STATUS_ACTIVE,
+        ]);
     }
 
     protected static function locationChanged(Asset $asset, array $data): bool
