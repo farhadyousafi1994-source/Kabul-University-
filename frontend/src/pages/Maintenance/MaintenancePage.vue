@@ -8,7 +8,8 @@
       :actions="barActions"
       :rows="rows"
       :columns="tab === 'requests' ? requestColumns : orderColumns"
-      :filename="'maintenance'"
+      :filename="'Maintenance_Report'"
+      :title="t('nav.items.maintenance')"
     />
 
     <q-tabs v-model="tab" class="q-mb-md" dense>

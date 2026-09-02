@@ -62,6 +62,11 @@ class AssetService
         $data['qr_code'] = $data['qr_code'] ?? self::generateQrCode();
         $data['created_by'] = $userId ?? auth('sanctum')->id();
 
+        // Creating an asset already in an employee's hands ⇒ status assigned.
+        if (! empty($data['employee_id']) && ($data['status'] ?? Asset::STATUS_AVAILABLE) === Asset::STATUS_AVAILABLE) {
+            $data['status'] = Asset::STATUS_ASSIGNED;
+        }
+
         $asset = Asset::create($data);
 
         // Initial location history row — every asset must be traceable.
@@ -81,6 +86,20 @@ class AssetService
     public static function update(Asset $asset, array $data): Asset
     {
         $locationChanged = self::locationChanged($asset, $data);
+
+        // Keep status in step with a direct employee (un)assignment when the
+        // caller did not choose an explicit status themselves.
+        if (array_key_exists('employee_id', $data)
+            && (int) ($data['employee_id'] ?? 0) !== (int) ($asset->employee_id ?? 0)
+            && ! array_key_exists('status', $data)) {
+            if (! empty($data['employee_id'])) {
+                if (in_array($asset->status, [Asset::STATUS_AVAILABLE, Asset::STATUS_ASSIGNED, Asset::STATUS_RESERVED], true)) {
+                    $data['status'] = Asset::STATUS_ASSIGNED;
+                }
+            } elseif ($asset->status === Asset::STATUS_ASSIGNED) {
+                $data['status'] = Asset::STATUS_AVAILABLE;
+            }
+        }
 
         $asset->update($data);
 

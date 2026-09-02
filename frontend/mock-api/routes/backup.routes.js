@@ -34,7 +34,7 @@ const PROTECTED_TABLES = new Set(['sessions', 'backups'])
 // Tables that keep their data in the "clean start" template: people, the
 // organisation tree, master data and settings. Everything else is emptied.
 const KEPT_IN_FRESH_START = new Set([
-  'users', 'roles', 'permissions', 'role_user', 'role_permission', 'settings',
+  'users', 'employees', 'roles', 'permissions', 'role_user', 'role_permission', 'settings',
   'campuses', 'faculties', 'departments', 'buildings', 'floors', 'rooms',
   'asset_categories', 'asset_subcategories', 'suppliers', 'warehouses',
   'depreciation_methods',

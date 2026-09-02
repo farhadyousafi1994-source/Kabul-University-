@@ -15,6 +15,7 @@ use App\Domains\Organization\Models\Floor;
 use App\Domains\Organization\Models\Room;
 use App\Domains\Procurement\Models\Supplier;
 use App\Domains\Warehouse\Models\WarehouseTransaction;
+use App\Domains\HR\Models\Employee;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -70,6 +71,7 @@ class Asset extends Model
         'supplier_id', 'warranty_expiry_date', 'useful_life',
         'status', 'condition',
         'campus_id', 'faculty_id', 'department_id', 'building_id', 'floor_id', 'room_id',
+        'employee_id',
         'created_by',
     ];
 
@@ -128,6 +130,12 @@ class Asset extends Model
     public function room(): BelongsTo
     {
         return $this->belongsTo(Room::class);
+    }
+
+    /** Employee currently holding this asset (direct assignment). */
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class);
     }
 
     public function creator(): BelongsTo

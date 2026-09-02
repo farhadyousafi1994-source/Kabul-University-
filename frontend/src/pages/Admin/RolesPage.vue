@@ -8,7 +8,8 @@
       :actions="barActions"
       :rows="rows"
       :columns="columns"
-      :filename="'roles'"
+      :filename="'Roles_Report'"
+      :title="t('nav.items.roles')"
     />
 
     <div v-if="loading" class="q-mt-sm">

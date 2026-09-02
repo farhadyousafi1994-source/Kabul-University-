@@ -171,6 +171,30 @@ CREATE TABLE IF NOT EXISTS asset_subcategories (
   FOREIGN KEY (category_id) REFERENCES asset_categories(id) ON DELETE RESTRICT
 );
 
+CREATE TABLE IF NOT EXISTS employees (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  employee_code TEXT NOT NULL UNIQUE,
+  first_name TEXT NOT NULL,
+  last_name TEXT NOT NULL DEFAULT '',
+  email TEXT UNIQUE,
+  phone TEXT,
+  department_id INTEGER,
+  position TEXT,
+  job_title TEXT,
+  employment_type TEXT NOT NULL DEFAULT 'full_time',
+  status TEXT NOT NULL DEFAULT 'active',
+  hire_date TEXT,
+  manager_id INTEGER,
+  address TEXT,
+  notes TEXT,
+  user_id INTEGER UNIQUE,
+  created_at TEXT, updated_at TEXT, deleted_at TEXT,
+  FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL,
+  FOREIGN KEY (manager_id) REFERENCES employees(id) ON DELETE SET NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_employees_department ON employees(department_id, status);
+
 CREATE TABLE IF NOT EXISTS assets (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   asset_code TEXT NOT NULL UNIQUE,
@@ -194,6 +218,7 @@ CREATE TABLE IF NOT EXISTS assets (
   condition TEXT NOT NULL DEFAULT 'good',
   campus_id INTEGER, faculty_id INTEGER, department_id INTEGER,
   building_id INTEGER, floor_id INTEGER, room_id INTEGER,
+  employee_id INTEGER,
   created_by INTEGER,
   created_at TEXT, updated_at TEXT, deleted_at TEXT,
   FOREIGN KEY (category_id) REFERENCES asset_categories(id) ON DELETE RESTRICT,
@@ -205,6 +230,7 @@ CREATE TABLE IF NOT EXISTS assets (
   FOREIGN KEY (building_id) REFERENCES buildings(id) ON DELETE SET NULL,
   FOREIGN KEY (floor_id) REFERENCES floors(id) ON DELETE SET NULL,
   FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE SET NULL,
+  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE SET NULL,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
@@ -1234,6 +1260,126 @@ export function seed(db) {
 // restorable snapshots, exactly like the ones the page creates later.
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Employee module — idempotent schema/data migration.
+//
+// The Employees module got its own dedicated table (it used to piggyback on
+// `users`). This helper upgrades existing development databases in place:
+//   1. adds `assets.employee_id` when the column is missing (older DBs),
+//   2. registers the `employees.*` permission family and grants it to roles,
+//   3. migrates staff records out of `users` into `employees` (linking them
+//      via `user_id` — user accounts are never touched or deleted),
+//   4. seeds a few employees without login accounts + realistic asset links.
+// Running it repeatedly is safe: every step checks before it writes.
+// ---------------------------------------------------------------------------
+
+export const EMPLOYEE_PERMISSIONS = ['employees.view', 'employees.create', 'employees.update', 'employees.delete']
+
+function ensureEmployeeModule(db) {
+  const now = new Date().toISOString()
+
+  // 1. assets.employee_id (present in fresh schemas, missing in older DBs).
+  const assetCols = db.prepare('PRAGMA table_info(assets)').all().map((c) => c.name)
+  if (!assetCols.includes('employee_id')) {
+    db.exec('ALTER TABLE assets ADD COLUMN employee_id INTEGER REFERENCES employees(id) ON DELETE SET NULL')
+  }
+  db.exec('CREATE INDEX IF NOT EXISTS idx_assets_employee ON assets(employee_id)')
+
+  // 2. employees.* permissions + role grants.
+  const ROLE_GRANTS = {
+    'Super Admin': EMPLOYEE_PERMISSIONS,
+    'University Administrator': EMPLOYEE_PERMISSIONS,
+    'Asset Manager': ['employees.view', 'employees.update'],
+    'Faculty Manager': ['employees.view'],
+    'Department Manager': ['employees.view'],
+    'Auditor': ['employees.view'],
+  }
+  for (const p of EMPLOYEE_PERMISSIONS) {
+    if (!db.prepare('SELECT id FROM permissions WHERE name = ?').get(p)) {
+      insert(db, 'permissions', { name: p, guard_name: 'web', created_at: now, updated_at: now })
+    }
+  }
+  for (const [role, perms] of Object.entries(ROLE_GRANTS)) {
+    const r = db.prepare('SELECT id FROM roles WHERE name = ?').get(role)
+    if (!r) continue
+    for (const p of perms) {
+      const pid = db.prepare('SELECT id FROM permissions WHERE name = ?').get(p)?.id
+      if (pid) db.prepare('INSERT OR IGNORE INTO role_permission (role_id, permission_id) VALUES (?, ?)').run(r.id, pid)
+    }
+  }
+
+  // 3 + 4. One-time data migration & seed.
+  if (db.prepare('SELECT COUNT(*) AS c FROM employees').get().c > 0) return
+
+  const splitName = (name) => {
+    const parts = String(name || '').trim().split(/\s+/)
+    return [parts[0] || '', parts.slice(1).join(' ')]
+  }
+
+  const users = db.prepare('SELECT * FROM users WHERE deleted_at IS NULL ORDER BY id').all()
+  for (const u of users) {
+    const [first, last] = splitName(u.name)
+    insert(db, 'employees', {
+      employee_code: u.employee_number || `EMP-${String(u.id).padStart(4, '0')}`,
+      first_name: first,
+      last_name: last,
+      email: u.email,
+      phone: u.phone,
+      department_id: u.department_id,
+      position: u.position,
+      job_title: u.position,
+      employment_type: u.hire_type === 'contract' ? 'contract' : 'full_time',
+      status: u.status === 'leave' ? 'on_leave' : (u.status === 'inactive' ? 'inactive' : 'active'),
+      hire_date: (u.created_at || now).slice(0, 10),
+      user_id: u.id,
+      created_at: now,
+      updated_at: now,
+    })
+  }
+
+  // Staff members without a login account — employees ≠ users.
+  const anyDept = db.prepare('SELECT id FROM departments ORDER BY id').all().map((d) => d.id)
+  const managerId = db.prepare("SELECT id FROM employees WHERE employee_code = 'KU-0002'").get()?.id || null
+  const extras = [
+    { first_name: 'Karim', last_name: 'Sultani', email: 'karim.sultani@ku.edu.af', phone: '+93 700 000 021', position: 'Lab Assistant', employment_type: 'full_time', status: 'active' },
+    { first_name: 'Freshta', last_name: 'Omari', email: 'freshta.omari@ku.edu.af', phone: '+93 700 000 022', position: 'Librarian', employment_type: 'part_time', status: 'active' },
+    { first_name: 'Najibullah', last_name: 'Kohistani', email: 'najib.kohistani@ku.edu.af', phone: '+93 700 000 023', position: 'Electrician', employment_type: 'contract', status: 'active' },
+    { first_name: 'Shukria', last_name: 'Barakzai', email: 'shukria.barakzai@ku.edu.af', phone: '+93 700 000 024', position: 'Office Assistant', employment_type: 'full_time', status: 'inactive' },
+  ]
+  const nextCode = () => {
+    const c = db.prepare('SELECT COUNT(*) AS c FROM employees').get().c
+    return `EMP-${String(c + 1).padStart(4, '0')}`
+  }
+  extras.forEach((e, i) => {
+    insert(db, 'employees', {
+      employee_code: nextCode(),
+      ...e,
+      job_title: e.position,
+      department_id: anyDept.length ? anyDept[i % anyDept.length] : null,
+      hire_date: daysAgo(200 + i * 45),
+      manager_id: managerId,
+      user_id: null,
+      created_at: now,
+      updated_at: now,
+    })
+  })
+
+  // Link assets: mirror the active hand-out assignments onto the new
+  // employee relation so "who holds what" is visible immediately.
+  const activeAssignments = db
+    .prepare("SELECT asset_id, assigned_to_user_id FROM asset_assignments WHERE status = 'active'")
+    .all()
+  for (const a of activeAssignments) {
+    const emp = db.prepare('SELECT id FROM employees WHERE user_id = ?').get(a.assigned_to_user_id)
+    if (emp) {
+      db.prepare('UPDATE assets SET employee_id = ?, updated_at = ? WHERE id = ? AND employee_id IS NULL')
+        .run(emp.id, now, a.asset_id)
+    }
+  }
+}
+
+
+
 const pad2 = (n) => String(n).padStart(2, '0')
 
 export function backupStamp(d = new Date()) {
@@ -1297,6 +1443,9 @@ export function openDb() {
   if (db.prepare('SELECT COUNT(*) AS c FROM backups').get().c === 0) {
     seedBackupHistory(db)
   }
+
+  // Employee module upgrade — safe to run on every start (idempotent).
+  ensureEmployeeModule(db)
 
   return db
 }

@@ -3,6 +3,7 @@ import { dashboardRoutes } from './dashboard.routes.js'
 import { notificationRoutes } from './notifications.routes.js'
 import { activityRoutes } from './activity.routes.js'
 import { userRoutes } from './users.routes.js'
+import { employeeRoutes } from './employees.routes.js'
 import { organizationRoutes } from './organization.routes.js'
 import { catalogRoutes } from './catalog.routes.js'
 import { assetRoutes } from './assets.routes.js'
@@ -24,6 +25,7 @@ export function registerRoutes(router) {
   notificationRoutes(router)
   activityRoutes(router)
   userRoutes(router)
+  employeeRoutes(router)
   organizationRoutes(router)
   catalogRoutes(router)
   assetRoutes(router)

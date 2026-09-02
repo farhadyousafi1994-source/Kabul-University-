@@ -16,6 +16,7 @@ class RolesAndPermissionsSeeder extends Seeder
     public const PERMISSION_GROUPS = [
         'dashboard' => ['view'],
         'users' => ['view', 'create', 'update', 'delete'],
+        'employees' => ['view', 'create', 'update', 'delete'],
         'roles' => ['view', 'create', 'update', 'delete'],
         'organization' => ['view', 'create', 'update', 'delete'],
         'categories' => ['view', 'create', 'update', 'delete'],
@@ -45,19 +46,20 @@ class RolesAndPermissionsSeeder extends Seeder
         'Asset Manager' => [
             'dashboard.view', 'categories.view', 'categories.create', 'categories.update',
             'assets.view', 'assets.create', 'assets.update', 'assets.assign', 'assets.return',
-            'assets.transfer', 'assets.dispose', 'maintenance.view', 'maintenance.create',
+            'assets.transfer', 'assets.dispose', 'employees.view', 'employees.update',
+            'maintenance.view', 'maintenance.create',
             'maintenance.update', 'incidents.view', 'incidents.create', 'incidents.update',
             'requests.view', 'requests.create', 'requests.approve', 'audit.view', 'audit.create',
             'depreciation.view', 'reports.view', 'notifications.view',
         ],
         'Faculty Manager' => [
-            'dashboard.view', 'assets.view', 'assets.assign', 'assets.return',
+            'dashboard.view', 'assets.view', 'assets.assign', 'assets.return', 'employees.view',
             'requests.view', 'requests.create', 'requests.approve',
             'maintenance.view', 'maintenance.create', 'incidents.view', 'incidents.create',
             'reports.view', 'notifications.view',
         ],
         'Department Manager' => [
-            'dashboard.view', 'assets.view', 'requests.view', 'requests.create',
+            'dashboard.view', 'assets.view', 'employees.view', 'requests.view', 'requests.create',
             'maintenance.view', 'maintenance.create', 'incidents.view', 'incidents.create',
             'notifications.view',
         ],
@@ -71,7 +73,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'maintenance.update', 'notifications.view',
         ],
         'Auditor' => [
-            'dashboard.view', 'assets.view', 'audit.view', 'audit.create', 'audit.complete',
+            'dashboard.view', 'assets.view', 'employees.view', 'audit.view', 'audit.create', 'audit.complete',
             'reports.view', 'notifications.view',
         ],
         'Employee' => [

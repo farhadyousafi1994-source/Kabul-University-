@@ -8,7 +8,8 @@
       :actions="barActions"
       :rows="rows"
       :columns="columns"
-      :filename="'incidents'"
+      :filename="'Incidents_Report'"
+      :title="t('nav.items.incidents')"
     />
 
     <div class="row items-center q-col-gutter-sm q-mb-sm print-hide">

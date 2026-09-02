@@ -46,6 +46,7 @@ const MAP = {
   active: ['positive', 'Active'],
   inactive: ['grey-6', 'Inactive'],
   leave: ['orange', 'On Leave'],
+  on_leave: ['orange', 'On Leave'],
   deactivated: ['grey-6', 'Deactivated'],
   // Assignments
   overdue: ['negative', 'Overdue'],

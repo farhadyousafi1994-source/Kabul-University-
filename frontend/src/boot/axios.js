@@ -53,6 +53,8 @@ api.interceptors.response.use(
         error.message ||
         'Something went wrong. Please try again.',
       errors: response.data?.errors || {},
+      // Raw payload — needed by blob downloads to parse JSON error bodies.
+      data: response.data,
     })
   },
 )

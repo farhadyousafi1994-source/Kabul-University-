@@ -8,7 +8,8 @@
       :actions="barActions"
       :rows="rows"
       :columns="columns"
-      :filename="'assets'"
+      :filename="'Assets_Report'"
+      :title="t('assets.title')"
     />
 
     <!-- Toolbar -->
@@ -113,6 +114,7 @@
             <q-input v-model="form.warranty_expiry_date" :label="t('assets.warrantyExpiry')" type="date" dense outlined class="col-6 col-md-3"/>
             <q-select v-model="form.status" :options="statusOptions" :label="t('common.status')" dense outlined emit-value map-options options-dense class="col-6 col-md-3"/>
             <q-select v-model="form.condition" :options="conditionOptions" :label="t('common.condition')" dense outlined emit-value map-options options-dense class="col-6 col-md-3"/>
+            <EmployeeSelect v-model="form.employee_id" :label="t('assets.assignedTo')" dense outlined class="col-12 col-md-6"/>
             <q-select v-model="form.campus_id" :options="campusOptions" :label="t('common.campus')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-4"/>
             <q-select v-model="form.faculty_id" :options="facultyOptions" :label="t('common.faculty')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-4"/>
             <q-select v-model="form.department_id" :options="departmentOptions" :label="t('common.department')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-4"/>
@@ -161,6 +163,7 @@ import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import TableActionBar from 'src/components/common/TableActionBar.vue'
 import UserSelect from 'src/components/common/UserSelect.vue'
+import EmployeeSelect from 'src/components/common/EmployeeSelect.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
 import StatusBadge from 'src/components/common/StatusBadge.vue'
@@ -243,6 +246,7 @@ const columns = computed(() => [
   { name: 'purchase_price', label: t('common.price'), field: 'purchase_price', align: 'right', format: (v) => currency(v) },
   { name: 'current_value', label: t('common.value'), field: 'current_value', align: 'right', format: (v) => currency(v) },
   { name: 'department_name', label: t('common.department'), field: 'department_name', align: 'left' },
+  { name: 'employee_name', label: t('assets.assignedTo'), field: 'employee_name', align: 'left', format: (v) => v || '—' },
   { name: 'status', label: t('common.status'), field: 'status', align: 'left' },
   { name: 'condition', label: t('common.condition'), field: 'condition', align: 'left' },
   { name: 'purchase_date', label: t('assets.purchaseDate'), field: 'purchase_date', align: 'left', format: (v) => date(v) },
@@ -282,7 +286,7 @@ function applyScan() {
 
 function openCreate() {
   editing.value = null
-  Object.assign(form, { name: '', category_id: null, subcategory_id: null, brand: '', model: '', serial_number: '', supplier_id: null, purchase_date: '', purchase_price: null, current_value: null, salvage_value: 0, useful_life: 5, warranty_expiry_date: '', status: 'available', condition: 'good', campus_id: null, faculty_id: null, department_id: null, building_id: null, floor_id: null, room_id: null, description: '' })
+  Object.assign(form, { name: '', category_id: null, subcategory_id: null, brand: '', model: '', serial_number: '', supplier_id: null, purchase_date: '', purchase_price: null, current_value: null, salvage_value: 0, useful_life: 5, warranty_expiry_date: '', status: 'available', condition: 'good', campus_id: null, faculty_id: null, department_id: null, building_id: null, floor_id: null, room_id: null, employee_id: null, description: '' })
   dialogOpen.value = true
 }
 
@@ -295,7 +299,8 @@ function openEdit(row) {
     current_value: row.current_value, salvage_value: row.salvage_value, useful_life: row.useful_life,
     warranty_expiry_date: row.warranty_expiry_date, status: row.status, condition: row.condition,
     campus_id: row.campus_id, faculty_id: row.faculty_id, department_id: row.department_id,
-    building_id: row.building_id, floor_id: row.floor_id, room_id: row.room_id, description: row.description,
+    building_id: row.building_id, floor_id: row.floor_id, room_id: row.room_id,
+    employee_id: row.employee_id || null, description: row.description,
   })
   dialogOpen.value = true
 }

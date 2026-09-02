@@ -53,6 +53,10 @@ class AssetResource extends JsonResource
             'building_id' => $this->building_id,
             'floor_id' => $this->floor_id,
             'room_id' => $this->room_id,
+            // Direct employee assignment
+            'employee_id' => $this->employee_id,
+            'employee_name' => $this->whenLoaded('employee', fn () => $this->employee?->full_name),
+            'employee_code' => $this->whenLoaded('employee', fn () => $this->employee?->employee_code),
             'location' => $this->whenLoaded('campus', function () {
                 $parts = array_filter([
                     $this->room?->name,

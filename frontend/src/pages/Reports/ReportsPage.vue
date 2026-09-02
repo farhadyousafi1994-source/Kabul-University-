@@ -36,7 +36,8 @@
           class="print-hide"
           :rows="resultRows"
           :columns="resultColumns"
-          :filename="`report-${current}`"
+          :filename="`${currentTitle || current}_Report`"
+          :title="currentTitle"
           :actions="barActions"
         />
 

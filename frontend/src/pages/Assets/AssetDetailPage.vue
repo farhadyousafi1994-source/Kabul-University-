@@ -30,6 +30,17 @@
               <q-item><q-item-section><q-item-label caption>{{ t('assets.brand') }} / {{ t('assets.model') }}</q-item-label><q-item-label>{{ [asset.brand, asset.model].filter(Boolean).join(' / ') || '—' }}</q-item-label></q-item-section></q-item>
               <q-item><q-item-section><q-item-label caption>{{ t('assets.serialNumber') }}</q-item-label><q-item-label>{{ asset.serial_number || '—' }}</q-item-label></q-item-section></q-item>
               <q-item><q-item-section><q-item-label caption>{{ t('common.supplier') }}</q-item-label><q-item-label>{{ asset.supplier_name || '—' }}</q-item-label></q-item-section></q-item>
+              <q-item>
+                <q-item-section>
+                  <q-item-label caption>{{ t('assets.assignedTo') }}</q-item-label>
+                  <q-item-label>
+                    <router-link v-if="asset.employee_id" :to="{ name: 'employee-detail', params: { id: asset.employee_id } }" class="text-primary text-weight-medium">
+                      {{ asset.employee_name }} <span class="text-grey-6 text-caption">({{ asset.employee_code }})</span>
+                    </router-link>
+                    <template v-else>—</template>
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
               <q-item><q-item-section><q-item-label caption>{{ t('common.condition') }}</q-item-label><q-item-label><StatusBadge :value="asset.condition" /></q-item-label></q-item-section></q-item>
               <q-item><q-item-section><q-item-label caption>{{ t('assets.warrantyExpiry') }}</q-item-label><q-item-label>{{ date(asset.warranty_expiry_date) }}</q-item-label></q-item-section></q-item>
               <q-item v-if="asset.description"><q-item-section><q-item-label caption>{{ t('common.description') }}</q-item-label><q-item-label>{{ asset.description }}</q-item-label></q-item-section></q-item>

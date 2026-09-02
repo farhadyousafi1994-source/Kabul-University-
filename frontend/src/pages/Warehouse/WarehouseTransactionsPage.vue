@@ -8,7 +8,8 @@
       :actions="barActions"
       :rows="rows"
       :columns="columns"
-      :filename="'warehouse-transactions'"
+      :filename="'Stock_Transactions_Report'"
+      :title="t('nav.items.warehouseTransactions')"
     />
 
     <div class="row items-center q-col-gutter-sm q-mb-sm print-hide">

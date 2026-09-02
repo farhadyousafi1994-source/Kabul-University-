@@ -8,7 +8,14 @@ export function assetRoutes(router) {
   const ASSET_COLS = ['name', 'description', 'category_id', 'subcategory_id', 'brand', 'model',
     'serial_number', 'barcode', 'qr_code', 'purchase_date', 'purchase_price', 'current_value',
     'salvage_value', 'supplier_id', 'warranty_expiry_date', 'useful_life', 'status', 'condition',
-    'campus_id', 'faculty_id', 'department_id', 'building_id', 'floor_id', 'room_id']
+    'campus_id', 'faculty_id', 'department_id', 'building_id', 'floor_id', 'room_id', 'employee_id']
+
+  // Validates an incoming `employee_id` (assignment target must exist).
+  const checkEmployee = (ctx, employeeId) => {
+    if (employeeId === undefined || employeeId === null || employeeId === '') return
+    const emp = ctx.db.prepare('SELECT id FROM employees WHERE id = ? AND deleted_at IS NULL').get(Number(employeeId))
+    if (!emp) throw new HttpError(422, 'Validation failed', { employee_id: ['The selected employee does not exist.'] })
+  }
 
   // GET /api/assets
   router.get('/api/assets', (ctx) => {
@@ -21,7 +28,7 @@ export function assetRoutes(router) {
     for (const col of ['status', 'condition']) {
       if (ctx.query[col]) { where += ` AND a.${col} = ?`; params.push(ctx.query[col]) }
     }
-    for (const col of ['category_id', 'campus_id', 'faculty_id', 'department_id', 'building_id', 'floor_id', 'room_id', 'supplier_id']) {
+    for (const col of ['category_id', 'campus_id', 'faculty_id', 'department_id', 'building_id', 'floor_id', 'room_id', 'supplier_id', 'employee_id']) {
       if (ctx.query[col]) { where += ` AND a.${col} = ?`; params.push(Number(ctx.query[col])) }
     }
     if (ctx.query.code) {
@@ -42,6 +49,8 @@ export function assetRoutes(router) {
       `SELECT a.*, c.name AS category_name, s.name AS supplier_name,
               cm.name AS campus_name, f.name AS faculty_name, d.name AS department_name,
               b.name AS building_name, fl.name AS floor_name, r.name AS room_name,
+              TRIM(e.first_name || ' ' || e.last_name) AS employee_name,
+              e.employee_code AS employee_code,
               (SELECT COUNT(*) FROM asset_images i WHERE i.asset_id = a.id) AS images_count,
               (SELECT COUNT(*) FROM asset_documents doc WHERE doc.asset_id = a.id) AS documents_count
        FROM assets a
@@ -53,6 +62,7 @@ export function assetRoutes(router) {
        LEFT JOIN buildings b ON b.id = a.building_id
        LEFT JOIN floors fl ON fl.id = a.floor_id
        LEFT JOIN rooms r ON r.id = a.room_id
+       LEFT JOIN employees e ON e.id = a.employee_id
        WHERE ${where} ORDER BY ${sort} ${dir} LIMIT ? OFFSET ?`,
     ).all(...params, perPage, (page - 1) * perPage)
 
@@ -109,6 +119,7 @@ export function assetRoutes(router) {
         category_id: data.category_id ? [] : ['The category field is required.'],
       })
     }
+    checkEmployee(ctx, data.employee_id)
 
     // Asset code generation: KU-{CAT}-{YEAR}-{NNNNNN}
     const cat = ctx.db.prepare('SELECT * FROM asset_categories WHERE id = ?').get(Number(data.category_id))
@@ -124,6 +135,8 @@ export function assetRoutes(router) {
     if (!data.condition) data.condition = 'good'
     if (!data.useful_life) data.useful_life = 5
     if (data.purchase_price && !data.current_value) data.current_value = data.purchase_price
+    // Creating an asset already in an employee's hands ⇒ status is assigned.
+    if (data.employee_id && data.status === 'available') data.status = 'assigned'
 
     const keys = Object.keys(data)
     const stmt = ctx.db.prepare(`INSERT INTO assets (${keys.map((k) => `"${k}"`).join(', ')}) VALUES (${keys.map(() => '?').join(', ')})`)
@@ -138,12 +151,19 @@ export function assetRoutes(router) {
         ctx.user.id, now, 'Initial registration', now)
 
     log(ctx, 'created', 'Assets', { id, name: data.name })
-    return ok('Asset created successfully.', ctx.db.prepare('SELECT * FROM assets WHERE id = ?').get(id), null, 201)
+    return ok('Asset created successfully.', ctx.db.prepare(
+      `SELECT a.*, TRIM(e.first_name || ' ' || e.last_name) AS employee_name, e.employee_code AS employee_code
+       FROM assets a LEFT JOIN employees e ON e.id = a.employee_id WHERE a.id = ?`).get(id), null, 201)
   }, { auth: true, permission: 'assets.create' })
 
   // GET /api/assets/:id
   router.get('/api/assets/:id', (ctx) => {
-    const asset = ctx.db.prepare('SELECT * FROM assets WHERE id = ? AND deleted_at IS NULL').get(Number(ctx.params.id))
+    const asset = ctx.db.prepare(
+      `SELECT a.*, TRIM(e.first_name || ' ' || e.last_name) AS employee_name, e.employee_code AS employee_code
+       FROM assets a
+       LEFT JOIN employees e ON e.id = a.employee_id
+       WHERE a.id = ? AND a.deleted_at IS NULL`,
+    ).get(Number(ctx.params.id))
     if (!asset) throw new HttpError(404, 'Asset not found.')
     return ok('Asset retrieved successfully.', asset)
   }, { auth: true, permission: 'assets.view' })
@@ -156,6 +176,20 @@ export function assetRoutes(router) {
     const picked = {}
     for (const k of ASSET_COLS) if (ctx.body[k] !== undefined) picked[k] = ctx.body[k]
     const data = { ...picked, updated_at: new Date().toISOString() }
+    checkEmployee(ctx, data.employee_id)
+
+    // Keep the status in step with the employee assignment when the caller
+    // did not set an explicit status themselves.
+    const employeeChanged = data.employee_id !== undefined
+      && Number(data.employee_id || 0) !== Number(asset.employee_id || 0)
+    if (employeeChanged && data.status === undefined) {
+      if (data.employee_id) {
+        if (asset.status === 'available' || asset.status === 'assigned' || asset.status === 'reserved') data.status = 'assigned'
+      } else if (asset.status === 'assigned') {
+        data.status = 'available'
+      }
+    }
+
     const locCols = ['campus_id', 'faculty_id', 'department_id', 'building_id', 'floor_id', 'room_id']
     const locChanged = locCols.some((c) => data[c] !== undefined && Number(data[c] || 0) !== Number(asset[c] || 0))
 
@@ -173,7 +207,12 @@ export function assetRoutes(router) {
     }
 
     log(ctx, 'updated', 'Assets', { id: asset.id, name: data.name || asset.name })
-    return ok('Asset updated successfully.', ctx.db.prepare('SELECT * FROM assets WHERE id = ?').get(asset.id))
+    if (employeeChanged) {
+      log(ctx, data.employee_id ? 'assigned' : 'unassigned', 'Assets', { id: asset.id, name: asset.name })
+    }
+    return ok('Asset updated successfully.', ctx.db.prepare(
+      `SELECT a.*, TRIM(e.first_name || ' ' || e.last_name) AS employee_name, e.employee_code AS employee_code
+       FROM assets a LEFT JOIN employees e ON e.id = a.employee_id WHERE a.id = ?`).get(asset.id))
   }, { auth: true, permission: 'assets.update' })
 
   // DELETE /api/assets/:id

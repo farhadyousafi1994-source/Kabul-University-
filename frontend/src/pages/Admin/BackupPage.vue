@@ -163,7 +163,16 @@
                 </span>
               </div>
             </div>
-            <q-btn flat round dense color="primary" icon="download" @click="download(row)">
+            <q-btn
+              flat
+              round
+              dense
+              color="primary"
+              icon="download"
+              :loading="downloadingId === row.id"
+              :disable="deletingId === row.id || (downloadingId && downloadingId !== row.id)"
+              @click="download(row)"
+            >
               <q-tooltip>{{ t('common.download') }}</q-tooltip>
             </q-btn>
             <q-btn
@@ -173,6 +182,7 @@
               color="negative"
               icon="delete"
               :loading="deletingId === row.id"
+              :disable="downloadingId === row.id || (deletingId && deletingId !== row.id)"
               @click="pendingDelete = row"
             >
               <q-tooltip>{{ t('common.delete') }}</q-tooltip>
@@ -246,6 +256,7 @@ const taking = ref(false)
 const restoring = ref(false)
 const freshing = ref(false)
 const deletingId = ref(null)
+const downloadingId = ref(null)
 
 const format = ref('sqlite')
 const file = ref(null)
@@ -295,10 +306,15 @@ async function takeBackup() {
 }
 
 async function download(row) {
+  if (downloadingId.value) return // prevent accidental double-clicks
+  downloadingId.value = row.id
   try {
     await backupService.downloadFile(backupService.downloadUrl(row.id), row.filename || 'ku-ams-backup')
+    $q.notify({ type: 'positive', message: t('admin.backup.downloadedSuccess') })
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || t('common.error') })
+  } finally {
+    downloadingId.value = null
   }
 }
 

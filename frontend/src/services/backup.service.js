@@ -2,6 +2,25 @@ import api from 'src/boot/axios'
 import http from './api'
 
 /**
+ * Read a human error message out of a rejected blob download. The axios
+ * interceptor rejects with `{ status, message, errors }`, but when
+ * `responseType: 'blob'` was requested the JSON error body is still a Blob.
+ */
+async function extractBlobError(e) {
+  const candidates = [e?.data, e?.response?.data].filter((v) => v instanceof Blob)
+  for (const b of candidates) {
+    try {
+      const parsed = JSON.parse(await b.text())
+      if (parsed?.message) return parsed.message
+    } catch {
+      /* not JSON — keep looking */
+    }
+  }
+  if (e?.status === 404) return 'Backup file not found on the server.'
+  return null
+}
+
+/**
  * Module 29 — Backup & disaster recovery.
  *
  * Contract (identical in the Laravel backend and the dev mock API):
@@ -22,8 +41,10 @@ export const backupService = {
   create: (payload = {}) => http.post('/backups', payload || {}),
   remove: (id) => http.delete(`/backups/${id}`),
   restore: (snapshot) => http.post('/backups/restore', { data: snapshot }),
-  downloadUrl: (id) => `/api/backups/${id}/download`,
-  freshTemplateUrl: '/api/backups/fresh-template',
+  // Paths are relative to the axios baseURL (`/api` by default) — they must
+  // NOT repeat the `/api` prefix or the request becomes `/api/api/…` (404).
+  downloadUrl: (id) => `/backups/${id}/download`,
+  freshTemplateUrl: '/backups/fresh-template',
 
   /**
    * Stream an authenticated file to the browser and save it under `filename`.
@@ -31,19 +52,17 @@ export const backupService = {
    * with axios (responseType blob) and handed to the download manager.
    */
   async downloadFile(url, filename) {
-    const blob = await api.get(url, { responseType: 'blob' })
+    let blob
+    try {
+      blob = await api.get(url, { responseType: 'blob' })
+    } catch (e) {
+      // Error responses arrive as a Blob when responseType is blob, so the
+      // axios interceptor cannot read `message` from them — parse it here.
+      throw new Error(await extractBlobError(e) || e.message || 'Download failed.')
+    }
 
-    // The API answers errors with JSON — surface them instead of "downloading" them.
-    if (blob?.type === 'application/json') {
-      let message = 'Download failed.'
-      try {
-        const text = await blob.text()
-        const parsed = JSON.parse(text)
-        message = parsed?.message || message
-      } catch {
-        /* keep the generic message */
-      }
-      throw new Error(message)
+    if (!(blob instanceof Blob)) {
+      throw new Error('Download failed — the server did not return a file.')
     }
 
     const href = URL.createObjectURL(blob)
