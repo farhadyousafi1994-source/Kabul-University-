@@ -71,9 +71,9 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import { downloadExcel, downloadPdf, exportFilename, printArea } from 'src/utils/export'
+import { notify } from 'src/utils/notify'
 
 const props = defineProps({
   /**
@@ -94,7 +94,6 @@ const props = defineProps({
 })
 
 const { t } = useI18n()
-const $q = useQuasar()
 
 const printing = ref(false)
 const pdfing = ref(false)
@@ -114,7 +113,7 @@ function doPrint() {
   try {
     printArea(props.printSelector, { title: reportTitle.value })
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || t('common.exportFailed') })
+    notify.error(e.message || t('common.exportFailed'))
   } finally {
     // window.print() is synchronous — release the button immediately after.
     printing.value = false
@@ -127,9 +126,9 @@ async function doPdf() {
   try {
     const cols = exportColumns()
     await downloadPdf(baseFilename.value, props.rows, cols.length ? cols : null, { title: reportTitle.value })
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.pdfExported') })
+    notify.success(t('common.pdfExported'))
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || t('common.exportFailed') })
+    notify.error(e.message || t('common.exportFailed'))
   } finally {
     pdfing.value = false
   }
@@ -141,9 +140,9 @@ async function doExcel() {
   try {
     const cols = exportColumns()
     await downloadExcel(baseFilename.value, props.rows, cols.length ? cols : null, { sheetName: reportTitle.value })
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.excelExported') })
+    notify.success(t('common.excelExported'))
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || t('common.exportFailed') })
+    notify.error(e.message || t('common.exportFailed'))
   } finally {
     exceling.value = false
   }

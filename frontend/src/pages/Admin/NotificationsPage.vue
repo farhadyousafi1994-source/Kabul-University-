@@ -113,7 +113,6 @@
 <script setup>
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import { computed, onMounted, ref } from 'vue'
-import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
@@ -121,9 +120,10 @@ import {
   notificationService, NOTIFICATION_CATEGORIES, notificationCategory,
 } from 'src/services/notifications.service'
 import { timeAgo } from 'src/utils/format'
+import { notify } from 'src/utils/notify'
+import { confirmAction } from 'src/utils/confirm'
 
 const { t } = useI18n()
-const $q = useQuasar()
 
 const items = ref([])
 const loading = ref(false)
@@ -188,37 +188,35 @@ async function markAll() {
   try {
     await notificationService.markAllRead()
     items.value.forEach((n) => { n.read_at = n.read_at || new Date().toISOString() })
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.notifications.markAllDone') })
+    notify.success(t('admin.notifications.markAllDone'))
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
+    notify.error(e.message || t('common.saveFailed'))
   }
 }
 
 async function clearRead() {
-  $q.dialog({
+  const confirmed = await confirmAction({
     title: t('admin.notifications.clearRead'),
     message: t('admin.notifications.clearReadConfirm'),
-    cancel: true,
-    persistent: true,
+    okLabel: t('admin.notifications.clearRead'),
+    busyLabel: t('common.deleting'),
+    icon: 'clear_all',
     color: 'warning',
-  }).onOk(async () => {
-    try {
-      await notificationService.clearRead()
-      items.value = items.value.filter((n) => !n.read_at)
-      $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.notifications.clearedDone') })
-    } catch (e) {
-      $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
-    }
+    onConfirm: () => notificationService.clearRead(),
   })
+  // Only mutate the local list once the backend has confirmed the delete.
+  if (!confirmed) return
+  items.value = items.value.filter((n) => !n.read_at)
+  notify.success(t('admin.notifications.clearedDone'))
 }
 
 async function removeOne(n) {
   try {
     await notificationService.remove(n.id)
     items.value = items.value.filter((x) => x.id !== n.id)
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.deletedSuccessEntity', { entity: t('common.entities.notification') }) })
+    notify.success(t('common.deletedSuccessEntity', { entity: t('common.entities.notification') }))
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
+    notify.error(e.message || t('common.saveFailed'))
   }
 }
 

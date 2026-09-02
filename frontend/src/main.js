@@ -1,6 +1,6 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import { Quasar, Dark } from 'quasar'
+import { Quasar, Dark, Notify, Dialog, Loading, ClosePopup } from 'quasar'
 import quasarIconSet from 'quasar/icon-set/material-icons'
 import VueApexCharts from 'vue3-apexcharts'
 
@@ -21,6 +21,7 @@ import '@quasar/extras/material-icons/material-icons.css'
 // MDI is needed for the shared table action bar (import / tune / excel / pdf icons)
 import '@quasar/extras/mdi-v7/mdi-v7.css'
 import '@quasar/extras/roboto-font/roboto-font.css'
+import './css/theme.css'
 import './css/app.sass'
 
 // App
@@ -46,9 +47,24 @@ useThemeStore().applyInitial()
 app.use(router)
 app.use(i18n)
 app.use(VueApexCharts)
+// ---------------------------------------------------------------------------
+// Quasar installation
+//
+// `plugins` is REQUIRED. Without it `$q.notify` / `$q.dialog` are `undefined`
+// and every success toast and every confirmation dialog in the application
+// throws `TypeError: $q.notify is not a function` — which silently aborts the
+// CRUD flow *after* the API call succeeded (the dialog closed, but the list was
+// never refreshed and no notification was shown). Registering the plugins here
+// is what makes the global "notify → close → refresh" behaviour actually work.
+//
+// They are also usable as singletons (`Notify.create(...)`) from plain modules —
+// see src/utils/notify.js — which keeps notifications working outside of
+// components (stores, services, router guards).
+// ---------------------------------------------------------------------------
 app.use(Quasar, {
   lang: initialLangConfig.quasarLang,
   iconSet: quasarIconSet,
+  plugins: { Notify, Dialog, Loading, ClosePopup },
   config: {
     dark: Dark.isActive, // follow system preference; togglable from the layout
     brand: {
@@ -56,7 +72,13 @@ app.use(Quasar, {
       secondary: '#175A8C',
       accent: '#0B1626',
     },
-    notify: { position: 'top-right', timeout: 3500 },
+    notify: {
+      position: 'top',
+      timeout: 3500,
+      group: false,
+      classes: 'ku-notify',
+    },
+    loading: {},
   },
 })
 

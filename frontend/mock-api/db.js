@@ -589,6 +589,54 @@ CREATE TABLE IF NOT EXISTS settings (
   created_at TEXT, updated_at TEXT
 );
 
+-- Module 24b — Appearance / theme preferences.
+-- One row per user (their personal look & feel) plus a single organization-wide
+-- default row used for users who have never saved their own preferences.
+-- Mirrors backend/database/migrations/*_create_appearance_tables.php.
+CREATE TABLE IF NOT EXISTS user_appearances (
+  user_id INTEGER PRIMARY KEY,
+  theme_mode TEXT NOT NULL DEFAULT 'system',
+  selected_theme TEXT NOT NULL DEFAULT 'softcora',
+  custom_colors TEXT,
+  font_family TEXT NOT NULL DEFAULT 'roboto',
+  font_size TEXT NOT NULL DEFAULT 'M',
+  font_weight INTEGER NOT NULL DEFAULT 400,
+  line_height REAL NOT NULL DEFAULT 1.5,
+  border_radius TEXT NOT NULL DEFAULT 'normal',
+  sidebar_style TEXT NOT NULL DEFAULT 'normal',
+  table_density TEXT NOT NULL DEFAULT 'compact',
+  animations_enabled INTEGER NOT NULL DEFAULT 1,
+  calendar_type TEXT NOT NULL DEFAULT 'gregorian',
+  layout_preferences TEXT,
+  accessibility_preferences TEXT,
+  created_at TEXT, updated_at TEXT,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS appearance_defaults (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  theme_mode TEXT NOT NULL DEFAULT 'system',
+  selected_theme TEXT NOT NULL DEFAULT 'softcora',
+  font_family TEXT NOT NULL DEFAULT 'roboto',
+  font_size TEXT NOT NULL DEFAULT 'M',
+  font_weight INTEGER NOT NULL DEFAULT 400,
+  line_height REAL NOT NULL DEFAULT 1.5,
+  border_radius TEXT NOT NULL DEFAULT 'normal',
+  sidebar_style TEXT NOT NULL DEFAULT 'normal',
+  table_density TEXT NOT NULL DEFAULT 'compact',
+  animations_enabled INTEGER NOT NULL DEFAULT 1,
+  calendar_type TEXT NOT NULL DEFAULT 'gregorian',
+  layout_preferences TEXT,
+  accessibility_preferences TEXT,
+  organization_name TEXT,
+  brand_name TEXT,
+  logo_url TEXT,
+  favicon_url TEXT,
+  updated_by INTEGER,
+  created_at TEXT, updated_at TEXT,
+  FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
 -- Module 29 — Backup & disaster recovery index.
 -- One row per backup file kept on the server (.sqlite copy of this database,
 -- or a .json dump). Column "kind" is manual | scheduled | pre_restore.
@@ -682,6 +730,63 @@ const SEED_STAFF_INFO = {
   technician: { employee_code: 'KU-0007', position: 'Technician', employment_type: 'contract' },
   auditor: { employee_code: 'KU-0008', position: 'Auditor', employment_type: 'full_time' },
   employee: { employee_code: 'KU-0009', position: 'Research Assistant', employment_type: 'contract' },
+}
+
+// ---------------------------------------------------------------------------
+// Module 24b — Appearance / theme preferences (idempotent bootstrap).
+//
+// Guarantees the organization-wide default row exists (id = 1 is enforced by a
+// CHECK constraint, so there can only ever be one) and registers the
+// `appearance.manage` permission that gates the administrator endpoints.
+// Safe to run on every start.
+// ---------------------------------------------------------------------------
+
+export const APPEARANCE_DEFAULTS = {
+  theme_mode: 'system',
+  selected_theme: 'softcora',
+  font_family: 'roboto',
+  font_size: 'M',
+  font_weight: 400,
+  line_height: 1.5,
+  border_radius: 'normal',
+  sidebar_style: 'normal',
+  table_density: 'compact',
+  animations_enabled: 1,
+  calendar_type: 'gregorian',
+  layout_preferences: JSON.stringify({ header: 'fixed', contentWidth: 'boxed', dashboardDensity: 'comfortable' }),
+  accessibility_preferences: JSON.stringify({ highContrast: false, reducedMotion: false, largerText: false, strongFocus: false, keyboardNav: true }),
+}
+
+export const APPEARANCE_PERMISSION = 'appearance.manage'
+
+function ensureAppearanceModule(db) {
+  const now = new Date().toISOString()
+
+  if (!db.prepare('SELECT id FROM appearance_defaults WHERE id = 1').get()) {
+    insert(db, 'appearance_defaults', {
+      id: 1,
+      ...APPEARANCE_DEFAULTS,
+      organization_name: 'Kabul University',
+      brand_name: 'SoftCora Technologies',
+      logo_url: null,
+      favicon_url: null,
+      updated_by: null,
+      created_at: now,
+      updated_at: now,
+    })
+  }
+
+  if (!db.prepare('SELECT id FROM permissions WHERE name = ?').get(APPEARANCE_PERMISSION)) {
+    insert(db, 'permissions', { name: APPEARANCE_PERMISSION, guard_name: 'web', created_at: now, updated_at: now })
+  }
+
+  const pid = db.prepare('SELECT id FROM permissions WHERE name = ?').get(APPEARANCE_PERMISSION)?.id
+  if (pid) {
+    for (const role of ['Super Admin', 'University Administrator']) {
+      const r = db.prepare('SELECT id FROM roles WHERE name = ?').get(role)
+      if (r) db.prepare('INSERT OR IGNORE INTO role_permission (role_id, permission_id) VALUES (?, ?)').run(r.id, pid)
+    }
+  }
 }
 
 export function seed(db) {
@@ -1850,6 +1955,9 @@ function prepareDatabase(db) {
 
   // Employee module upgrade — safe to run on every start (idempotent).
   ensureEmployeeModule(db)
+
+  // Appearance module bootstrap — safe to run on every start (idempotent).
+  ensureAppearanceModule(db)
 
   return db
 }

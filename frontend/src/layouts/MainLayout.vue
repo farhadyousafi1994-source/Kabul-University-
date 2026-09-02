@@ -73,6 +73,17 @@
                 </q-item-section>
               </q-item>
               <q-separator />
+              <q-item clickable v-ripple @click="goToTheme">
+                <q-item-section avatar><q-icon name="palette" /></q-item-section>
+                <q-item-section>{{ t('theme.title') }}</q-item-section>
+              </q-item>
+              <q-item clickable v-ripple @click="themeOpen = true">
+                <q-item-section avatar><q-icon name="contrast" /></q-item-section>
+                <q-item-section>{{ t('theme.displayMode') }}</q-item-section>
+                <q-item-section side>
+                  <q-icon :name="isDark ? 'dark_mode' : 'light_mode'" size="16px" />
+                </q-item-section>
+              </q-item>
               <q-item clickable v-ripple @click="changePasswordDialog = true">
                 <q-item-section avatar><q-icon name="lock" /></q-item-section>
                 <q-item-section>{{ t('auth.changePassword') }}</q-item-section>
@@ -94,10 +105,11 @@
       :mini="miniSidebar"
       show-if-above
       bordered
-      :width="264"
+      :width="drawerWidth"
       :mini-width="76"
       :breakpoint="1024"
       class="ku-drawer"
+      :class="{ 'ku-drawer--floating': isFloating }"
     >
       <q-scroll-area class="fit">
         <!-- Brand block -->
@@ -155,6 +167,43 @@
     <q-dialog v-model="changePasswordDialog">
       <ChangePasswordDialog @done="changePasswordDialog = false" />
     </q-dialog>
+
+    <!-- Display-mode quick picker (light / dark / system) -->
+    <q-dialog v-model="themeOpen">
+      <q-card style="min-width: 300px" class="q-dialog-card">
+        <q-card-section class="row items-center q-pb-none">
+          <q-icon name="contrast" color="primary" size="20px" class="q-mr-sm" />
+          <div class="text-h6">{{ t('theme.displayMode') }}</div>
+          <q-space />
+          <q-btn flat round dense icon="close" :aria-label="t('common.close')" @click="themeOpen = false" />
+        </q-card-section>
+        <q-card-section>
+          <q-list bordered separator class="rounded-borders">
+            <q-item
+              v-for="mode in ['light', 'dark', 'system']"
+              :key="mode"
+              clickable
+              v-ripple
+              :active="themeStore.settings.mode === mode"
+              @click="pickMode(mode)"
+            >
+              <q-item-section avatar>
+                <q-icon :name="modeIcon(mode)" />
+              </q-item-section>
+              <q-item-section>{{ t(`theme.${mode}`) }}</q-item-section>
+              <q-item-section side>
+                <q-icon v-if="themeStore.settings.mode === mode" name="check_circle" color="primary" />
+              </q-item-section>
+            </q-item>
+          </q-list>
+          <div class="text-caption text-grey-6 q-mt-sm">{{ t('theme.displayModeHint') }}</div>
+        </q-card-section>
+        <q-card-actions align="right" class="q-px-md q-pb-md">
+          <q-btn flat dense no-caps color="grey-8" :label="t('common.close')" @click="themeOpen = false" />
+          <q-btn unelevated dense no-caps color="primary" icon="palette" :label="t('theme.title')" @click="goToTheme" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-layout>
 </template>
 
@@ -176,14 +225,21 @@ const themeStore = useThemeStore()
 
 const drawerOpen = ref(true)
 const changePasswordDialog = ref(false)
-const isDark = computed(() => themeStore.settings.mode === 'dark')
-const miniSidebar = computed(() => themeStore.settings.sidebar === 'mini')
+const themeOpen = ref(false)
+
+// `resolvedMode` collapses `system` into the mode the OS currently reports, so
+// the header toggle always flips between two concrete states.
+const isDark = computed(() => themeStore.isDark)
+const sidebarStyle = computed(() => themeStore.settings.sidebar || 'normal')
+const miniSidebar = computed(() => sidebarStyle.value === 'mini')
+const drawerWidth = computed(() => (sidebarStyle.value === 'expanded' ? 320 : 264))
+const isFloating = computed(() => sidebarStyle.value === 'floating')
 
 const year = new Date().getFullYear()
 
-// The header quick-toggle and the theme center share one source of truth.
+// The header quick-toggle and the theme centre share one source of truth.
 function toggleDark() {
-  themeStore.patch({ mode: isDark.value ? 'light' : 'dark' })
+  themeStore.setDisplayMode(isDark.value ? 'light' : 'dark')
 }
 
 // ---------------------------------------------------------------------------
@@ -218,6 +274,21 @@ const menuSections = computed(() => {
   return sections
 })
 
+function modeIcon(mode) {
+  return { light: 'light_mode', dark: 'dark_mode', system: 'desktop_windows' }[mode] || 'contrast'
+}
+
+function pickMode(mode) {
+  themeStore.setDisplayMode(mode)
+  themeOpen.value = false
+}
+
+function goToTheme() {
+  themeOpen.value = false
+  changePasswordDialog.value = false
+  router.push({ name: 'theme' })
+}
+
 function notificationIcon(n) {
   return n.icon || 'notifications'
 }
@@ -241,6 +312,9 @@ async function logout() {
 onMounted(() => {
   if (authStore.isAuthenticated) {
     notificationStore.fetchNotifications()
+    // Pull the signed-in user's appearance (user → org → app defaults) so a
+    // fresh login re-skins the app even on a browser with empty localStorage.
+    themeStore.loadTheme({ silent: true })
   }
 })
 </script>
@@ -306,6 +380,13 @@ onMounted(() => {
 .body--dark
   .menu-item.q-router-link--active
     color: #fff
+
+.ku-drawer--floating .q-drawer__content
+  margin: 10px
+  border-radius: var(--app-radius-lg)
+  border: 1px solid var(--app-border)
+  overflow: hidden
+  box-shadow: var(--ku-shadow-md)
 
 .ku-footer
   background: var(--ku-card-bg)

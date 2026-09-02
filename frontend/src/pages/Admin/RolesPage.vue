@@ -42,10 +42,21 @@
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">{{ editing ? t('admin.roles.editRole', { name: editing.name }) : t('admin.roles.add') }}</div>
           <q-space />
-          <q-btn flat round dense icon="close" @click="dialogOpen = false" />
+          <q-btn flat round dense icon="close" :disable="saving" @click="dialogOpen = false" />
         </q-card-section>
         <q-card-section>
-          <q-input v-model="form.name" :label="`${t('admin.roles.roleName')} *`" dense outlined class="q-mb-md" :rules="[(v) => !!v || t('common.required')]" />
+          <q-input
+            v-model="form.name"
+            :label="`${t('admin.roles.roleName')} *`"
+            dense
+            outlined
+            class="q-mb-md"
+            :rules="[(v) => !!v || t('common.required')]"
+            :disable="saving"
+            :error="Boolean(fieldErrors.name)"
+            :error-message="fieldErrors.name"
+            data-cy="role-name"
+          />
           <div class="text-subtitle2 q-mb-sm">{{ t('admin.roles.permissions') }}</div>
           <div class="row q-col-gutter-sm">
             <div v-for="group in permissionGroups" :key="group" class="col-12 col-md-6">
@@ -63,8 +74,16 @@
           </div>
         </q-card-section>
         <q-card-section class="row justify-end q-gutter-sm q-pt-none">
-          <q-btn :label="t('common.cancel')" flat color="grey-7" @click="dialogOpen = false" />
-          <q-btn :label="t('common.save')" color="primary" :loading="saving" @click="save" />
+          <q-btn :label="t('common.cancel')" flat color="grey-7" :disable="saving" @click="dialogOpen = false" />
+          <q-btn
+            :label="saving ? t('common.saving') : t('common.save')"
+            color="primary"
+            :loading="saving"
+            data-cy="role-save"
+            @click="save"
+          >
+            <template #loading><q-spinner-dots class="q-mr-sm" />{{ t('common.saving') }}</template>
+          </q-btn>
         </q-card-section>
       </q-card>
     </q-dialog>
@@ -80,6 +99,9 @@ import TableActionBar from 'src/components/common/TableActionBar.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
 import { roleService, roleActions } from 'src/services/users.service'
 import { useAuthStore } from 'src/stores/auth'
+import { notify } from 'src/utils/notify'
+import { useAction } from 'src/composables/useAction'
+import { confirmDelete } from 'src/utils/confirm'
 
 const { t } = useI18n()
 const $q = useQuasar()
@@ -93,7 +115,13 @@ const rows = ref([])
 const allPermissions = ref([])
 const loading = ref(false)
 const error = ref('')
-const saving = ref(false)
+/**
+ * Shared action lifecycle: loading flag, duplicate-submission guard, specific
+ * success toast, and server validation mapped onto `fieldErrors`.
+ */
+const saveAction = useAction()
+const saving = saveAction.pending
+const fieldErrors = saveAction.fieldErrors
 const dialogOpen = ref(false)
 const editing = ref(null)
 const form = reactive({ name: '', permission_ids: [] })
@@ -140,36 +168,38 @@ function openEdit(role) {
   dialogOpen.value = true
 }
 
-async function save() {
-  if (!form.name) { $q.notify({ type: 'negative', message: t('common.required') }); return }
-  if (saving.value) return // prevent duplicate submissions
-  saving.value = true
-  try {
-    if (editing.value) await roleService.update(editing.value.id, { name: form.name, permission_ids: form.permission_ids })
-    else await roleService.create({ name: form.name, permission_ids: form.permission_ids })
-    dialogOpen.value = false
-    $q.notify({ type: 'positive', icon: 'check_circle', message: editing.value ? t('common.updatedSuccessEntity', { entity: t('common.entities.role') }) : t('common.createdSuccessEntity', { entity: t('common.entities.role') }) })
-    await load()
-  } catch (e) {
-    $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-  } finally {
-    saving.value = false
-  }
+function save() {
+  const wasEditing = Boolean(editing.value)
+  const id = editing.value?.id
+  const entity = t('common.entities.role')
+  const payload = { name: form.name, permission_ids: form.permission_ids }
+
+  return saveAction.run(
+    () => (wasEditing ? roleService.update(id, payload) : roleService.create(payload)),
+    {
+      successMessage: wasEditing
+        ? t('common.updatedSuccessEntity', { entity })
+        : t('common.createdSuccessEntity', { entity }),
+      errorMessage: t('common.unableToSaveEntity', { entity }),
+      onSuccess: async () => {
+        dialogOpen.value = false
+        editing.value = null
+        saveAction.clearFieldErrors()
+        await load()
+      },
+    },
+  )
 }
 
 function remove(role) {
-  $q.dialog({
-    title: t('common.confirmDeleteTitle'),
-    message: t('common.confirmDeleteMessage'),
-    cancel: true, persistent: true, color: 'negative',
-  }).onOk(async () => {
-    try {
-      await roleService.remove(role.id)
-      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.deletedSuccessEntity', { entity: t('common.entities.role') }) })
+  return confirmDelete({
+    entity: t('common.entities.role'),
+    name: role.name,
+    onConfirm: () => roleService.remove(role.id),
+    onConfirmed: async () => {
+      notify.success(t('common.deletedSuccessEntity', { entity: t('common.entities.role') }))
       await load()
-    } catch (e) {
-      $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-    }
+    },
   })
 }
 

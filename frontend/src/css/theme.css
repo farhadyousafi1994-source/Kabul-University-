@@ -1,0 +1,253 @@
+/* ---------------------------------------------------------------------------
+   KU-AMS design tokens
+   ---------------------------------------------------------------------------
+   The theme store (src/stores/theme.js) writes the live values of every
+   `--app-*` custom property onto <html>. This file declares the fallbacks,
+   maps the legacy `--ku-*` aliases and the Quasar brand variables onto them,
+   and holds the global rules that react to the appearance preferences
+   (density, sidebar style, layout, accessibility).
+
+   Rule of thumb for component authors: never hardcode a colour — read a token
+   (`var(--app-primary)`, `var(--app-text-secondary)`, …).
+   --------------------------------------------------------------------------- */
+
+:root {
+  /* Brand ------------------------------------------------------------- */
+  --app-primary: #c8862d;
+  --app-secondary: #175a8c;
+  --app-accent: #0b1626;
+  --app-accent-background: #f4f7fb;
+  --app-on-primary: #16233a;
+
+  /* Navigation -------------------------------------------------------- */
+  --app-topbar-start: #123a66;
+  --app-topbar-end: #175a8c;
+  --app-sidebar-background: #ffffff;
+  --app-sidebar-active: #f6e7cf;
+
+  /* Surfaces ---------------------------------------------------------- */
+  --app-background: #f4f7fb;
+  --app-surface: #ffffff;
+  --app-card: #ffffff;
+  --app-border: #e6eaf2;
+  --app-hover: #edf1f8;
+  --app-focus: #f6e7cf;
+
+  /* Typography -------------------------------------------------------- */
+  --app-text-primary: #16233a;
+  --app-text-secondary: #5c6b84;
+  --app-font-family: 'Roboto', -apple-system, 'Segoe UI', sans-serif;
+  --app-font-size: 15px;
+  --app-font-weight: 400;
+  --app-line-height: 1.5;
+
+  /* Shape ------------------------------------------------------------- */
+  --app-radius: 10px;
+  --app-radius-sm: calc(var(--app-radius) * 0.6);
+  --app-radius-lg: calc(var(--app-radius) + 4px);
+
+  /* Status ------------------------------------------------------------ */
+  --app-positive: #21ba45;
+  --app-negative: #c10015;
+  --app-warning: #f2c037;
+  --app-info: #31ccec;
+
+  /* Density (overridden by body.app-density-*) ------------------------ */
+  --app-row-padding-y: 7px;
+  --app-card-padding: 16px;
+  --app-gap: 12px;
+
+  /* Layout ------------------------------------------------------------ */
+  --app-content-max-width: 1440px;
+  --app-sidebar-width: 264px;
+  --app-sidebar-mini-width: 76px;
+}
+
+/* Legacy aliases — the existing stylesheets (app.sass, component <style>
+   blocks) read these. They are derived, never hardcoded, so a theme change
+   still reaches every corner of the UI. */
+:root {
+  --ku-radius: var(--app-radius);
+  --ku-radius-card: var(--app-radius-lg);
+  --ku-page-bg: var(--app-background);
+  --ku-card-bg: var(--app-card);
+  --ku-card-border: var(--app-border);
+  --ku-line: var(--app-border);
+  --ku-ink: var(--app-text-primary);
+  --ku-ink-soft: var(--app-text-secondary);
+  --ku-header-from: var(--app-topbar-start);
+  --ku-header-to: var(--app-topbar-end);
+  --ku-accent-bg: var(--app-accent-background);
+}
+
+/* Quasar reads its palette from these; the store also writes them inline so
+   the values stay authoritative. */
+:root {
+  --q-primary: var(--app-primary);
+  --q-secondary: var(--app-secondary);
+  --q-accent: var(--app-accent);
+  --q-positive: var(--app-positive);
+  --q-negative: var(--app-negative);
+  --q-info: var(--app-info);
+  --q-warning: var(--app-warning);
+}
+
+body {
+  font-family: var(--app-font-family);
+  font-weight: var(--app-font-weight);
+  line-height: var(--app-line-height);
+  background: var(--app-background);
+  color: var(--app-text-primary);
+}
+
+/* RTL content keeps its own reading stack on top of the chosen family. */
+[dir='rtl'] body,
+body[dir='rtl'] {
+  font-family: var(--app-font-family), 'Segoe UI', Tahoma, 'Vazirmatn',
+    'Noto Sans Arabic', 'Noto Naskh Arabic', Arial, sans-serif;
+}
+
+/* ---------------------------------------------------------------------------
+   Table density — compact / comfortable / spacious
+   --------------------------------------------------------------------------- */
+body.app-density-compact {
+  --app-row-padding-y: 7px;
+  --app-card-padding: 14px;
+  --app-gap: 10px;
+}
+
+body.app-density-comfortable {
+  --app-row-padding-y: 12px;
+  --app-card-padding: 18px;
+  --app-gap: 14px;
+}
+
+body.app-density-spacious {
+  --app-row-padding-y: 18px;
+  --app-card-padding: 22px;
+  --app-gap: 18px;
+}
+
+body.app-density-comfortable .q-table td,
+body.app-density-comfortable .q-table th,
+body.app-density-spacious .q-table td,
+body.app-density-spacious .q-table th,
+body.ku-density-loose .q-table td,
+body.ku-density-loose .q-table th {
+  padding-top: var(--app-row-padding-y) !important;
+  padding-bottom: var(--app-row-padding-y) !important;
+}
+
+body.app-density-spacious .q-card-section,
+body.app-density-comfortable .q-card-section {
+  padding: var(--app-card-padding);
+}
+
+/* ---------------------------------------------------------------------------
+   Sidebar style — mini / normal / expanded / floating
+   --------------------------------------------------------------------------- */
+body.app-sidebar-expanded {
+  --app-sidebar-width: 320px;
+}
+
+body.app-sidebar-floating .ku-drawer .q-drawer__content {
+  margin: 10px;
+  border-radius: var(--app-radius-lg);
+  border: 1px solid var(--app-border);
+  box-shadow: var(--app-shadow-md, 0 10px 24px rgba(11, 22, 38, 0.08));
+  overflow: hidden;
+}
+
+/* ---------------------------------------------------------------------------
+   Layout — content width, header behaviour
+   --------------------------------------------------------------------------- */
+body.app-content-boxed .page-container {
+  max-width: var(--app-content-max-width);
+  margin-inline: auto;
+}
+
+body.app-content-full .page-container {
+  max-width: none;
+}
+
+body.app-header-normal .ku-app-header {
+  position: relative !important;
+}
+
+body.app-dash-compact .q-col-gutter-md {
+  --q-gutter-x: 8px;
+}
+
+/* ---------------------------------------------------------------------------
+   Accessibility
+   --------------------------------------------------------------------------- */
+body.app-high-contrast {
+  --app-border: currentColor;
+  --app-text-secondary: var(--app-text-primary);
+}
+
+body.app-high-contrast .q-card,
+body.app-high-contrast .ku-card,
+body.app-high-contrast .data-table,
+body.app-high-contrast .ku-toolbar,
+body.app-high-contrast .ku-hero {
+  border-width: 2px !important;
+  border-color: var(--app-text-primary) !important;
+}
+
+body.app-strong-focus :focus-visible,
+body.app-keyboard-nav :focus-visible {
+  outline: 3px solid var(--app-primary) !important;
+  outline-offset: 2px !important;
+}
+
+body.app-larger-text {
+  font-size: calc(var(--app-font-size) + 2px);
+}
+
+/* Honour the OS preference as well as the explicit toggle. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+body.app-reduced-motion *,
+body.app-reduced-motion *::before,
+body.app-reduced-motion *::after,
+body.ku-no-anim *,
+body.ku-no-anim *::before,
+body.ku-no-anim *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* ---------------------------------------------------------------------------
+   Notification chrome (the global notify layer adds .ku-notify)
+   --------------------------------------------------------------------------- */
+.ku-notify {
+  border-radius: var(--app-radius) !important;
+  box-shadow: 0 8px 24px rgba(11, 22, 38, 0.18) !important;
+  font-weight: 600;
+  max-width: min(460px, calc(100vw - 24px));
+}
+
+.ku-notify .q-notification__message {
+  font-weight: 600;
+}
+
+.ku-notify .q-notification__caption {
+  font-weight: 400;
+  opacity: 0.92;
+}
+
+/* Confirmation dialogs rendered by ConfirmDialog.vue */
+.ku-confirm .q-card__actions {
+  border-top: 1px solid var(--app-border);
+  padding-top: 10px;
+}

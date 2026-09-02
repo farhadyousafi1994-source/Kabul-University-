@@ -236,16 +236,15 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
 import { backupService } from 'src/services/backup.service'
 import { date, fileSize } from 'src/utils/format'
+import { notify } from 'src/utils/notify'
 
 const { t } = useI18n()
-const $q = useQuasar()
 
 const backups = ref([])
 const meta = ref({ count: 0, total_size: 0, last_backup: null })
@@ -296,10 +295,10 @@ async function takeBackup() {
       backupService.downloadUrl(data.id),
       data.filename || `ku-ams-backup.${format.value === 'json' ? 'json' : 'sqlite'}`,
     )
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.backup.takenSuccess') })
+    notify.success(t('admin.backup.takenSuccess'))
     await load()
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || t('common.error') })
+    notify.error(e.message || t('common.error'))
   } finally {
     taking.value = false
   }
@@ -310,9 +309,9 @@ async function download(row) {
   downloadingId.value = row.id
   try {
     await backupService.downloadFile(backupService.downloadUrl(row.id), row.filename || 'ku-ams-backup')
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.backup.downloadedSuccess') })
+    notify.success(t('admin.backup.downloadedSuccess'))
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || t('common.error') })
+    notify.error(e.message || t('common.error'))
   } finally {
     downloadingId.value = null
   }
@@ -323,9 +322,9 @@ async function downloadFreshTemplate() {
   try {
     const stamp = new Date().toISOString().slice(0, 10)
     await backupService.downloadFile(backupService.freshTemplateUrl, `ku-ams-fresh-start-${stamp}.json`)
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.backup.freshTemplateDownloaded') })
+    notify.success(t('admin.backup.freshTemplateDownloaded'))
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || t('common.error') })
+    notify.error(e.message || t('common.error'))
   } finally {
     freshing.value = false
   }
@@ -333,19 +332,19 @@ async function downloadFreshTemplate() {
 
 async function doRestore() {
   if (!snapshot.value) {
-    $q.notify({ type: 'warning', message: t('admin.backup.pickFileFirst') })
+    notify.warning(t('admin.backup.pickFileFirst'))
     return
   }
 
   restoring.value = true
   try {
     await backupService.restore(snapshot.value)
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.backup.restoredSuccess') })
+    notify.success(t('admin.backup.restoredSuccess'))
     confirmRestore.value = false
     clearFile()
     await load()
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || t('common.error') })
+    notify.error(e.message || t('common.error'))
   } finally {
     restoring.value = false
   }
@@ -358,11 +357,11 @@ async function doDelete() {
   deletingId.value = row.id
   try {
     await backupService.remove(row.id)
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('admin.backup.deletedSuccess') })
+    notify.success(t('admin.backup.deletedSuccess'))
     pendingDelete.value = null
     await load()
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || t('common.error') })
+    notify.error(e.message || t('common.error'))
   } finally {
     deletingId.value = null
   }

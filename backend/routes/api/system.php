@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ActivityLogController;
+use App\Http\Controllers\Api\AppearanceController;
 use App\Http\Controllers\Api\BackupController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DisposalController;
@@ -148,6 +149,18 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     // Settings
     Route::get('settings', [SettingsController::class, 'index'])->middleware('permission:settings.manage');
     Route::put('settings', [SettingsController::class, 'update'])->middleware('permission:settings.manage');
+
+    // Appearance / theme preferences (Module 24b)
+    // Any authenticated user may read and edit their OWN appearance; the
+    // organisation-wide defaults are gated behind `appearance.manage`.
+    Route::get('appearance', [AppearanceController::class, 'index']);
+    Route::put('appearance', [AppearanceController::class, 'update']);
+    Route::post('appearance/reset', [AppearanceController::class, 'reset']);
+    // Spatie's `permission:` middleware treats `|` as "any of these", so a
+    // legacy `settings.manage` holder keeps working next to the new
+    // `appearance.manage` permission.
+    Route::get('admin/appearance', [AppearanceController::class, 'admin'])->middleware('permission:appearance.manage|settings.manage');
+    Route::put('admin/appearance', [AppearanceController::class, 'updateAdmin'])->middleware('permission:appearance.manage|settings.manage');
 
     // Backup & disaster recovery (Module 29)
     Route::get('backups', [BackupController::class, 'index'])->middleware('permission:backup.view');

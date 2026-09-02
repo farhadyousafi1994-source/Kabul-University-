@@ -63,7 +63,7 @@
             </template>
             <template v-else>
               <q-btn v-if="canUpdate && props.row.status === 'approved'" flat dense round size="sm" color="warning" icon="person_add" @click="assignTechnician(props.row)"><q-tooltip>{{ t('maintenance.assignTechnician') }}</q-tooltip></q-btn>
-              <q-btn v-if="canUpdate && ['assigned', 'approved'].includes(props.row.status)" flat dense round size="sm" color="warning" icon="play_arrow" @click="transition(props.row, 'in_progress')"><q-tooltip>{{ t('maintenance.startWork') }}</q-tooltip></q-btn>
+              <q-btn v-if="canUpdate && ['assigned', 'approved'].includes(props.row.status)" flat dense round size="sm" color="warning" icon="play_arrow" :loading="rowBusy" :disable="rowBusy" @click="transition(props.row, 'in_progress')"><q-tooltip>{{ t('maintenance.startWork') }}</q-tooltip></q-btn>
               <q-btn v-if="canUpdate && props.row.status === 'in_progress'" flat dense round size="sm" color="positive" icon="flag" @click="completeOrder(props.row)"><q-tooltip>{{ t('maintenance.completeWork') }}</q-tooltip></q-btn>
             </template>
           </q-td>
@@ -85,17 +85,34 @@
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">{{ t('maintenance.newRequest') }}</div>
           <q-space />
-          <q-btn flat round dense icon="close" @click="dialogOpen = false" />
+          <q-btn flat round dense icon="close" :disable="saving" @click="dialogOpen = false" />
         </q-card-section>
         <q-card-section>
           <q-form @submit="doCreate" class="row q-col-gutter-md">
-            <q-select v-model="form.asset_id" :options="assetOptions" :label="`${t('assignments.asset')} *`" dense outlined emit-value map-options options-dense :rules="[required]" class="col-12" />
-            <q-select v-model="form.maintenance_type" :options="typeOptions" :label="`${t('maintenance.maintenanceType')} *`" dense outlined emit-value map-options options-dense :rules="[required]" class="col-6 col-md-6" />
+            <q-select v-model="form.asset_id" :options="assetOptions" :label="`${t('assignments.asset')} *`" dense outlined emit-value map-options options-dense :rules="[required]" class="col-12"
+              :disable="saving"
+              :error="Boolean(fieldErrors.asset_id)"
+              :error-message="fieldErrors.asset_id" />
+            <q-select v-model="form.maintenance_type" :options="typeOptions" :label="`${t('maintenance.maintenanceType')} *`" dense outlined emit-value map-options options-dense :rules="[required]" class="col-6 col-md-6"
+              :disable="saving"
+              :error="Boolean(fieldErrors.maintenance_type)"
+              :error-message="fieldErrors.maintenance_type" />
             <q-select v-model="form.priority" :options="priorityOptions" :label="t('common.priority')" dense outlined emit-value map-options options-dense class="col-6 col-md-6" />
-            <q-input v-model="form.problem" :label="t('maintenance.problemDescription')" type="textarea" dense outlined autogrow :rules="[required]" class="col-12" />
+            <q-input v-model="form.problem" :label="t('maintenance.problemDescription')" type="textarea" dense outlined autogrow :rules="[required]" class="col-12"
+              :disable="saving"
+              :error="Boolean(fieldErrors.problem)"
+              :error-message="fieldErrors.problem" />
             <div class="col-12 row justify-end q-gutter-sm">
-              <q-btn :label="t('common.cancel')" flat color="grey-7" @click="dialogOpen = false" />
-              <q-btn :label="t('common.save')" type="submit" color="primary" :loading="saving" />
+              <q-btn :label="t('common.cancel')" flat color="grey-7" :disable="saving" @click="dialogOpen = false" />
+              <q-btn
+                :label="saving ? t('common.saving') : t('common.save')"
+                type="submit"
+                color="primary"
+                :loading="saving"
+                data-cy="maintenance-submit"
+              >
+                <template #loading><q-spinner-dots class="q-mr-sm" />{{ t('common.saving') }}</template>
+              </q-btn>
             </div>
           </q-form>
         </q-card-section>
@@ -106,7 +123,6 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import TableActionBar from 'src/components/common/TableActionBar.vue'
@@ -118,9 +134,11 @@ import { assetService } from 'src/services/assets.service'
 import { useOptions } from 'src/composables/useOptions'
 import { useAuthStore } from 'src/stores/auth'
 import { currency, date } from 'src/utils/format'
+import { notify } from 'src/utils/notify'
+import { useAction } from 'src/composables/useAction'
+import { confirmAction, promptAction } from 'src/utils/confirm'
 
 const { t, te } = useI18n()
-const $q = useQuasar()
 const authStore = useAuthStore()
 const { users, opts } = useOptions()
 const userOptions = computed(() => opts(users.value))
@@ -138,7 +156,22 @@ const perPage = ref(20)
 const search = ref('')
 const loading = ref(false)
 const error = ref('')
-const saving = ref(false)
+/**
+ * Shared action lifecycle: loading flag, duplicate-submission guard, specific
+ * success toast, and server validation mapped onto `fieldErrors` so the dialog
+ * can render it inline while staying open.
+ */
+const createAction = useAction()
+/**
+ * Inline row actions (approve / reject / transition / verify) share one action
+ * lifecycle: a duplicate-submission guard, the specific success toast, and
+ * server messages surfaced through the standard error handling.
+ */
+const rowAction = useAction()
+const rowBusy = rowAction.pending
+
+const saving = createAction.pending
+const fieldErrors = createAction.fieldErrors
 const dialogOpen = ref(false)
 const form = reactive({ asset_id: null, maintenance_type: 'corrective', priority: 'medium', problem: '' })
 const filters = reactive({ status: null })
@@ -243,97 +276,150 @@ async function openRequest() {
   } catch { assetOptions.value = [] }
 }
 
-async function doCreate() {
-  if (saving.value) return // prevent duplicate submissions
-  saving.value = true
-  try {
-    await maintenanceService.createRequest({ ...form })
-    dialogOpen.value = false
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.createdSuccessEntity', { entity: t('common.entities.maintenance') }) })
-    await load()
-  } catch (e) {
-    $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-  } finally {
-    saving.value = false
-  }
+function resetForm() {
+  Object.assign(form, { asset_id: null, maintenance_type: 'corrective', priority: 'medium', problem: '' })
+  createAction.clearFieldErrors()
+}
+
+function doCreate() {
+  const entity = t('common.entities.maintenance')
+  return createAction.run(() => maintenanceService.createRequest({ ...form }), {
+    successMessage: t('common.createdSuccessEntity', { entity }),
+    errorMessage: t('common.unableToSaveEntity', { entity }),
+    onSuccess: async () => {
+      dialogOpen.value = false
+      resetForm()
+      await load()
+    },
+  })
 }
 
 async function approveRequest(row) {
   try {
     await maintenanceService.approveRequest(row.id)
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.updatedSuccessEntity', { entity: t('common.entities.maintenance') }) })
+    notify.success(t('common.updatedSuccessEntity', { entity: t('common.entities.maintenance') }))
     await load()
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
+    notify.error(e.message || t('common.saveFailed'))
   }
 }
 
 async function createOrder(row) {
-  $q.dialog({
+  const confirmed = await confirmAction({
     title: t('maintenance.createWorkOrder'),
-    message: `${t('maintenance.createWorkOrder')} ${row.asset_name}?`,
-    cancel: true, persistent: true,
-  }).onOk(async () => {
-    try {
-      await maintenanceService.create({ asset_id: row.asset_id, maintenance_request_id: row.id, maintenance_type: row.maintenance_type })
-      $q.notify({ type: 'positive', icon: 'check_circle', message: t('maintenance.workOrderCreated') })
-      await load()
-    } catch (e) {
-      $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
-    }
+    message: t('maintenance.createWorkOrderConfirm', { asset: row.asset_name }),
+    okLabel: t('maintenance.createWorkOrder'),
+    busyLabel: t('common.working'),
+    icon: 'build',
+    color: 'primary',
+    onConfirm: () =>
+      maintenanceService.create({
+        asset_id: row.asset_id,
+        maintenance_request_id: row.id,
+        maintenance_type: row.maintenance_type,
+      }),
   })
+  if (!confirmed) return
+  notify.success(t('maintenance.workOrderCreated'))
+  await load()
 }
 
+/**
+ * Assign a technician to a work order.
+ *
+ * Replaces the old free-text prompt (which fuzzy-matched a typed name against
+ * the user list and silently sent `technician_id: null` when nothing matched)
+ * with a real select of user accounts — `asset_maintenances.technician_id` is
+ * a FK to `users.id`, so this is the one place a technician is a user account
+ * rather than an `employees` record.
+ */
 async function assignTechnician(row) {
-  $q.dialog({
+  const entity = t('common.entities.maintenance')
+  const result = await promptAction({
     title: t('maintenance.assignTechnician'),
     message: t('maintenance.chooseTechnician'),
-    cancel: true, persistent: true,
-    prompt: { model: '', type: 'text', isValid: (v) => !!v },
-  }).onOk(async (name) => {
-    const tech = userOptions.value.find((o) => o.label.toLowerCase().includes(name.toLowerCase()))?.value || null
-    try {
-      await maintenanceService.transition(row.id, { status: 'assigned', technician_id: tech })
-      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.updatedSuccessEntity', { entity: t('common.entities.maintenance') }) })
-      await load()
-    } catch (e) {
-      $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
-    }
+    okLabel: t('maintenance.assignTechnician'),
+    busyLabel: t('common.assigning'),
+    icon: 'engineering',
+    color: 'primary',
+    errorMessage: t('common.unableToSaveEntity', { entity }),
+    fields: [
+      {
+        name: 'technician_id',
+        label: t('maintenance.technician'),
+        type: 'select',
+        value: row.technician_id || null,
+        required: true,
+        options: userOptions.value,
+      },
+      {
+        name: 'scheduled_date',
+        label: t('maintenance.scheduledDate'),
+        type: 'date',
+        value: row.scheduled_date || null,
+      },
+    ],
+    onConfirm: ({ technician_id, scheduled_date }) =>
+      maintenanceService.transition(row.id, {
+        status: 'assigned',
+        technician_id,
+        ...(scheduled_date ? { scheduled_date } : {}),
+      }),
+  })
+  if (!result.ok) return
+  notify.success(t('common.updatedSuccessEntity', { entity }))
+  await load()
+}
+
+function transition(row, status) {
+  const entity = t('common.entities.maintenance')
+  return rowAction.run(() => maintenanceService.transition(row.id, { status }), {
+    successMessage: t('common.updatedSuccessEntity', { entity }),
+    errorMessage: t('common.unableToSaveEntity', { entity }),
+    onSuccess: () => load(),
   })
 }
 
-async function transition(row, status) {
-  try {
-    await maintenanceService.transition(row.id, { status })
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.updatedSuccessEntity', { entity: t('common.entities.maintenance') }) })
-    await load()
-  } catch (e) {
-    $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-  }
-}
-
+/**
+ * Complete a work order.
+ *
+ * Used to be two prompt dialogs chained together (result, then cost) with the
+ * second one's Cancel silently falling back to the old cost. It is now a single
+ * form: both fields are visible at once, validated before the request, and the
+ * dialog stays open with everything preserved if the backend rejects it.
+ */
 async function completeOrder(row) {
-  $q.dialog({
+  const result = await promptAction({
     title: t('maintenance.completeWork'),
     message: t('maintenance.recordResult'),
-    cancel: true, persistent: true,
-    prompt: { model: 'Completed successfully', type: 'text' },
-  }).onOk(async (result) => {
-    const costInput = await new Promise((resolve) => {
-      $q.dialog({
-        title: `${t('maintenance.cost')}`,
-        cancel: true, persistent: true,
-        prompt: { model: String(row.cost || 0), type: 'number' },
-      }).onOk((v) => resolve(Number(v))).onCancel(() => resolve(row.cost || 0))
-    })
-    try {
-      await maintenanceService.transition(row.id, { status: 'completed', result, cost: costInput })
-      $q.notify({ type: 'positive', icon: 'check_circle', message: t('maintenance.workOrderCompleted') })
-      await load()
-    } catch (e) {
-      $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
-    }
+    okLabel: t('maintenance.completeWork'),
+    busyLabel: t('common.updating'),
+    icon: 'task_alt',
+    color: 'positive',
+    fields: [
+      {
+        name: 'result',
+        label: t('maintenance.result'),
+        type: 'textarea',
+        value: 'Completed successfully',
+        required: true,
+        maxlength: 1000,
+      },
+      {
+        name: 'cost',
+        label: `${t('maintenance.cost')} (AFN)`,
+        type: 'number',
+        value: Number(row.cost || 0),
+        min: 0,
+        step: '0.01',
+      },
+    ],
+    onConfirm: ({ result: workResult, cost }) =>
+      maintenanceService.transition(row.id, { status: 'completed', result: workResult, cost }),
   })
+  if (!result.ok) return
+  notify.success(t('maintenance.workOrderCompleted'))
+  await load()
 }
 
 onMounted(load)

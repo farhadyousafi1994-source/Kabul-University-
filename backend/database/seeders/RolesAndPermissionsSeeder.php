@@ -31,6 +31,10 @@ class RolesAndPermissionsSeeder extends Seeder
         'requests' => ['view', 'create', 'approve'],
         'reports' => ['view'],
         'settings' => ['manage'],
+        // Module 24b — Theme & Appearance. `appearance.manage` gates the
+        // organisation-wide defaults; every authenticated user may always edit
+        // their OWN appearance.
+        'appearance' => ['manage'],
         'notifications' => ['view'],
         'backup' => ['view', 'create', 'restore', 'delete'],
     ];

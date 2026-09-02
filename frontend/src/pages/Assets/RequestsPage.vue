@@ -40,10 +40,10 @@
         </template>
         <template v-slot:body-cell-actions="props">
           <q-td :props="props">
-            <q-btn v-if="canApprove && props.row.status === 'department_approval'" flat dense round size="sm" color="positive" icon="check" @click="departmentApprove(props.row, true)"><q-tooltip>{{ t('status.approved') }}</q-tooltip></q-btn>
-            <q-btn v-if="canApprove && ['department_approval', 'manager_review'].includes(props.row.status)" flat dense round size="sm" color="warning" icon="verified" @click="managerApprove(props.row, true)"><q-tooltip>{{ t('status.approved') }}</q-tooltip></q-btn>
-            <q-btn v-if="canApprove && ['department_approval', 'manager_review'].includes(props.row.status)" flat dense round size="sm" color="negative" icon="block" @click="reject(props.row)"><q-tooltip>{{ t('status.rejected') }}</q-tooltip></q-btn>
-            <q-btn v-if="canApprove && props.row.status === 'approved'" flat dense round size="sm" color="positive" icon="flag" @click="complete(props.row)"><q-tooltip>{{ t('status.completed') }}</q-tooltip></q-btn>
+            <q-btn v-if="canApprove && props.row.status === 'department_approval'" flat dense round size="sm" color="positive" icon="check" :loading="rowBusy" :disable="rowBusy" @click="departmentApprove(props.row, true)"><q-tooltip>{{ t('status.approved') }}</q-tooltip></q-btn>
+            <q-btn v-if="canApprove && ['department_approval', 'manager_review'].includes(props.row.status)" flat dense round size="sm" color="warning" icon="verified" :loading="rowBusy" :disable="rowBusy" @click="managerApprove(props.row, true)"><q-tooltip>{{ t('status.approved') }}</q-tooltip></q-btn>
+            <q-btn v-if="canApprove && ['department_approval', 'manager_review'].includes(props.row.status)" flat dense round size="sm" color="negative" icon="block" :loading="rowBusy" :disable="rowBusy" @click="reject(props.row)"><q-tooltip>{{ t('status.rejected') }}</q-tooltip></q-btn>
+            <q-btn v-if="canApprove && props.row.status === 'approved'" flat dense round size="sm" color="positive" icon="flag" :loading="rowBusy" :disable="rowBusy" @click="complete(props.row)"><q-tooltip>{{ t('status.completed') }}</q-tooltip></q-btn>
           </q-td>
         </template>
         <template v-if="!rows.length" v-slot:no-data>
@@ -63,18 +63,51 @@
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">{{ t('requests.newRequest') }}</div>
           <q-space />
-          <q-btn flat round dense icon="close" @click="dialogOpen = false" />
+          <q-btn flat round dense icon="close" :disable="saving" @click="dialogOpen = false" />
         </q-card-section>
         <q-card-section>
           <q-form @submit="doCreate" class="row q-col-gutter-md">
-            <q-select v-model="form.request_type" :options="typeOptions" :label="`${t('requests.requestType')} *`" dense outlined emit-value map-options options-dense :rules="[required]" class="col-12" />
+            <q-select
+              v-model="form.request_type"
+              :options="typeOptions"
+              :label="`${t('requests.requestType')} *`"
+              dense
+              outlined
+              emit-value
+              map-options
+              options-dense
+              :rules="[required]"
+              :error="Boolean(fieldErrors.request_type)"
+              :error-message="fieldErrors.request_type"
+              :disable="saving"
+              class="col-12"
+            />
             <q-select v-model="form.department_id" :options="departmentOptions" :label="t('common.department')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
             <q-select v-model="form.asset_category_id" :options="categoryOptions" :label="t('common.category')" dense outlined emit-value map-options options-dense clearable class="col-12 col-md-6" />
             <q-input v-model="form.quantity" :label="t('common.quantity')" type="number" dense outlined class="col-6 col-md-3" :rules="[(v) => !v || Number(v) >= 1 || 'Must be >= 1']" />
-            <q-input v-model="form.reason" :label="t('transfers.reason')" type="textarea" dense outlined autogrow class="col-12" />
+            <q-input
+              v-model="form.reason"
+              :label="t('transfers.reason')"
+              type="textarea"
+              dense
+              outlined
+              autogrow
+              :disable="saving"
+              :error="Boolean(fieldErrors.reason)"
+              :error-message="fieldErrors.reason"
+              class="col-12"
+            />
             <div class="col-12 row justify-end q-gutter-sm">
-              <q-btn :label="t('common.cancel')" flat color="grey-7" @click="dialogOpen = false" />
-              <q-btn :label="t('requests.newRequest')" type="submit" color="primary" :loading="saving" />
+              <q-btn :label="t('common.cancel')" flat color="grey-7" :disable="saving" @click="dialogOpen = false" />
+              <q-btn
+                :label="saving ? t('common.submitting') : t('requests.newRequest')"
+                type="submit"
+                color="primary"
+                :loading="saving"
+                data-cy="request-submit"
+              >
+                <template #loading><q-spinner-dots class="q-mr-sm" />{{ t('common.submitting') }}</template>
+              </q-btn>
             </div>
           </q-form>
         </q-card-section>
@@ -85,7 +118,6 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import TableActionBar from 'src/components/common/TableActionBar.vue'
@@ -96,9 +128,10 @@ import { assetRequestService } from 'src/services/operations.service'
 import { useOptions } from 'src/composables/useOptions'
 import { useAuthStore } from 'src/stores/auth'
 import { date } from 'src/utils/format'
+import { notify } from 'src/utils/notify'
+import { useAction } from 'src/composables/useAction'
 
 const { t } = useI18n()
-const $q = useQuasar()
 const authStore = useAuthStore()
 const { departments, categories, opts } = useOptions()
 const departmentOptions = computed(() => opts(departments.value))
@@ -116,7 +149,22 @@ const perPage = ref(20)
 const search = ref('')
 const loading = ref(false)
 const error = ref('')
-const saving = ref(false)
+/**
+ * Shared action lifecycle (loading flag, duplicate-submission guard, specific
+ * success toast, and server validation mapped onto `fieldErrors` so the dialog
+ * can show it next to the offending input while staying open).
+ */
+const createAction = useAction()
+/**
+ * Inline row actions (approve / reject / transition / verify) share one action
+ * lifecycle: a duplicate-submission guard, the specific success toast, and
+ * server messages surfaced through the standard error handling.
+ */
+const rowAction = useAction()
+const rowBusy = rowAction.pending
+
+const saving = createAction.pending
+const fieldErrors = createAction.fieldErrors
 const dialogOpen = ref(false)
 const form = reactive({ request_type: 'new_asset', department_id: null, asset_category_id: null, quantity: 1, reason: '' })
 const filters = reactive({ status: null, request_type: null })
@@ -175,21 +223,35 @@ watch(page, load)
 watch(search, () => { page.value = 1; load() })
 watch(() => [filters.status, filters.request_type], () => { page.value = 1; load() })
 
-async function doCreate() {
-  if (saving.value) return // prevent duplicate submissions
-  saving.value = true
-  try {
-    const { data } = await assetRequestService.store({ ...form })
-    dialogOpen.value = false
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.createdSuccessEntity', { entity: t('common.entities.request') }) })
-    await assetRequestService.submit(data.id)
-    $q.notify({ type: 'info', icon: 'send', message: t('requests.submittedSuccess') })
-    await load()
-  } catch (e) {
-    $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-  } finally {
-    saving.value = false
-  }
+function resetForm() {
+  Object.assign(form, { request_type: 'new_asset', department_id: null, asset_category_id: null, quantity: 1, reason: '' })
+  createAction.clearFieldErrors()
+}
+
+/**
+ * Create the request and immediately submit it for approval.
+ * The dialog only closes once the backend has confirmed BOTH writes; on any
+ * failure it stays open with everything the user typed preserved.
+ */
+function doCreate() {
+  const entity = t('common.entities.request')
+  return createAction.run(
+    async () => {
+      const { data } = await assetRequestService.store({ ...form })
+      await assetRequestService.submit(data.id)
+      return data
+    },
+    {
+      successMessage: t('common.createdSuccessEntity', { entity }),
+      errorMessage: t('common.unableToSaveEntity', { entity }),
+      onSuccess: async () => {
+        dialogOpen.value = false
+        resetForm()
+        notify.info(t('requests.submittedSuccess'))
+        await load()
+      },
+    },
+  )
 }
 
 async function departmentApprove(row, approve) {
@@ -205,14 +267,13 @@ async function complete(row) {
   await act(() => assetRequestService.complete(row.id), row, t('status.completed'))
 }
 
-async function act(fn, row, msg) {
-  try {
-    await fn()
-    $q.notify({ type: 'positive', icon: 'check_circle', message: msg })
-    await load()
-  } catch (e) {
-    $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-  }
+function act(fn, row, msg) {
+  const entity = t('common.entities.request')
+  return rowAction.run(fn, {
+    successMessage: msg,
+    errorMessage: t('common.unableToSaveEntity', { entity }),
+    onSuccess: () => load(),
+  })
 }
 
 onMounted(load)

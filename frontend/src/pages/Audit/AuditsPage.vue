@@ -59,15 +59,37 @@
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">{{ t('audit.newAudit') }}</div>
           <q-space />
-          <q-btn flat round dense icon="close" @click="dialogOpen = false" />
+          <q-btn flat round dense icon="close" :disable="saving" @click="dialogOpen = false" />
         </q-card-section>
         <q-card-section>
           <q-form @submit="doCreate" class="row q-col-gutter-md">
-            <q-select v-model="form.scope_type" :options="scopeOptions" :label="`${t('common.category')} *`" dense outlined emit-value map-options options-dense :rules="[required]" class="col-12 col-md-6" />
+            <q-select
+              v-model="form.scope_type"
+              :options="scopeOptions"
+              :label="`${t('common.category')} *`"
+              dense
+              outlined
+              emit-value
+              map-options
+              options-dense
+              :rules="[required]"
+              :disable="saving"
+              :error="Boolean(fieldErrors.scope_type)"
+              :error-message="fieldErrors.scope_type"
+              class="col-12 col-md-6"
+            />
             <q-input v-model="form.scheduled_at" :label="t('audit.auditDate')" type="date" dense outlined class="col-12 col-md-6" />
             <div class="col-12 row justify-end q-gutter-sm">
-              <q-btn :label="t('common.cancel')" flat color="grey-7" @click="dialogOpen = false" />
-              <q-btn :label="t('common.create')" type="submit" color="primary" :loading="saving" />
+              <q-btn :label="t('common.cancel')" flat color="grey-7" :disable="saving" @click="dialogOpen = false" />
+              <q-btn
+                :label="saving ? t('common.working') : t('common.create')"
+                type="submit"
+                color="primary"
+                :loading="saving"
+                data-cy="audit-submit"
+              >
+                <template #loading><q-spinner-dots class="q-mr-sm" />{{ t('common.working') }}</template>
+              </q-btn>
             </div>
           </q-form>
         </q-card-section>
@@ -85,9 +107,19 @@
         </q-card-section>
         <q-card-section class="q-pt-sm">
           <div class="row items-center q-gutter-sm q-mb-sm">
-            <q-input v-model="scan" dense outlined :placeholder="t('assets.scanPlaceholder')" class="col-12 col-md-5" @keyup.enter="verifyByCode" />
-            <q-select v-model="verifyStatus" :options="verifyOptions" :label="t('common.status')" dense outlined emit-value map-options options-dense class="col-5 col-md-3" />
-            <q-btn color="primary" :label="t('common.save')" size="sm" :disable="!scan || !verifyStatus" @click="verifyByCode" />
+            <q-input v-model="scan" dense outlined :placeholder="t('assets.scanPlaceholder')" :disable="runBusy" class="col-12 col-md-5" @keyup.enter="verifyByCode" />
+            <q-select v-model="verifyStatus" :options="verifyOptions" :label="t('common.status')" dense outlined emit-value map-options options-dense :disable="runBusy" class="col-5 col-md-3" />
+            <q-btn
+              color="primary"
+              :label="runBusy ? t('common.working') : t('common.save')"
+              size="sm"
+              :loading="runBusy"
+              :disable="!scan || !verifyStatus"
+              data-cy="audit-verify"
+              @click="verifyByCode"
+            >
+              <template #loading><q-spinner-dots class="q-mr-sm" />{{ t('common.working') }}</template>
+            </q-btn>
           </div>
           <div v-if="!current?.items?.length" class="q-pa-md text-center text-grey-6">
             {{ t('common.noDataDesc') }}
@@ -101,6 +133,7 @@
                   dense
                   size="sm"
                   spread
+                  :disable="runBusy"
                   @update:model-value="verifyItem(props.row)"
                 />
               </q-td>
@@ -108,7 +141,17 @@
           </q-table>
         </q-card-section>
         <q-card-section class="row justify-end q-gutter-sm q-pt-none">
-          <q-btn v-if="canCreate && current && ['draft', 'scheduled'].includes(current.status)" color="warning" :label="t('common.start')" icon="play_arrow" @click="startAudit" />
+          <q-btn
+            v-if="canCreate && current && ['draft', 'scheduled'].includes(current.status)"
+            color="warning"
+            :label="runBusy ? t('common.working') : t('common.start')"
+            icon="play_arrow"
+            :loading="runBusy"
+            data-cy="audit-start"
+            @click="startAudit"
+          >
+            <template #loading><q-spinner-dots class="q-mr-sm" />{{ t('common.working') }}</template>
+          </q-btn>
           <q-btn v-if="canComplete && current?.status === 'in_progress'" color="positive" :label="t('maintenance.complete')" icon="flag" @click="complete(current)" />
           <q-btn v-if="canCreate && current && ['draft', 'scheduled', 'in_progress'].includes(current.status)" flat color="negative" :label="t('common.cancel')" icon="block" @click="cancel(current)" />
         </q-card-section>
@@ -129,6 +172,9 @@ import StatusBadge from 'src/components/common/StatusBadge.vue'
 import { auditService } from 'src/services/audit.service'
 import { useAuthStore } from 'src/stores/auth'
 import { date } from 'src/utils/format'
+import { notify } from 'src/utils/notify'
+import { useAction } from 'src/composables/useAction'
+import { confirmAction } from 'src/utils/confirm'
 
 const { t } = useI18n()
 const $q = useQuasar()
@@ -146,7 +192,22 @@ const perPage = ref(20)
 const search = ref('')
 const loading = ref(false)
 const error = ref('')
-const saving = ref(false)
+/**
+ * Shared action lifecycle: loading flag, duplicate-submission guard, specific
+ * success toast, and server validation mapped onto `fieldErrors` so the dialog
+ * can render it inline while staying open.
+ */
+const createAction = useAction()
+/**
+ * The audit-run dialog's inline actions (start / verify) share one lifecycle: a
+ * duplicate-submission guard, the specific success toast, and server messages
+ * surfaced through the standard error handling.
+ */
+const runAction = useAction()
+const runBusy = runAction.pending
+
+const saving = createAction.pending
+const fieldErrors = createAction.fieldErrors
 const dialogOpen = ref(false)
 const runOpen = ref(false)
 const current = ref(null)
@@ -237,19 +298,22 @@ watch(page, load)
 watch(search, () => { page.value = 1; load() })
 watch(() => filters.status, () => { page.value = 1; load() })
 
-async function doCreate() {
-  if (saving.value) return // prevent duplicate submissions
-  saving.value = true
-  try {
-    const { data } = await auditService.store({ ...form })
-    dialogOpen.value = false
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.createdSuccessEntity', { entity: t('common.entities.audit') }) })
-    await load()
-  } catch (e) {
-    $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-  } finally {
-    saving.value = false
-  }
+function resetForm() {
+  Object.assign(form, { scope_type: 'all', scheduled_at: '' })
+  createAction.clearFieldErrors()
+}
+
+function doCreate() {
+  const entity = t('common.entities.audit')
+  return createAction.run(() => auditService.store({ ...form }), {
+    successMessage: t('common.createdSuccessEntity', { entity }),
+    errorMessage: t('common.unableToSaveEntity', { entity }),
+    onSuccess: async () => {
+      dialogOpen.value = false
+      resetForm()
+      await load()
+    },
+  })
 }
 
 async function openAudit(row) {
@@ -260,19 +324,24 @@ async function openAudit(row) {
     verifyStatus.value = 'found'
     runOpen.value = true
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || t('common.loadFailed') })
+    notify.error(e.message || t('common.loadFailed'))
   }
 }
 
-async function startAudit() {
-  try {
-    await auditService.start(current.value.id)
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.savedSuccessEntity', { entity: t('common.entities.audit') }) })
-    await openAudit(current.value)
-    await load()
-  } catch (e) {
-    $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-  }
+function startAudit() {
+  const target = current.value
+  if (!target) return Promise.resolve({ ok: false, skipped: true })
+
+  const entity = t('common.entities.audit')
+  return runAction.run(() => auditService.start(target.id), {
+    successMessage: t('common.savedSuccessEntity', { entity }),
+    errorMessage: t('common.unableToSaveEntity', { entity }),
+    onSuccess: async () => {
+      // Re-read the audit so the item checklist reflects the started state.
+      await openAudit(target)
+      await load()
+    },
+  })
 }
 
 async function verifyByCode() {
@@ -283,60 +352,77 @@ async function verifyByCode() {
       const { data: found } = await (await import('src/services/assets.service')).assetService.lookup(scan.value)
       item.asset_id = found.id
     } catch {
-      $q.notify({ type: 'negative', message: t('assets.notFound') })
+      notify.error(t('assets.notFound'))
       return
     }
   }
-  try {
-    await auditService.verify(current.value.id, { asset_id: item.asset_id, verification: verifyStatus.value })
-    scan.value = ''
-    await openAudit(current.value)
-  } catch (e) {
-    $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-  }
+  const auditId = current.value.id
+  const verification = verifyStatus.value
+  const entity = t('common.entities.audit')
+  return runAction.run(
+    () => auditService.verify(auditId, { asset_id: item.asset_id, verification }),
+    {
+      successMessage: t('common.savedSuccessEntity', { entity }),
+      errorMessage: t('common.unableToSaveEntity', { entity }),
+      onSuccess: async () => {
+        scan.value = ''
+        await openAudit(current.value)
+      },
+    },
+  )
 }
 
-async function verifyItem(item) {
-  try {
-    await auditService.verify(current.value.id, { asset_id: item.asset_id, verification: item.verification })
-  } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
-    await openAudit(current.value)
-  }
+function verifyItem(item) {
+  const auditId = current.value?.id
+  if (!auditId) return Promise.resolve({ ok: false, skipped: true })
+
+  const entity = t('common.entities.audit')
+  return runAction.run(
+    () => auditService.verify(auditId, { asset_id: item.asset_id, verification: item.verification }),
+    {
+      successMessage: t('common.savedSuccessEntity', { entity }),
+      errorMessage: t('common.unableToSaveEntity', { entity }),
+      // Re-read on failure too: the optimistic toggle must be rolled back to
+      // whatever the server actually stored.
+      onError: () => openAudit(current.value),
+    },
+  )
 }
 
 async function complete(audit) {
-  $q.dialog({
-    title: t('maintenance.complete'),
-    message: `${t('maintenance.complete')}: ${audit.audit_code}?`,
-    cancel: true, persistent: true,
-  }).onOk(async () => {
-    try {
-      await auditService.complete(audit.id)
-      runOpen.value = false
-      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.savedSuccessEntity', { entity: t('common.entities.audit') }) })
-      await load()
-    } catch (e) {
-      $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-    }
+  const entity = t('common.entities.audit')
+  const confirmed = await confirmAction({
+    title: t('audit.completeTitle'),
+    message: t('audit.completeMessage', { code: audit.audit_code }),
+    okLabel: t('maintenance.complete'),
+    busyLabel: t('common.updating'),
+    icon: 'task_alt',
+    color: 'positive',
+    errorMessage: t('common.unableToSaveEntity', { entity }),
+    onConfirm: () => auditService.complete(audit.id),
   })
+  if (!confirmed) return
+  runOpen.value = false
+  notify.success(t('common.savedSuccessEntity', { entity }))
+  await load()
 }
 
 async function cancel(audit) {
-  $q.dialog({
-    title: t('common.cancel'),
-    message: `${t('common.cancel')}: ${audit.audit_code}?`,
-    cancel: true, persistent: true, color: 'negative',
-  }).onOk(async () => {
-    try {
-      await auditService.cancel(audit.id)
-      runOpen.value = false
-      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.savedSuccessEntity', { entity: t('common.entities.audit') }) })
-      await load()
-    } catch (e) {
-      $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-    }
+  const entity = t('common.entities.audit')
+  const confirmed = await confirmAction({
+    title: t('audit.cancelTitle'),
+    message: t('audit.cancelMessage', { code: audit.audit_code }),
+    okLabel: t('audit.cancelAudit'),
+    busyLabel: t('common.updating'),
+    icon: 'cancel',
+    color: 'negative',
+    errorMessage: t('common.unableToSaveEntity', { entity }),
+    onConfirm: () => auditService.cancel(audit.id),
   })
+  if (!confirmed) return
+  runOpen.value = false
+  notify.success(t('common.savedSuccessEntity', { entity }))
+  await load()
 }
 
 onMounted(load)

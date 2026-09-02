@@ -61,7 +61,6 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import TableActionBar from 'src/components/common/TableActionBar.vue'
@@ -70,8 +69,8 @@ import ErrorState from 'src/components/common/ErrorState.vue'
 import { reportService } from 'src/services/system.service'
 import api from 'src/boot/axios'
 import { stamp } from 'src/utils/export'
+import { notify } from 'src/utils/notify'
 
-const $q = useQuasar()
 
 const { t } = useI18n()
 
@@ -112,9 +111,9 @@ async function exportCsv() {
     anchor.click()
     anchor.remove()
     setTimeout(() => URL.revokeObjectURL(url), 4000)
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.exportedSuccess') })
+    notify.success(t('common.exportedSuccess'))
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || t('common.exportFailed') })
+    notify.error(e.message || t('common.exportFailed'))
   } finally {
     exporting.value = false
   }

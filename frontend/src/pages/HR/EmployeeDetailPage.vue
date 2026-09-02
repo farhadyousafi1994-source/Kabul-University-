@@ -164,7 +164,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import StatCard from 'src/components/common/StatCard.vue'
@@ -175,10 +174,10 @@ import { employeeService } from 'src/services/employees.service'
 import { assetService } from 'src/services/assets.service'
 import { useAuthStore } from 'src/stores/auth'
 import { currency, date as formatDate } from 'src/utils/format'
+import { notify } from 'src/utils/notify'
 
 const route = useRoute()
 const { t } = useI18n()
-const $q = useQuasar()
 const authStore = useAuthStore()
 
 const employee = ref(null)
@@ -249,7 +248,7 @@ async function loadAssets() {
     const { data } = await employeeService.assets(route.params.id)
     assets.value = data?.data || []
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || t('common.loadFailed') })
+    notify.error(e.message || t('common.loadFailed'))
   } finally {
     assetsLoading.value = false
   }
@@ -261,14 +260,14 @@ async function doUnassign() {
   unassigningId.value = row.id
   try {
     await assetService.update(row.id, { employee_id: null })
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('hr.unassignedSuccess') })
+    notify.success(t('hr.unassignedSuccess'))
     pendingUnassign.value = null
     // Refresh both the list and the summary counters.
     const { data } = await employeeService.get(route.params.id)
     employee.value = data
     await loadAssets()
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || t('common.saveFailed') })
+    notify.error(e.message || t('common.saveFailed'))
   } finally {
     unassigningId.value = null
   }

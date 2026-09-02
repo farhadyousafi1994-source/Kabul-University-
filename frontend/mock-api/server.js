@@ -154,11 +154,20 @@ class Router {
     ctx.token = token
   }
 
+  /**
+   * Mirrors Spatie's `permission:` route middleware, including its `|`
+   * separator meaning "any one of these is enough".
+   */
   authorize(ctx, permission) {
     const perms = new Set(this.userPermissions(ctx.user))
     const roles = this.userRoles(ctx.user)
-    if (roles.includes('Super Admin') || perms.has(permission)) return
-    throw new HttpError(403, `Missing permission: ${permission}`)
+    const wanted = String(permission)
+      .split('|')
+      .map((p) => p.trim())
+      .filter(Boolean)
+
+    if (roles.includes('Super Admin') || wanted.some((p) => perms.has(p))) return
+    throw new HttpError(403, `Missing permission: ${wanted.join(' or ')}`)
   }
 
   userRoles(user) {

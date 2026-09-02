@@ -64,17 +64,34 @@
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">{{ t('incidents.reportIncident') }}</div>
           <q-space />
-          <q-btn flat round dense icon="close" @click="dialogOpen = false" />
+          <q-btn flat round dense icon="close" :disable="saving" @click="dialogOpen = false" />
         </q-card-section>
         <q-card-section>
           <q-form @submit="doCreate" class="row q-col-gutter-md">
-            <q-select v-model="form.asset_id" :options="assetOptions" :label="`${t('assignments.asset')} *`" dense outlined emit-value map-options options-dense :rules="[required]" class="col-12" />
-            <q-select v-model="form.incident_type" :options="typeOptions" :label="`${t('common.type')} *`" dense outlined emit-value map-options options-dense :rules="[required]" class="col-12 col-md-6" />
+            <q-select v-model="form.asset_id" :options="assetOptions" :label="`${t('assignments.asset')} *`" dense outlined emit-value map-options options-dense :rules="[required]" class="col-12"
+              :disable="saving"
+              :error="Boolean(fieldErrors.asset_id)"
+              :error-message="fieldErrors.asset_id" />
+            <q-select v-model="form.incident_type" :options="typeOptions" :label="`${t('common.type')} *`" dense outlined emit-value map-options options-dense :rules="[required]" class="col-12 col-md-6"
+              :disable="saving"
+              :error="Boolean(fieldErrors.incident_type)"
+              :error-message="fieldErrors.incident_type" />
             <q-input v-model="form.incident_date" :label="t('incidents.incidentDate')" type="date" dense outlined class="col-12 col-md-6" />
-            <q-input v-model="form.description" :label="`${t('common.description')} *`" type="textarea" dense outlined autogrow :rules="[required]" class="col-12" />
+            <q-input v-model="form.description" :label="`${t('common.description')} *`" type="textarea" dense outlined autogrow :rules="[required]" class="col-12"
+              :disable="saving"
+              :error="Boolean(fieldErrors.description)"
+              :error-message="fieldErrors.description" />
             <div class="col-12 row justify-end q-gutter-sm">
-              <q-btn :label="t('common.cancel')" flat color="grey-7" @click="dialogOpen = false" />
-              <q-btn :label="t('common.submit')" type="submit" color="negative" :loading="saving" />
+              <q-btn :label="t('common.cancel')" flat color="grey-7" :disable="saving" @click="dialogOpen = false" />
+              <q-btn
+                :label="saving ? t('common.submitting') : t('common.submit')"
+                type="submit"
+                color="negative"
+                :loading="saving"
+                data-cy="incident-submit"
+              >
+                <template #loading><q-spinner-dots class="q-mr-sm" />{{ t('common.submitting') }}</template>
+              </q-btn>
             </div>
           </q-form>
         </q-card-section>
@@ -85,7 +102,6 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
 import TableActionBar from 'src/components/common/TableActionBar.vue'
@@ -96,9 +112,11 @@ import { incidentService } from 'src/services/maintenance.service'
 import { assetService } from 'src/services/assets.service'
 import { useAuthStore } from 'src/stores/auth'
 import { date } from 'src/utils/format'
+import { notify } from 'src/utils/notify'
+import { useAction } from 'src/composables/useAction'
+import { promptAction } from 'src/utils/confirm'
 
 const { t } = useI18n()
-const $q = useQuasar()
 const authStore = useAuthStore()
 
 const barActions = computed(() => [
@@ -113,7 +131,14 @@ const perPage = ref(20)
 const search = ref('')
 const loading = ref(false)
 const error = ref('')
-const saving = ref(false)
+/**
+ * Shared action lifecycle: loading flag, duplicate-submission guard, specific
+ * success toast, and server validation mapped onto `fieldErrors` so the dialog
+ * can render it inline while staying open.
+ */
+const createAction = useAction()
+const saving = createAction.pending
+const fieldErrors = createAction.fieldErrors
 const dialogOpen = ref(false)
 const form = reactive({ asset_id: null, incident_type: 'damaged', incident_date: '', description: '' })
 const filters = reactive({ status: null, incident_type: null })
@@ -182,45 +207,73 @@ watch(dialogOpen, async (open) => {
   } catch { assetOptions.value = [] }
 })
 
-async function doCreate() {
-  if (saving.value) return // prevent duplicate submissions
-  saving.value = true
-  try {
-    await incidentService.store({ ...form })
-    dialogOpen.value = false
-    $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.createdSuccessEntity', { entity: t('common.entities.incident') }) })
-    await load()
-  } catch (e) {
-    $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-  } finally {
-    saving.value = false
-  }
+function resetForm() {
+  Object.assign(form, {
+    asset_id: null, incident_type: 'damaged',
+    incident_date: new Date().toISOString().slice(0, 10), description: '',
+  })
+  createAction.clearFieldErrors()
 }
 
-async function updateStatus(row) {
-  $q.dialog({
-    title: t('common.status'),
-    message: `${t('common.status')}: ${row.asset_name}.`,
-    cancel: true, persistent: true,
-    options: {
-      type: 'radio',
-      model: row.status,
-      items: [
-        { label: t('status.open'), value: 'open' },
-        { label: t('status.investigating'), value: 'investigating' },
-        { label: t('status.resolved'), value: 'resolved' },
-        { label: t('status.closed'), value: 'closed' },
-      ],
-    },
-  }).onOk(async (status) => {
-    try {
-      await incidentService.updateStatus(row.id, { status, resolution: status === 'resolved' || status === 'closed' ? 'Handled' : null })
-      $q.notify({ type: 'positive', icon: 'check_circle', message: t('common.savedSuccessEntity', { entity: t('common.entities.incident') }) })
+function doCreate() {
+  const entity = t('common.entities.incident')
+  return createAction.run(() => incidentService.store({ ...form }), {
+    successMessage: t('common.createdSuccessEntity', { entity }),
+    errorMessage: t('common.unableToSaveEntity', { entity }),
+    onSuccess: async () => {
+      dialogOpen.value = false
+      resetForm()
       await load()
-    } catch (e) {
-      $q.notify({ type: 'negative', message: e.errors ? Object.values(e.errors).flat().join(' · ') : e.message })
-    }
+    },
   })
+}
+
+/**
+ * Status transition for an incident report. The shared prompt dialog replaces
+ * Quasar's `options` dialog so the request can show a loading state and keep
+ * the dialog open when the backend rejects the transition.
+ */
+async function updateStatus(row) {
+  const entity = t('common.entities.incident')
+  const result = await promptAction({
+    title: t('incidents.updateStatusTitle'),
+    message: t('incidents.updateStatusMessage', { asset: row.asset_name }),
+    okLabel: t('common.save'),
+    busyLabel: t('common.updating'),
+    icon: 'report_problem',
+    color: 'primary',
+    errorMessage: t('common.unableToSaveEntity', { entity }),
+    fields: [
+      {
+        name: 'status',
+        label: t('common.status'),
+        type: 'select',
+        value: row.status,
+        required: true,
+        options: [
+          { label: t('status.open'), value: 'open' },
+          { label: t('status.investigating'), value: 'investigating' },
+          { label: t('status.resolved'), value: 'resolved' },
+          { label: t('status.closed'), value: 'closed' },
+        ],
+      },
+      {
+        name: 'resolution',
+        label: t('incidents.resolution'),
+        type: 'textarea',
+        value: row.resolution || '',
+        maxlength: 1000,
+      },
+    ],
+    onConfirm: ({ status, resolution }) =>
+      incidentService.updateStatus(row.id, {
+        status,
+        resolution: resolution || (status === 'resolved' || status === 'closed' ? 'Handled' : null),
+      }),
+  })
+  if (!result.ok) return
+  notify.success(t('common.savedSuccessEntity', { entity }))
+  await load()
 }
 
 onMounted(load)

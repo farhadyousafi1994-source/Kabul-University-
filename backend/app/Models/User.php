@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Domains\HR\Models\Employee;
 use App\Domains\Organization\Models\Department;
+use App\Domains\System\Models\UserAppearance;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -86,6 +87,16 @@ class User extends Authenticatable
     public function employee(): HasOne
     {
         return $this->hasOne(Employee::class);
+    }
+
+    /**
+     * Saved Theme & Appearance preferences (Module 24b). Null until the user
+     * saves something on the Theme page, at which point the organisation
+     * default applies.
+     */
+    public function appearance(): HasOne
+    {
+        return $this->hasOne(UserAppearance::class);
     }
 
     // ------------------------------------------------------------------
