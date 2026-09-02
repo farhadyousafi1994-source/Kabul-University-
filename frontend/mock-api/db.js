@@ -601,8 +601,8 @@ CREATE TABLE IF NOT EXISTS backups (
 // Seed helpers
 // ---------------------------------------------------------------------------
 
-// node:sqlite only accepts null, number, string, bigint and Uint8Array as
-// statement parameters. Anything else throws ERR_INVALID_ARG_TYPE —
+// node:sqlite only accepts null, finite number, string, bigint and Uint8Array
+// as statement parameters. Anything else throws ERR_INVALID_ARG_TYPE —
 // "Provided value cannot be bound to SQLite parameter N" — and, because the
 // seed runs while the Vite dev server boots, takes the whole dev server down.
 // The usual offender is `undefined`, which is what a record missing an
@@ -613,7 +613,8 @@ export function sqlValue(value) {
   if (value === undefined || value === null) return null
   if (typeof value === 'boolean') return value ? 1 : 0
   if (value instanceof Date) return value.toISOString()
-  if (typeof value === 'number' || typeof value === 'bigint' || typeof value === 'string') return value
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null
+  if (typeof value === 'bigint' || typeof value === 'string') return value
   if (value instanceof Uint8Array) return value
   if (typeof value === 'object') return JSON.stringify(value)
   return null // functions, symbols — nothing meaningful to persist
