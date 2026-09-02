@@ -1,5 +1,17 @@
 export default {
   common: {
+    recordsPerPage: 'په هره پاڼه کې کتار',
+    columns: 'ستونې',
+    fullscreen: 'مکه پرده',
+    exitFullscreen: 'له بشپړې پرده وتل',
+    compactRows: 'کمپاکټ کتارونه بدل کړئ',
+    selectedCount: '{n} ټاکنې شوې',
+    bulkArchive: 'ټاکل شوي آرشیف کړئ',
+    clearSelection: 'ټاکنه پاکه کړئ',
+    bulkArchiveMessage: 'ټاکل شوې {n} ثبتونه آرشیف کړو؟ له لیستونو پټ شي خو په ډاټابیس کې پاتې کیږي.',
+    bulkArchivedSuccess: '{n} ثبتونه په بریالیتوب سره آرشیف شول.',
+    bulkArchivePartial: '{ok} آرشیف شو · {failed} ناکام (ړوند ثبتونه لري).',
+    saving: 'خوندي کیږي…',
     appName: 'د شتمنیو د مدیریت سیستم',
     universityName: 'د کابل پوهنتون',
     appSubtitle: 'د کابل پوهنتون د شتمنیو د مدیریت او څارنې سیستم',
@@ -207,6 +219,12 @@ export default {
   },
 
   auth: {
+    tagline1: 'هر شئ ثبت کړئ.',
+    tagline2: 'هر خوځښتع تعقیب کړئ.',
+    tagline3: 'یو سیستم هرڅه اداره کوي.',
+    heroDesc: 'د کابل پوهنتون د شپیړنو مدیریت سیستم — شپېړنې، ساتنه، ګدامونه او کارکوونکي، له پیل تر پایه اداره کیږي.',
+    welcomeBack: 'بېرته ښه راغلاست',
+    welcomeBackSub: 'خپل کاري ځای ته د لاسرسي لپاره ننوځئ',
     signIn: 'سیسټم ته ننوتل',
     signingIn: 'د ننوتلو په حال کې…',
     signOut: 'له سیسټم څخه وتل',

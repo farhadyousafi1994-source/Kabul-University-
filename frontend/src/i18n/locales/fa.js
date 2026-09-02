@@ -1,5 +1,17 @@
 export default {
   common: {
+    recordsPerPage: 'ردیف در هر صفحه',
+    columns: 'ستون‌ها',
+    fullscreen: 'تمام صفحه',
+    exitFullscreen: 'خروج از تمام صفحه',
+    compactRows: 'تغییر ردیف‌های فشرده',
+    selectedCount: '{n} مورد انتخاب شد',
+    bulkArchive: 'بایگانی انتخاب‌شده‌ها',
+    clearSelection: 'پاک کردن انتخاب',
+    bulkArchiveMessage: 'آرشیو کردن {n} رکورد انتخاب شده؟ از فهرست‌ها پنهان ولی در پایگاه داده باقی می‌مانند.',
+    bulkArchivedSuccess: '{n} رکورد با موفقیت آرشیو شد.',
+    bulkArchivePartial: '{ok} آرشیو شد · {failed} ناموفق (ممکن است رکورد مرتبط داشته باشند).',
+    saving: 'در حال ذخیره…',
     appName: 'سیستم مدیریت دارایی‌ها',
     universityName: 'پوهنتون کابل',
     appSubtitle: 'سیستم مدیریت و نظارت بر دارایی‌های پوهنتون کابل',
@@ -207,6 +219,12 @@ export default {
   },
 
   auth: {
+    tagline1: 'ثبت هر دارایی.',
+    tagline2: 'رهگیری هر جابه‌جایی.',
+    tagline3: 'یک سامانه، مدیریت همه.',
+    heroDesc: 'سامانه مدیریت دارایی‌های دانشگاه کابل — دارایی‌ها، نگهداری، انبارها و کارمندان، مدیریت شده از ابتدا تا انتها.',
+    welcomeBack: 'خوش آمدید',
+    welcomeBackSub: 'برای دسترسی به فضای کاری وارد شوید',
     signIn: 'ورود به سیستم',
     signingIn: 'در حال ورود…',
     signOut: 'خروج از حساب',

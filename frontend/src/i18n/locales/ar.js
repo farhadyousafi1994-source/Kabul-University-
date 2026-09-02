@@ -1,5 +1,17 @@
 export default {
   common: {
+    recordsPerPage: 'صفوف لكل صفحة',
+    columns: 'الأعمدة',
+    fullscreen: 'ملء الشاشة',
+    exitFullscreen: 'الخروج من ملء الشاشة',
+    compactRows: 'تبديل الصفوف المضغوطة',
+    selectedCount: 'تم تحديد {n}',
+    bulkArchive: 'أرشفة المحدد',
+    clearSelection: 'مسح التحديد',
+    bulkArchiveMessage: 'أرشفة السجلات الـ{n} المحددة؟ ستُخفى من القوائم لكنها تبقى في قاعدة البيانات.',
+    bulkArchivedSuccess: 'تمت أرشفة {n} سجل بنجاح.',
+    bulkArchivePartial: 'تمت أرشفة {ok} · فشل {failed} (قد تكون مرتبطة بسجلات أخرى).',
+    saving: 'جارٍ الحفظ…',
     appName: 'نظام إدارة الأصول',
     universityName: 'جامعة كابول',
     appSubtitle: 'نظام إدارة ومتابعة أصول جامعة كابول',
@@ -207,6 +219,12 @@ export default {
   },
 
   auth: {
+    tagline1: 'سجّل كل الأصول.',
+    tagline2: 'تتبّع كل حركة.',
+    tagline3: 'نظام واحد يديرها جميعاً.',
+    heroDesc: 'نظام إدارة الأصول المؤسسي لجامعة كابل — الأصول والصيانة والمستودعات والموظفون، مُدارة من البداية إلى النهاية.',
+    welcomeBack: 'مرحباً بعودتك',
+    welcomeBackSub: 'قم بتسجيل الدخول للوصول إلى مساحة عملك',
     signIn: 'تسجيل الدخول',
     signingIn: 'جار تسجيل الدخول…',
     signOut: 'تسجيل الخروج',

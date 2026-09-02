@@ -7,7 +7,7 @@
         <q-toolbar-title class="row items-center no-wrap">
           <q-icon name="account_balance" size="26px" class="q-mr-sm" />
           <span class="text-subtitle1 text-weight-medium gt-xs">{{ t('common.universityName') }}</span>
-          <span class="text-caption q-ml-xs gt-sm text-white/70">{{ t('common.appName') }}</span>
+          <span class="text-caption q-ml-xs gt-sm ku-header-sub">{{ t('common.appName') }}</span>
         </q-toolbar-title>
 
         <!-- Language Selector -->
@@ -63,7 +63,7 @@
 
         <!-- User menu -->
         <q-btn round flat class="q-ml-xs">
-          <q-avatar size="32px" color="white" text-color="primary">{{ authStore.initials }}</q-avatar>
+          <q-avatar size="32px" class="ku-user-avatar">{{ authStore.initials }}</q-avatar>
           <q-menu auto-close>
             <q-list style="min-width: 220px">
               <q-item class="bg-grey-2">
@@ -97,9 +97,21 @@
       :width="264"
       :mini-width="76"
       :breakpoint="1024"
-      class="bg-grey-1"
+      class="ku-drawer"
     >
       <q-scroll-area class="fit">
+        <!-- Brand block -->
+        <div class="ku-drawer__brand row items-center no-wrap" :class="miniSidebar ? 'justify-center q-py-md' : 'q-pa-md'">
+          <div class="ku-drawer__logo">
+            <q-icon name="account_balance" size="22px" />
+          </div>
+          <div v-if="!miniSidebar" class="q-ml-sm min-width-0">
+            <div class="text-subtitle2 text-weight-bold ellipsis">{{ t('common.universityName') }}</div>
+            <div class="text-caption text-grey-6 ellipsis">{{ t('common.appName') }}</div>
+          </div>
+        </div>
+        <q-separator />
+
         <q-list padding class="menu-list">
           <template v-for="section in menuSections" :key="section.label">
             <div v-if="section.label && !miniSidebar" class="text-overline text-grey-6 q-px-md q-mt-md q-mb-xs">
@@ -132,7 +144,7 @@
       </router-view>
     </q-page-container>
 
-    <q-footer reveal bordered class="bg-white text-grey-8">
+    <q-footer reveal bordered class="ku-footer">
       <q-toolbar class="justify-between">
         <div class="text-caption">© {{ year }} {{ t('common.universityName') }} — {{ t('common.appName') }}</div>
         <div class="text-caption gt-xs">{{ t('common.version') }}</div>
@@ -234,12 +246,68 @@ onMounted(() => {
 </script>
 
 <style lang="sass">
+.ku-header-sub
+  color: rgba(255, 255, 255, .72)
+
+.min-width-0
+  min-width: 0
+
+.ku-user-avatar
+  background: linear-gradient(160deg, #F3D48B 0%, #C8862D 100%)
+  color: #0B1626
+  font-weight: 800
+  box-shadow: 0 2px 8px rgba(200, 134, 45, .4)
+
+.ku-drawer
+  background: var(--ku-card-bg)
+
+  &__brand
+    border-bottom: 1px solid var(--ku-line)
+
+  &__logo
+    width: 38px
+    height: 38px
+    min-width: 38px
+    border-radius: 11px
+    display: flex
+    align-items: center
+    justify-content: center
+    background: linear-gradient(160deg, #F3D48B 0%, #C8862D 100%)
+    color: #0B1626
+    box-shadow: 0 4px 12px rgba(200, 134, 45, .35)
+
 .menu-list .menu-item
+  color: var(--ku-ink)
+  border-radius: 10px
+  margin-bottom: 2px
+  transition: background-color .12s ease
+
   .q-item__section--avatar
     min-width: 34px
 
+  .q-icon
+    color: var(--ku-ink-soft)
+    transition: color .12s ease
+
+  &:hover
+    background: color-mix(in srgb, var(--ku-navy-2) 6%, transparent)
+
+    .q-icon
+      color: var(--ku-navy-2)
+
 .menu-item.q-router-link--active
-  color: $primary
-  background: rgba(27, 94, 32, .08)
-  font-weight: 600
+  color: var(--ku-navy-2)
+  background: color-mix(in srgb, var(--q-primary) 12%, transparent)
+  font-weight: 700
+
+  .q-icon
+    color: var(--q-primary)
+
+.body--dark
+  .menu-item.q-router-link--active
+    color: #fff
+
+.ku-footer
+  background: var(--ku-card-bg)
+  color: var(--ku-ink-soft)
 </style>

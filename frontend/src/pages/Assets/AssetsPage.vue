@@ -13,7 +13,7 @@
     />
 
     <!-- Toolbar -->
-    <div class="row items-center q-col-gutter-sm q-mb-sm print-hide">
+    <div class="ku-toolbar row items-center q-col-gutter-sm print-hide">
       <div class="col-12 col-md-4">
         <q-input v-model="search" dense outlined clearable debounce="350" :placeholder="t('assets.searchPlaceholder')">
           <template #prepend><q-icon name="search" /></template>
@@ -46,8 +46,8 @@
     <template v-else>
       <div class="print-area">
       <div class="print-title text-h6 q-mb-xs">{{ t('assets.title') }}</div>
-      <q-table :rows="rows" :columns="columns" row-key="id" flat bordered dense hide-bottom wrap-cells
-        :pagination="{ rowsPerPage: perPage }" class="q-mt-sm">
+      <q-table :rows="rows" :columns="columns" row-key="id" flat dense hide-bottom wrap-cells
+        :pagination="{ rowsPerPage: perPage }" class="q-mt-sm data-table">
         <template v-slot:body-cell-status="props">
           <q-td :props="props"><StatusBadge :value="props.row.status" /></q-td>
         </template>

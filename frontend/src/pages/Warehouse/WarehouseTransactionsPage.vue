@@ -12,7 +12,7 @@
       :title="t('nav.items.warehouseTransactions')"
     />
 
-    <div class="row items-center q-col-gutter-sm q-mb-sm print-hide">
+    <div class="ku-toolbar row items-center q-col-gutter-sm print-hide">
       <div class="col-12 col-md-3">
         <q-select v-model="filters.warehouse_id" :options="warehouseOptions" :label="t('warehouse.warehouses.entity')" dense outlined clearable emit-value map-options options-dense />
       </div>
@@ -29,7 +29,7 @@
     <template v-else>
       <div class="print-area">
       <div class="print-title text-h6 q-mb-xs">{{ t('warehouse.transactions.title') }}</div>
-      <q-table :rows="rows" :columns="columns" row-key="id" flat bordered dense hide-bottom wrap-cells :pagination="{ rowsPerPage: perPage }" class="q-mt-sm">
+      <q-table :rows="rows" :columns="columns" row-key="id" flat dense hide-bottom wrap-cells :pagination="{ rowsPerPage: perPage }" class="q-mt-sm data-table">
         <template v-slot:body-cell-type="props">
           <q-td :props="props">
             <q-chip size="sm" :color="props.row.type === 'in' ? 'positive' : 'deep-orange'" text-color="white" dense>{{ props.row.type === 'in' ? 'IN' : 'OUT' }}</q-chip>

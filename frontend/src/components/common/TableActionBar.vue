@@ -174,7 +174,7 @@ async function doExcel() {
   transition: background .15s ease, transform .15s ease
 
   &:hover:not(:disabled)
-    background: rgba(0, 0, 0, .05)
+    background: color-mix(in srgb, var(--q-primary) 8%, transparent)
     transform: translateY(-1px)
 
   &:disabled
@@ -188,7 +188,7 @@ async function doExcel() {
     display: flex
     align-items: center
     justify-content: center
-    box-shadow: 0 4px 10px rgba(0, 0, 0, .18)
+    box-shadow: var(--ku-shadow-sm)
     background: color-mix(in srgb, currentColor 14%, #fff)
     border: 2px solid currentColor
 

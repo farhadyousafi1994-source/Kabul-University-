@@ -1,6 +1,48 @@
 // ---------------------------------------------------------------------------
-// KU-AMS global styles
+// KU-AMS global design system
 // ---------------------------------------------------------------------------
+// Visual language adapted from the reference management system:
+//   deep navy (#0B1626 / #123A66) + academic gold (#C8862D → #F3D48B),
+//   clean white cards, soft layered shadows, generous rounding,
+//   circular icon action buttons, modern table chrome.
+//
+// Tokens are plain CSS custom properties so components (and the live theme
+// store) can react without recompiling. $primary etc. come from
+// quasar.variables.sass via the @quasar/vite-plugin.
+// ---------------------------------------------------------------------------
+
+// Design tokens ---------------------------------------------------------------
+
+:root
+  --ku-navy: #0B1626
+  --ku-navy-2: #123A66
+  --ku-navy-3: #175A8C
+  --ku-gold: #C8862D
+  --ku-gold-light: #F3D48B
+  --ku-gold-grad: linear-gradient(160deg, #F3D48B 0%, #C8862D 100%)
+  --ku-page-bg: var(--ku-accent-bg, #F4F7FB)
+  --ku-card-bg: #FFFFFF
+  --ku-card-border: #E6EAF2
+  --ku-line: #EDF0F6
+  --ku-ink: #16233A
+  --ku-ink-soft: #5C6B84
+  --ku-shadow-sm: 0 1px 2px rgba(11, 22, 38, .05), 0 1px 3px rgba(11, 22, 38, .06)
+  --ku-shadow-md: 0 2px 4px rgba(11, 22, 38, .05), 0 10px 24px rgba(11, 22, 38, .08)
+  --ku-shadow-lg: 0 4px 8px rgba(11, 22, 38, .07), 0 18px 44px rgba(11, 22, 38, .14)
+  --ku-radius-card: calc(var(--ku-radius, 10px) + 4px)
+
+.body--dark
+  --ku-page-bg: #121418
+  --ku-card-bg: #1D2025
+  --ku-card-border: rgba(255, 255, 255, .09)
+  --ku-line: rgba(255, 255, 255, .07)
+  --ku-ink: #E8ECF4
+  --ku-ink-soft: #97A3B8
+  --ku-shadow-sm: 0 1px 2px rgba(0, 0, 0, .4)
+  --ku-shadow-md: 0 2px 4px rgba(0, 0, 0, .35), 0 10px 24px rgba(0, 0, 0, .45)
+  --ku-shadow-lg: 0 4px 8px rgba(0, 0, 0, .4), 0 18px 44px rgba(0, 0, 0, .55)
+
+// Base ------------------------------------------------------------------------
 
 html,
 body,
@@ -13,7 +55,10 @@ html
 
 body
   font-family: 'Roboto', -apple-system, 'Segoe UI', sans-serif
-  -webkit-tap-highlight-color: rgba(27, 94, 32, .12)
+  -webkit-tap-highlight-color: rgba(200, 134, 45, .16)
+  background: var(--ku-page-bg)
+  color: var(--ku-ink)
+  transition: font-size .15s ease, background-color .2s ease
 
 // RTL & Multilingual typography ---------------------------------------------
 [dir="rtl"],
@@ -29,20 +74,144 @@ body.q-body--rtl
 
 // Visible focus ring for keyboard users (a11y)
 :focus-visible
-  outline: 2px solid $primary
+  outline: 2px solid var(--ku-gold)
   outline-offset: 2px
 
 // Page containers -----------------------------------------------------------
 
 .page-container
-  max-width: 1400px
+  max-width: 1440px
   margin: 0 auto
   width: 100%
+
+// Buttons — one consistent professional voice everywhere ---------------------
+
+.q-btn
+  font-weight: 600
+  letter-spacing: .2px
+  box-shadow: none
+
+  &:hover
+    transform: translateY(-1px)
+
+  &:active
+    transform: translateY(0)
+
+  &.q-btn--standard:not(.q-btn--flat):not(.q-btn--outline):not(.q-btn--round):not(.q-btn--flat)
+    box-shadow: 0 1px 2px rgba(11, 22, 38, .18)
+
+  &--round,
+  &--round.q-btn--flat
+    box-shadow: none
+
+  &:disabled
+    transform: none
+    opacity: .5
+
+.q-btn-group
+  box-shadow: var(--ku-shadow-sm)
+
+// Cards & containers ----------------------------------------------------------
+
+.q-card
+  background: var(--ku-card-bg)
+  border: 1px solid var(--ku-card-border)
+  box-shadow: var(--ku-shadow-sm)
+  color: var(--ku-ink)
+
+  &.shadow-8,
+  &.ku-shadow-md
+    box-shadow: var(--ku-shadow-md) !important
+
+// Workbench cards (lists, tables, forms) share one surface style
+.ku-card
+  background: var(--ku-card-bg)
+  border: 1px solid var(--ku-card-border)
+  border-radius: var(--ku-radius-card)
+  box-shadow: var(--ku-shadow-sm)
+
+// Inputs ----------------------------------------------------------------------
+
+.q-field--outlined .q-field__control
+  border-radius: var(--ku-radius, 10px)
+
+  &:before
+    border-color: #D5DCE8
+    transition: border-color .15s ease
+
+.body--dark .q-field--outlined .q-field__control:before
+  border-color: rgba(255, 255, 255, .16)
+
+.q-field--outlined.q-field--focused .q-field__control:after
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--q-primary) 16%, transparent)
+
+.q-field__marginal
+  color: var(--ku-ink-soft)
+
+// Selects / menus -------------------------------------------------------------
+
+.q-menu
+  border: 1px solid var(--ku-card-border)
+  box-shadow: var(--ku-shadow-md)
+
+.q-field--outlined .q-field__control:before
+  border-radius: inherit
+
+// Data tables — the shared `.data-table` chrome -------------------------------
+// Applied by DataTablePage and adopted by every standalone table.
+
+.data-table
+  border-radius: var(--ku-radius-card)
+  border: 1px solid var(--ku-card-border)
+  box-shadow: var(--ku-shadow-sm)
+  background: var(--ku-card-bg)
+  overflow-x: auto
+
+  .q-table__card
+    border-radius: inherit
+    box-shadow: none
+    background: transparent
+    color: var(--ku-ink)
+
+  thead th
+    background: color-mix(in srgb, var(--ku-navy-2) 5%, var(--ku-card-bg))
+    color: var(--ku-ink-soft)
+    font-size: 11px
+    font-weight: 700
+    letter-spacing: .6px
+    text-transform: uppercase
+    white-space: nowrap
+    border-bottom: 1px solid var(--ku-card-border)
+
+  tbody td
+    color: var(--ku-ink)
+    font-size: 13px
+    border-bottom: 1px solid var(--ku-line)
+
+  tbody tr
+    transition: background-color .12s ease
+
+    &:hover
+      background: color-mix(in srgb, var(--q-primary) 4%, transparent)
+
+    &.selected
+      background: color-mix(in srgb, var(--q-primary) 8%, transparent)
+
+  // Fullscreen mode keeps the surface readable
+  &.q-table--fullscreen
+    background: var(--ku-card-bg)
+    padding: 12px
+
+// Compact (default) / comfortable density
+.data-table--comfortable tbody td,
+.data-table--comfortable thead th
+  padding-top: 12px !important
+  padding-bottom: 12px !important
 
 // Generic table / list polish -------------------------------------------------
 
 .kv-table .q-table__card
-  border-radius: 8px
+  border-radius: var(--ku-radius-card)
 
 .clickable-row
   cursor: pointer
@@ -61,33 +230,242 @@ body.q-body--rtl
     .q-field
       min-width: 100%
 
-// Stat cards
+// Stat / KPI cards ------------------------------------------------------------
+
 .stat-card
-  border-radius: 10px
-  transition: transform .15s ease
+  border-radius: var(--ku-radius-card)
+  transition: transform .15s ease, box-shadow .15s ease
 
   &:hover
     transform: translateY(-2px)
+    box-shadow: var(--ku-shadow-md)
 
-// Auth pages
+// Badges & chips --------------------------------------------------------------
+
+.q-chip
+  font-weight: 600
+
+.q-badge
+  font-weight: 700
+  letter-spacing: .3px
+
+// Dialogs ---------------------------------------------------------------------
+
+.q-dialog
+  .q-card
+    border-radius: var(--ku-radius-card)
+    box-shadow: var(--ku-shadow-lg)
+    border: 1px solid var(--ku-card-border)
+
+  .q-dialog-card
+    min-width: 420px
+
+// Notifications ---------------------------------------------------------------
+
+.q-notification
+  border-radius: var(--ku-radius, 10px) !important
+  box-shadow: var(--ku-shadow-md) !important
+  border: 1px solid var(--ku-card-border)
+
+// Scrollbars ------------------------------------------------------------------
+
+*
+  scrollbar-width: thin
+
+::-webkit-scrollbar
+  width: 10px
+  height: 10px
+
+::-webkit-scrollbar-thumb
+  background: color-mix(in srgb, var(--ku-ink-soft) 38%, transparent)
+  border-radius: 8px
+  border: 2px solid transparent
+  background-clip: content-box
+
+::-webkit-scrollbar-thumb:hover
+  background: color-mix(in srgb, var(--ku-ink-soft) 60%, transparent)
+  border: 2px solid transparent
+  background-clip: content-box
+
+::-webkit-scrollbar-track
+  background: transparent
+
+// Page hero (AppPageHeader) ---------------------------------------------------
+
+.ku-hero
+  position: relative
+  background: var(--ku-card-bg)
+  border: 1px solid var(--ku-card-border)
+  border-radius: var(--ku-radius-card)
+  box-shadow: var(--ku-shadow-sm)
+  overflow: hidden
+  margin-bottom: 16px
+
+  // slim gold rule on top — the signature brand accent
+  &:before
+    content: ''
+    position: absolute
+    top: 0
+    left: 0
+    right: 0
+    height: 3px
+    background: var(--ku-gold-grad)
+
+  &__icon-tile
+    width: 52px
+    height: 52px
+    min-width: 52px
+    border-radius: calc(var(--ku-radius, 10px) + 4px)
+    display: flex
+    align-items: center
+    justify-content: center
+    background: var(--ku-gold-grad)
+    color: #fff
+    box-shadow: 0 6px 16px rgba(200, 134, 45, .35)
+
+  &__title
+    font-size: 22px
+    font-weight: 800
+    color: var(--ku-ink)
+    line-height: 1.2
+
+  &__subtitle
+    color: var(--ku-ink-soft)
+    font-size: 13px
+    margin-top: 2px
+
+  &__meta
+    display: inline-flex
+    align-items: center
+    gap: 6px
+    padding: 3px 10px
+    border-radius: 999px
+    background: color-mix(in srgb, var(--ku-navy-2) 7%, var(--ku-card-bg))
+    border: 1px solid var(--ku-card-border)
+    color: var(--ku-ink-soft)
+    font-size: 12px
+    font-weight: 600
+
+  &__actions
+    display: flex
+    align-items: center
+    flex-wrap: wrap
+    gap: 8px
+
+@media (max-width: 599px)
+  .ku-hero
+    &__title
+      font-size: 18px
+
+    &__icon-tile
+      width: 44px
+      height: 44px
+      min-width: 44px
+
+// Table toolbar (search + filters row of DataTablePage) ------------------------
+
+.ku-toolbar
+  background: var(--ku-card-bg)
+  border: 1px solid var(--ku-card-border)
+  border-radius: var(--ku-radius-card)
+  box-shadow: var(--ku-shadow-sm)
+  padding: 10px 12px
+  margin-bottom: 12px
+
+// Auth pages — split hero like the reference -----------------------------------
+// Left: deep navy brand panel · right: sign-in card.
+
 .auth-bg
   min-height: 100vh
   display: flex
-  align-items: center
+  align-items: stretch
   justify-content: center
-  background: linear-gradient(135deg, #1b5e20 0%, #0d47a1 100%)
+  background-image: linear-gradient(115deg, rgba(11, 22, 38, 0) 0%, rgba(11, 22, 38, 0.25) 100%), linear-gradient(160deg, #0b1626 0%, #123a66 55%, #175a8c 100%)
   position: relative
+  overflow: hidden
 
-  .auth-card
-    width: 100%
-    max-width: 420px
-    border-radius: 14px
-
-  .auth-lang-picker
+  // decorative gold glow, like the reference login's brand panel
+  &:before
+    content: ''
     position: absolute
-    top: 12px
-    right: 12px
-    z-index: 10
+    width: 480px
+    height: 480px
+    border-radius: 50%
+    background: radial-gradient(circle, rgba(200, 134, 45, .28) 0%, transparent 65%)
+    top: -140px
+    inset-inline-start: -140px
+    pointer-events: none
+
+  &:after
+    content: ''
+    position: absolute
+    width: 380px
+    height: 380px
+    border-radius: 50%
+    background: radial-gradient(circle, rgba(243, 212, 139, .16) 0%, transparent 65%)
+    bottom: -120px
+    inset-inline-end: -100px
+    pointer-events: none
+
+.auth-card
+  width: 100%
+  max-width: 420px
+  border-radius: calc(var(--ku-radius, 10px) + 6px)
+  align-self: center
+  z-index: 2
+
+.auth-lang-picker
+  position: absolute
+  top: 12px
+  right: 12px
+  z-index: 10
+
+.auth-hero
+  position: relative
+  z-index: 2
+  width: 100%
+  max-width: 520px
+  align-self: center
+  color: #fff
+  padding: 40px
+
+  &__logo
+    width: 64px
+    height: 64px
+    border-radius: 16px
+    display: flex
+    align-items: center
+    justify-content: center
+    background: var(--ku-gold-grad)
+    color: #0B1626
+    box-shadow: 0 10px 28px rgba(200, 134, 45, .45)
+
+  &__tagline
+    font-size: 26px
+    font-weight: 800
+    line-height: 1.3
+
+  &__desc
+    color: rgba(255, 255, 255, .72)
+    font-size: 14px
+    margin-top: 10px
+    line-height: 1.6
+
+  &__chip
+    display: flex
+    align-items: center
+    gap: 10px
+    padding: 8px 12px
+    border-radius: 12px
+    background: rgba(255, 255, 255, .07)
+    border: 1px solid rgba(255, 255, 255, .12)
+
+    .q-icon
+      color: var(--ku-gold-light)
+
+@media (max-width: 959px)
+  .auth-hero
+    display: none
 
 // Timeline polish
 .asset-timeline .q-timeline__title
@@ -97,9 +475,6 @@ body.q-body--rtl
 //
 // `--ku-radius` / `--ku-density` … come from <html style> so every override
 // below reacts instantly without re-rendering.
-
-body
-  transition: font-size .15s ease
 
 // Corner radius (sharp / normal / round)
 body
@@ -113,15 +488,15 @@ body
   .q-chip,
   .q-input,
   .q-select
-    border-radius: var(--ku-radius, 8px) !important
+    border-radius: var(--ku-radius, 10px) !important
 
   .q-avatar
-    border-radius: calc(var(--ku-radius, 8px) + 4px) !important
+    border-radius: calc(var(--ku-radius, 10px) + 4px) !important
 
   .q-menu,
   .q-tooltip,
   .q-notification
-    border-radius: var(--ku-radius, 8px) !important
+    border-radius: var(--ku-radius, 10px) !important
 
 // Table density (compact / loose)
 body.ku-density-loose
@@ -145,7 +520,7 @@ body.ku-no-anim
 .ku-app-header
   background: linear-gradient(115deg, var(--ku-header-from, $primary) 0%, var(--ku-header-to, $secondary) 100%) !important
 
-// Brand color usages that were hard-wired to the default green
+// Brand color usages — active states read the live palette
 .menu-item.q-router-link--active
   color: var(--q-primary)
   background: color-mix(in srgb, var(--q-primary) 10%, transparent)
@@ -163,8 +538,18 @@ body.ku-no-anim
   .q-dialog .q-card
     width: 96vw !important
 
+  .q-dialog .q-dialog-card
+    min-width: 0 !important
+
   .q-pagination
     flex-wrap: wrap
 
   .q-toolbar__title
     font-size: 16px
+
+// Print -------------------------------------------------------------------------
+
+@media print
+  .ku-hero:before,
+  .q-notification
+    display: none !important

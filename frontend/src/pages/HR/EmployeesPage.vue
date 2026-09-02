@@ -35,7 +35,7 @@
     />
 
     <!-- Toolbar: search + filters -->
-    <div class="row items-center q-col-gutter-sm q-mb-sm print-hide">
+    <div class="ku-toolbar row items-center q-col-gutter-sm print-hide">
       <div class="col-12 col-md-4">
         <q-input v-model="search" dense outlined clearable debounce="350" :placeholder="t('hr.searchPlaceholder')">
           <template #prepend><q-icon name="search" /></template>

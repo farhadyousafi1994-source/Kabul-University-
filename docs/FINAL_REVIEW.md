@@ -53,6 +53,17 @@ environment, known limitations, and the go-live checklist.
 - **Frontend (Quasar):** 28 pages, all with loading/empty/error states,
   search, pagination, filters, responsive layout, permission checks;
   `vite build` passes; dev server compiles all modules.
+- **UI design system (2026-09-02):** reference-inspired rebrand to deep navy
+  + academic gold (`steel` scheme is now the factory default in the theme
+  center; every scheme remains user-selectable). Shared, reusable components:
+  `AppPageHeader` (page hero with gold icon tile + meta chips), `StatCard`
+  (KPI card with icon tile/trend), `DataTablePage` (toolbar card with search
+  + filters + density/column-visibility/fullscreen view options, records
+  per page, row selection with permission-gated bulk archive) and
+  `TableActionBar` (circular icon actions + Print/PDF/Excel). Global design
+  tokens + Quasar chrome overrides live in `src/css/app.sass`; split-screen
+  auth hero in `LoginPage`. Verified with `node scripts/design-system.spec.mjs`
+  (21 checks) alongside the API/employee suites.
 - **Employee assignment flow (2026-09-02):** `node scripts/api-contract-check.mjs`
   → 22/22 PASS (assign → mirror → assets.employee_id, employee-scoped lists,
   unassign, delete-block while assets assigned); `node scripts/employee-select.spec.mjs`

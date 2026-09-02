@@ -1,5 +1,17 @@
 export default {
   common: {
+    recordsPerPage: 'Rows per page',
+    columns: 'Columns',
+    fullscreen: 'Fullscreen',
+    exitFullscreen: 'Exit fullscreen',
+    compactRows: 'Toggle compact rows',
+    selectedCount: '{n} selected',
+    bulkArchive: 'Archive selected',
+    clearSelection: 'Clear selection',
+    bulkArchiveMessage: 'Archive the {n} selected record(s)? They will be hidden from lists but kept in the database.',
+    bulkArchivedSuccess: '{n} record(s) archived successfully.',
+    bulkArchivePartial: '{ok} archived · {failed} failed (they may still have linked records).',
+    saving: 'Saving…',
     appName: 'Asset Management System',
     universityName: 'Kabul University',
     appSubtitle: 'Kabul University Asset Management System',
@@ -206,6 +218,12 @@ export default {
   },
 
   auth: {
+    tagline1: 'Register every asset.',
+    tagline2: 'Track every movement.',
+    tagline3: 'One system runs it all.',
+    heroDesc: 'The enterprise asset management system of Kabul University — assets, maintenance, warehouses and people, managed end to end.',
+    welcomeBack: 'Welcome back',
+    welcomeBackSub: 'Sign in to access your workspace',
     signIn: 'Sign in',
     signingIn: 'Signing in…',
     signOut: 'Sign out',

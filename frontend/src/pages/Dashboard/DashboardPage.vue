@@ -49,37 +49,13 @@
       <!-- Financial summary -->
       <div class="row q-col-gutter-md q-mb-lg">
         <div class="col-12 col-md-4">
-          <q-card class="stat-card">
-            <q-card-section class="row items-center">
-              <q-icon name="payments" size="32px" color="primary" class="q-mr-md" />
-              <div>
-                <div class="text-h6 q-mb-none text-weight-bold">{{ formatCurrency(stats.total_purchase_value) }}</div>
-                <div class="text-caption text-grey-6">{{ t('dashboard.totalPurchaseValue') }}</div>
-              </div>
-            </q-card-section>
-          </q-card>
+          <StatCard :label="t('dashboard.totalPurchaseValue')" :value="formatCurrency(stats.total_purchase_value)" icon="payments" color="primary" small />
         </div>
         <div class="col-12 col-md-4">
-          <q-card class="stat-card">
-            <q-card-section class="row items-center">
-              <q-icon name="savings" size="32px" color="positive" class="q-mr-md" />
-              <div>
-                <div class="text-h6 q-mb-none text-weight-bold">{{ formatCurrency(stats.current_value) }}</div>
-                <div class="text-caption text-grey-6">{{ t('dashboard.currentAssetValue') }}</div>
-              </div>
-            </q-card-section>
-          </q-card>
+          <StatCard :label="t('dashboard.currentAssetValue')" :value="formatCurrency(stats.current_value)" icon="savings" color="positive" small />
         </div>
         <div class="col-12 col-md-4">
-          <q-card class="stat-card">
-            <q-card-section class="row items-center">
-              <q-icon name="trending_down" size="32px" color="warning" class="q-mr-md" />
-              <div>
-                <div class="text-h6 q-mb-none text-weight-bold">{{ formatCurrency(stats.depreciated_value) }}</div>
-                <div class="text-caption text-grey-6">{{ t('dashboard.depreciatedValue') }}</div>
-              </div>
-            </q-card-section>
-          </q-card>
+          <StatCard :label="t('dashboard.depreciatedValue')" :value="formatCurrency(stats.depreciated_value)" icon="trending_down" color="warning" small />
         </div>
       </div>
 

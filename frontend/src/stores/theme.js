@@ -12,7 +12,7 @@ import { Dark } from 'quasar'
  */
 
 export const THEME_SCHEMES = [
-  { id: 'steel',   name: 'Steel Blue',       colors: ['#123A66', '#175A8C', '#C8862D', '#F4F7FB'] },
+  { id: 'steel',   name: 'Steel & Gold',     colors: ['#123A66', '#175A8C', '#C8862D', '#0B1626', '#F4F7FB'] },
   { id: 'minimal', name: 'Minimal',          colors: ['#1A1A1A', '#2E5BFF', '#2E5BFF', '#FFFFFF'] },
   { id: 'forest',  name: 'Forest Green',     colors: ['#1E4620', '#2E7D32', '#66A56B', '#E8F5E9'] },
   { id: 'royal',   name: 'Royal Purple',     colors: ['#4C1D95', '#7C3AED', '#A78BFA', '#F3EEFB'] },
@@ -31,7 +31,7 @@ export const QUICK_COLORS = ['#175A8C', '#2E5BFF', '#2E7D32', '#7C3AED', '#E07A1
 
 const STORAGE_KEY = 'ku_ams_theme'
 const DEFAULTS = {
-  schemeId: 'forest',
+  schemeId: 'steel',
   custom: null, // { headerFrom, headerTo, primary, accent, accentBg } — overrides the scheme
   mode: 'light',
   fontSize: 'M',
@@ -43,7 +43,7 @@ const DEFAULTS = {
 }
 
 const FONT_SIZES = { S: '14px', M: '15px', L: '16px', XL: '18px' }
-const RADII = { sharp: '0px', normal: '8px', round: '18px' }
+const RADII = { sharp: '0px', normal: '10px', round: '16px' }
 
 function readStored() {
   try {

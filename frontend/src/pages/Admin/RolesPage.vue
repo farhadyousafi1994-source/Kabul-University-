@@ -20,7 +20,7 @@
     <template v-else>
       <div class="print-area">
       <div class="print-title text-h6 q-mb-xs">{{ t('admin.roles.title') }}</div>
-      <q-table :rows="rows" :columns="columns" row-key="id" flat bordered dense hide-bottom wrap-cells :pagination="{ rowsPerPage: 20 }" class="q-mt-sm">
+      <q-table :rows="rows" :columns="columns" row-key="id" flat dense hide-bottom wrap-cells :pagination="{ rowsPerPage: 20 }" class="q-mt-sm data-table">
         <template v-slot:body-cell-permissions="props">
           <q-td :props="props" class="text-caption">
             <q-chip v-for="p in props.row.permissions?.slice(0, 6)" :key="p.id" size="xs" dense color="primary" text-color="white" class="q-ma-none q-mr-xs">{{ p.name }}</q-chip>
