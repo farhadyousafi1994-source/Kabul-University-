@@ -601,6 +601,26 @@ CREATE TABLE IF NOT EXISTS backups (
 // Seed helpers
 // ---------------------------------------------------------------------------
 
+// node:sqlite only accepts null, number, string, bigint and Uint8Array as
+// statement parameters. Anything else throws ERR_INVALID_ARG_TYPE —
+// "Provided value cannot be bound to SQLite parameter N" — and, because the
+// seed runs while the Vite dev server boots, takes the whole dev server down.
+// The usual offender is `undefined`, which is what a record missing an
+// optional key (or a column an older database does not have) produces.
+// Every shared write helper funnels through here so sparse data degrades to
+// NULL instead of crashing.
+export function sqlValue(value) {
+  if (value === undefined || value === null) return null
+  if (typeof value === 'boolean') return value ? 1 : 0
+  if (value instanceof Date) return value.toISOString()
+  if (typeof value === 'number' || typeof value === 'bigint' || typeof value === 'string') return value
+  if (value instanceof Uint8Array) return value
+  if (typeof value === 'object') return JSON.stringify(value)
+  return null // functions, symbols — nothing meaningful to persist
+}
+
+export const sqlValues = (values) => values.map(sqlValue)
+
 function insert(db, table, data) {
   const keys = Object.keys(data)
   // Quote identifiers so reserved words (e.g. "group") work as column names,
@@ -609,7 +629,7 @@ function insert(db, table, data) {
   const stmt = db.prepare(
     `INSERT INTO ${table} (${cols}) VALUES (${keys.map(() => '?').join(', ')})`,
   )
-  const info = stmt.run(...keys.map((k) => data[k]))
+  const info = stmt.run(...sqlValues(keys.map((k) => data[k])))
   return Number(info.lastInsertRowid)
 }
 
@@ -622,6 +642,21 @@ function mulberry32(a) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296
   }
 }
+
+// The canonical seeded accounts. Kept at module scope because the schema
+// drift repair backfills these values into databases created before a column
+// existed (see repairSchemaDrift / backfillSeedUserFields).
+const SEED_USERS = [
+  { name: 'Abdul Rahman Ahmadzai', username: 'superadmin', email: 'superadmin@ku.edu.af', phone: '+93 700 000 001', employee_number: 'KU-0001', role: 'Super Admin', position: 'IT Director', hire_type: 'permanent', salary: 45000 },
+  { name: 'Maryam Nazari', username: 'administrator', email: 'admin@ku.edu.af', phone: '+93 700 000 002', employee_number: 'KU-0002', role: 'University Administrator', position: 'Administrator', hire_type: 'permanent', salary: 38000 },
+  { name: 'Hassan Karimi', username: 'assetmanager', email: 'assets@ku.edu.af', phone: '+93 700 000 003', employee_number: 'KU-0003', role: 'Asset Manager', position: 'Asset Manager', hire_type: 'permanent', salary: 32000 },
+  { name: 'Sara Rahimi', username: 'facultymanager', email: 'faculty.cs@ku.edu.af', phone: '+93 700 000 004', employee_number: 'KU-0004', role: 'Faculty Manager', position: 'Lecturer', hire_type: 'permanent', salary: 28000 },
+  { name: 'Omid Stanikzai', username: 'deptmanager', email: 'dept@ku.edu.af', phone: '+93 700 000 005', employee_number: 'KU-0005', role: 'Department Manager', position: 'Department Manager', hire_type: 'contract', salary: 26000 },
+  { name: 'Nadia Wahidi', username: 'warehousemanager', email: 'warehouse@ku.edu.af', phone: '+93 700 000 006', employee_number: 'KU-0006', role: 'Warehouse Manager', position: 'Warehouse Manager', hire_type: 'permanent', salary: 30000 },
+  { name: 'Farid Ahmadi', username: 'technician', email: 'tech@ku.edu.af', phone: '+93 700 000 007', employee_number: 'KU-0007', role: 'Maintenance Technician', position: 'Technician', hire_type: 'contract', salary: 18000 },
+  { name: 'Zarghona Habibi', username: 'auditor', email: 'audit@ku.edu.af', phone: '+93 700 000 008', employee_number: 'KU-0008', role: 'Auditor', position: 'Auditor', hire_type: 'permanent', salary: 34000, status: 'leave' },
+  { name: 'Ahmad Farid', username: 'employee', email: 'employee@ku.edu.af', phone: '+93 700 000 009', employee_number: 'KU-0009', role: 'Employee', position: 'Research Assistant', hire_type: 'contract', salary: 15000 },
+]
 
 export function seed(db) {
   const now = new Date().toISOString()
@@ -702,19 +737,8 @@ export function seed(db) {
   }
 
   // --- Users ---------------------------------------------------------------
-  const userDefs = [
-    { name: 'Abdul Rahman Ahmadzai', username: 'superadmin', email: 'superadmin@ku.edu.af', phone: '+93 700 000 001', employee_number: 'KU-0001', role: 'Super Admin', position: 'IT Director', hire_type: 'permanent', salary: 45000 },
-    { name: 'Maryam Nazari', username: 'administrator', email: 'admin@ku.edu.af', phone: '+93 700 000 002', employee_number: 'KU-0002', role: 'University Administrator', position: 'Administrator', hire_type: 'permanent', salary: 38000 },
-    { name: 'Hassan Karimi', username: 'assetmanager', email: 'assets@ku.edu.af', phone: '+93 700 000 003', employee_number: 'KU-0003', role: 'Asset Manager', position: 'Asset Manager', hire_type: 'permanent', salary: 32000 },
-    { name: 'Sara Rahimi', username: 'facultymanager', email: 'faculty.cs@ku.edu.af', phone: '+93 700 000 004', employee_number: 'KU-0004', role: 'Faculty Manager', position: 'Lecturer', hire_type: 'permanent', salary: 28000 },
-    { name: 'Omid Stanikzai', username: 'deptmanager', email: 'dept@ku.edu.af', phone: '+93 700 000 005', employee_number: 'KU-0005', role: 'Department Manager', position: 'Department Manager', hire_type: 'contract', salary: 26000 },
-    { name: 'Nadia Wahidi', username: 'warehousemanager', email: 'warehouse@ku.edu.af', phone: '+93 700 000 006', employee_number: 'KU-0006', role: 'Warehouse Manager', position: 'Warehouse Manager', hire_type: 'permanent', salary: 30000 },
-    { name: 'Farid Ahmadi', username: 'technician', email: 'tech@ku.edu.af', phone: '+93 700 000 007', employee_number: 'KU-0007', role: 'Maintenance Technician', position: 'Technician', hire_type: 'contract', salary: 18000 },
-    { name: 'Zarghona Habibi', username: 'auditor', email: 'audit@ku.edu.af', phone: '+93 700 000 008', employee_number: 'KU-0008', role: 'Auditor', position: 'Auditor', hire_type: 'permanent', salary: 34000, status: 'leave' },
-    { name: 'Ahmad Farid', username: 'employee', email: 'employee@ku.edu.af', phone: '+93 700 000 009', employee_number: 'KU-0009', role: 'Employee', position: 'Research Assistant', hire_type: 'contract', salary: 15000 },
-  ]
   const userIds = {}
-  for (const u of userDefs) {
+  for (const u of SEED_USERS) {
     const uid = insert(db, 'users', {
       name: u.name, username: u.username, email: u.email, phone: u.phone,
       employee_number: u.employee_number,
@@ -1260,29 +1284,46 @@ export function seed(db) {
 // restorable snapshots, exactly like the ones the page creates later.
 // ---------------------------------------------------------------------------
 
+// "Abdul Rahman Ahmadzai" -> ["Abdul", "Rahman Ahmadzai"]
+const splitName = (name) => {
+  const parts = String(name || '').trim().split(/\s+/)
+  return [parts[0] || '', parts.slice(1).join(' ')]
+}
+
+// Next free EMP-xxxx code. Derived from the highest existing suffix (same rule
+// as the Employees API) rather than from a row count, so a deleted employee can
+// never make startup collide with the UNIQUE employee_code constraint.
+function nextEmployeeCode(db) {
+  const last = db
+    .prepare("SELECT employee_code FROM employees WHERE employee_code LIKE 'EMP-%' ORDER BY LENGTH(employee_code) DESC, employee_code DESC LIMIT 1")
+    .get()
+  const num = last ? Number(String(last.employee_code).replace(/\D+/g, '')) + 1 : 1
+  return `EMP-${String(num).padStart(4, '0')}`
+}
+
+export const EMPLOYEE_PERMISSIONS = ['employees.view', 'employees.create', 'employees.update', 'employees.delete']
+
 // ---------------------------------------------------------------------------
 // Employee module — idempotent schema/data migration.
 //
 // The Employees module got its own dedicated table (it used to piggyback on
 // `users`). This helper upgrades existing development databases in place:
-//   1. adds `assets.employee_id` when the column is missing (older DBs),
+//   1. indexes `assets.employee_id` (the column itself is added by
+//      repairSchemaDrift() when an older database does not have it),
 //   2. registers the `employees.*` permission family and grants it to roles,
 //   3. migrates staff records out of `users` into `employees` (linking them
 //      via `user_id` — user accounts are never touched or deleted),
 //   4. seeds a few employees without login accounts + realistic asset links.
-// Running it repeatedly is safe: every step checks before it writes.
+// Running it repeatedly is safe: steps 1 and 2 check before they write, and
+// steps 3 and 4 are keyed per record and wrapped in a transaction, so an
+// interrupted start can never leave the table half-migrated.
 // ---------------------------------------------------------------------------
-
-export const EMPLOYEE_PERMISSIONS = ['employees.view', 'employees.create', 'employees.update', 'employees.delete']
 
 function ensureEmployeeModule(db) {
   const now = new Date().toISOString()
 
-  // 1. assets.employee_id (present in fresh schemas, missing in older DBs).
-  const assetCols = db.prepare('PRAGMA table_info(assets)').all().map((c) => c.name)
-  if (!assetCols.includes('employee_id')) {
-    db.exec('ALTER TABLE assets ADD COLUMN employee_id INTEGER REFERENCES employees(id) ON DELETE SET NULL')
-  }
+  // 1. assets.employee_id is added by repairSchemaDrift() on older databases;
+  //    only the lookup index belongs to this module.
   db.exec('CREATE INDEX IF NOT EXISTS idx_assets_employee ON assets(employee_id)')
 
   // 2. employees.* permissions + role grants.
@@ -1308,73 +1349,84 @@ function ensureEmployeeModule(db) {
     }
   }
 
-  // 3 + 4. One-time data migration & seed.
-  if (db.prepare('SELECT COUNT(*) AS c FROM employees').get().c > 0) return
-
-  const splitName = (name) => {
-    const parts = String(name || '').trim().split(/\s+/)
-    return [parts[0] || '', parts.slice(1).join(' ')]
-  }
-
-  const users = db.prepare('SELECT * FROM users WHERE deleted_at IS NULL ORDER BY id').all()
-  for (const u of users) {
-    const [first, last] = splitName(u.name)
-    insert(db, 'employees', {
-      employee_code: u.employee_number || `EMP-${String(u.id).padStart(4, '0')}`,
-      first_name: first,
-      last_name: last,
-      email: u.email,
-      phone: u.phone,
-      department_id: u.department_id,
-      position: u.position,
-      job_title: u.position,
-      employment_type: u.hire_type === 'contract' ? 'contract' : 'full_time',
-      status: u.status === 'leave' ? 'on_leave' : (u.status === 'inactive' ? 'inactive' : 'active'),
-      hire_date: (u.created_at || now).slice(0, 10),
-      user_id: u.id,
-      created_at: now,
-      updated_at: now,
-    })
-  }
-
-  // Staff members without a login account — employees ≠ users.
-  const anyDept = db.prepare('SELECT id FROM departments ORDER BY id').all().map((d) => d.id)
-  const managerId = db.prepare("SELECT id FROM employees WHERE employee_code = 'KU-0002'").get()?.id || null
-  const extras = [
-    { first_name: 'Karim', last_name: 'Sultani', email: 'karim.sultani@ku.edu.af', phone: '+93 700 000 021', position: 'Lab Assistant', employment_type: 'full_time', status: 'active' },
-    { first_name: 'Freshta', last_name: 'Omari', email: 'freshta.omari@ku.edu.af', phone: '+93 700 000 022', position: 'Librarian', employment_type: 'part_time', status: 'active' },
-    { first_name: 'Najibullah', last_name: 'Kohistani', email: 'najib.kohistani@ku.edu.af', phone: '+93 700 000 023', position: 'Electrician', employment_type: 'contract', status: 'active' },
-    { first_name: 'Shukria', last_name: 'Barakzai', email: 'shukria.barakzai@ku.edu.af', phone: '+93 700 000 024', position: 'Office Assistant', employment_type: 'full_time', status: 'inactive' },
-  ]
-  const nextCode = () => {
-    const c = db.prepare('SELECT COUNT(*) AS c FROM employees').get().c
-    return `EMP-${String(c + 1).padStart(4, '0')}`
-  }
-  extras.forEach((e, i) => {
-    insert(db, 'employees', {
-      employee_code: nextCode(),
-      ...e,
-      job_title: e.position,
-      department_id: anyDept.length ? anyDept[i % anyDept.length] : null,
-      hire_date: daysAgo(200 + i * 45),
-      manager_id: managerId,
-      user_id: null,
-      created_at: now,
-      updated_at: now,
-    })
-  })
-
-  // Link assets: mirror the active hand-out assignments onto the new
-  // employee relation so "who holds what" is visible immediately.
-  const activeAssignments = db
-    .prepare("SELECT asset_id, assigned_to_user_id FROM asset_assignments WHERE status = 'active'")
-    .all()
-  for (const a of activeAssignments) {
-    const emp = db.prepare('SELECT id FROM employees WHERE user_id = ?').get(a.assigned_to_user_id)
-    if (emp) {
-      db.prepare('UPDATE assets SET employee_id = ?, updated_at = ? WHERE id = ? AND employee_id IS NULL')
-        .run(emp.id, now, a.asset_id)
+  // 3 + 4. Data migration & standalone seed.
+  //
+  // Both steps are idempotent *and* transactional: an interrupted run can no
+  // longer leave the employees table half-populated, which a "skip when the
+  // table already has rows" guard would then preserve forever.
+  db.exec('BEGIN')
+  try {
+    // 3. Staff records out of `users` — one employee per user account that does
+    //    not have one yet (user accounts themselves are never touched).
+    const users = db
+      .prepare(
+        `SELECT u.* FROM users u
+         WHERE u.deleted_at IS NULL
+           AND NOT EXISTS (SELECT 1 FROM employees e WHERE e.user_id = u.id)
+         ORDER BY u.id`,
+      )
+      .all()
+    for (const u of users) {
+      const [first, last] = splitName(u.name)
+      insert(db, 'employees', {
+        employee_code: u.employee_number || `EMP-${String(u.id).padStart(4, '0')}`,
+        first_name: first,
+        last_name: last,
+        email: u.email ?? null,
+        phone: u.phone ?? null,
+        department_id: u.department_id ?? null,
+        position: u.position ?? null,
+        job_title: u.position ?? null,
+        employment_type: u.hire_type === 'contract' ? 'contract' : 'full_time',
+        status: u.status === 'leave' ? 'on_leave' : (u.status === 'inactive' ? 'inactive' : 'active'),
+        hire_date: String(u.created_at || now).slice(0, 10),
+        user_id: u.id ?? null,
+        created_at: now,
+        updated_at: now,
+      })
     }
+
+    // 4. Staff members without a login account — employees ≠ users.
+    const anyDept = db.prepare('SELECT id FROM departments ORDER BY id').all().map((d) => d.id)
+    const managerId = db.prepare("SELECT id FROM employees WHERE employee_code = 'KU-0002'").get()?.id || null
+    const extras = [
+      { first_name: 'Karim', last_name: 'Sultani', email: 'karim.sultani@ku.edu.af', phone: '+93 700 000 021', position: 'Lab Assistant', employment_type: 'full_time', status: 'active' },
+      { first_name: 'Freshta', last_name: 'Omari', email: 'freshta.omari@ku.edu.af', phone: '+93 700 000 022', position: 'Librarian', employment_type: 'part_time', status: 'active' },
+      { first_name: 'Najibullah', last_name: 'Kohistani', email: 'najib.kohistani@ku.edu.af', phone: '+93 700 000 023', position: 'Electrician', employment_type: 'contract', status: 'active' },
+      { first_name: 'Shukria', last_name: 'Barakzai', email: 'shukria.barakzai@ku.edu.af', phone: '+93 700 000 024', position: 'Office Assistant', employment_type: 'full_time', status: 'inactive' },
+    ]
+    extras.forEach((e, i) => {
+      if (db.prepare('SELECT id FROM employees WHERE email = ?').get(e.email)) return
+      insert(db, 'employees', {
+        employee_code: nextEmployeeCode(db),
+        ...e,
+        job_title: e.position,
+        department_id: anyDept.length ? anyDept[i % anyDept.length] : null,
+        hire_date: daysAgo(200 + i * 45),
+        manager_id: managerId,
+        user_id: null,
+        created_at: now,
+        updated_at: now,
+      })
+    })
+
+    // Link assets: mirror the active hand-out assignments onto the new
+    // employee relation so "who holds what" is visible immediately.
+    const activeAssignments = db
+      .prepare("SELECT asset_id, assigned_to_user_id FROM asset_assignments WHERE status = 'active'")
+      .all()
+    for (const a of activeAssignments) {
+      const emp = db.prepare('SELECT id FROM employees WHERE user_id = ?').get(a.assigned_to_user_id)
+      if (emp) {
+        db.prepare('UPDATE assets SET employee_id = ?, updated_at = ? WHERE id = ? AND employee_id IS NULL')
+          .run(emp.id, now, a.asset_id)
+      }
+    }
+
+    db.exec('COMMIT')
+  } catch (err) {
+    db.exec('ROLLBACK')
+    throw err
   }
 }
 
@@ -1423,11 +1475,98 @@ function seedBackupHistory(db) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Schema drift repair
+//
+// SCHEMA is applied with CREATE TABLE IF NOT EXISTS, so a development database
+// created by an older revision of the mock API keeps its old shape forever:
+// columns introduced later (users.position / hire_type / salary,
+// assets.employee_id, ...) simply do not exist in that file. Reads then come
+// back without those keys — binding `undefined` back into a statement fails
+// with "Provided value cannot be bound to SQLite parameter N" — and writes
+// fail with "no such column". Adding the missing columns in place upgrades the
+// database without discarding anything the developer stored in it.
+//
+// SQLite restrictions for ALTER TABLE ADD COLUMN are respected below: no
+// PRIMARY KEY / UNIQUE, and NOT NULL columns carry a non-null default.
+// ---------------------------------------------------------------------------
+
+const EXPECTED_COLUMNS = {
+  users: [
+    ['username', 'TEXT'],
+    ['phone', 'TEXT'],
+    ['employee_number', 'TEXT'],
+    ['department_id', 'INTEGER'],
+    ['position', 'TEXT'],
+    ['hire_type', "TEXT NOT NULL DEFAULT 'permanent'"],
+    ['salary', 'REAL NOT NULL DEFAULT 0'],
+    ['status', "TEXT NOT NULL DEFAULT 'active'"],
+    ['avatar', 'TEXT'],
+    ['deleted_at', 'TEXT'],
+  ],
+  assets: [
+    ['employee_id', 'INTEGER REFERENCES employees(id) ON DELETE SET NULL'],
+  ],
+}
+
+// Returns the columns it had to add, as `${table}.${column}` — an empty array
+// for a database that is already up to date.
+export function repairSchemaDrift(db) {
+  const added = []
+
+  for (const [table, columns] of Object.entries(EXPECTED_COLUMNS)) {
+    const exists = db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")
+      .get(table)
+    if (!exists) continue
+
+    const present = new Set(db.prepare(`PRAGMA table_info("${table}")`).all().map((c) => c.name))
+    for (const [column, ddl] of columns) {
+      if (present.has(column)) continue
+      db.exec(`ALTER TABLE "${table}" ADD COLUMN "${column}" ${ddl}`)
+      added.push(`${table}.${column}`)
+    }
+  }
+
+  return added
+}
+
+// A freshly added column holds only its ALTER default (NULL / 'permanent' / 0),
+// so the seeded accounts would lose their position, hire type and salary after
+// an upgrade. Restore them — but only for the columns this boot actually added
+// and only for the known seed usernames, so a normal start never overwrites
+// anything a developer edited.
+function backfillSeedUserFields(db, repaired) {
+  const columns = repaired
+    .filter((c) => c.startsWith('users.'))
+    .map((c) => c.slice('users.'.length))
+    .filter((c) => SEED_USERS.some((u) => u[c] !== undefined))
+  if (!columns.length) return
+
+  for (const u of SEED_USERS) {
+    const sets = []
+    const params = []
+    for (const column of columns) {
+      if (u[column] === undefined) continue
+      sets.push(`"${column}" = ?`)
+      params.push(sqlValue(u[column]))
+    }
+    if (!sets.length) continue
+    db.prepare(`UPDATE users SET ${sets.join(', ')} WHERE username = ?`).run(...params, u.username)
+  }
+}
+
 export function openDb() {
   const db = new DatabaseSync(DB_PATH)
   db.exec('PRAGMA journal_mode = WAL')
   db.exec('PRAGMA foreign_keys = ON')
   db.exec(SCHEMA)
+
+  // Databases created by an older revision of the mock API keep their old
+  // shape (CREATE TABLE IF NOT EXISTS never alters an existing table), so
+  // bring them up to date before anything reads or writes them.
+  const repaired = repairSchemaDrift(db)
+  if (repaired.length) backfillSeedUserFields(db, repaired)
 
   const userCount = db.prepare('SELECT COUNT(*) AS c FROM users').get().c
   if (userCount === 0) {
