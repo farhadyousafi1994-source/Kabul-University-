@@ -116,7 +116,7 @@ const { warehouses, opts } = useOptions()
 const warehouseOptions = computed(() => opts(warehouses.value))
 
 const barActions = computed(() => [
-  {key: 'record', icon: 'swap_vert', label: t('warehouse.transactions.newTransaction'), color: 'teal', show: canTransfer.value, handler: () => { recordOpen.value = true }},
+  {key: 'record', icon: 'swap_vert', label: t('warehouse.transactions.newTransaction'), color: 'primary', show: canTransfer.value, handler: () => { recordOpen.value = true }},
   {key: 'transfer', icon: 'swap_horiz', label: t('assets.transferAsset'), color: 'info', show: canTransfer.value, handler: () => { transferOpen.value = true }},
 ])
 

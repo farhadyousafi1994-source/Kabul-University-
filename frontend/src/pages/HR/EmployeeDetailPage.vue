@@ -55,7 +55,7 @@
           <StatCard :label="t('hr.underMaintenance')" :value="summary.under_maintenance" icon="build" color="warning" />
         </div>
         <div class="col-6 col-sm-3">
-          <StatCard :label="t('hr.totalValue')" :value="currency(summary.total_value)" icon="payments" color="teal" small />
+          <StatCard :label="t('hr.totalValue')" :value="currency(summary.total_value)" icon="payments" color="primary" small />
         </div>
       </div>
 

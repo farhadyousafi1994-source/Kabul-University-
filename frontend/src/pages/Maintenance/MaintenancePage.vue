@@ -127,7 +127,7 @@ const userOptions = computed(() => opts(users.value))
 
 const tab = ref('requests')
 const barActions = computed(() => [
-  {key: 'add', icon: 'add', label: t('maintenance.newRequest'), color: 'teal', show: canCreate.value, handler: openRequest},
+  {key: 'add', icon: 'add', label: t('maintenance.newRequest'), color: 'primary', show: canCreate.value, handler: openRequest},
 ])
 
 const rows = ref([])

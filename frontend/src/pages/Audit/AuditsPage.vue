@@ -135,7 +135,7 @@ const $q = useQuasar()
 const authStore = useAuthStore()
 
 const barActions = computed(() => [
-  {key: 'add', icon: 'add', label: t('audit.newAudit'), color: 'teal', show: canCreate.value, handler: () => { dialogOpen.value = true }},
+  {key: 'add', icon: 'add', label: t('audit.newAudit'), color: 'primary', show: canCreate.value, handler: () => { dialogOpen.value = true }},
 ])
 
 const rows = ref([])

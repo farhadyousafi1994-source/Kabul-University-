@@ -153,7 +153,7 @@ const categoryOptions = computed(() => opts(categories.value))
 
 const tab = ref('pr')
 const barActions = computed(() => [
-  {key: 'add', icon: 'add', label: t('procurement.newPurchaseRequest'), color: 'teal', show: canCreate.value, handler: openPr},
+  {key: 'add', icon: 'add', label: t('procurement.newPurchaseRequest'), color: 'primary', show: canCreate.value, handler: openPr},
 ])
 
 const rows = ref([])

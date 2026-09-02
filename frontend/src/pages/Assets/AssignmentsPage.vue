@@ -40,7 +40,7 @@
         </template>
         <template v-slot:body-cell-actions="props">
           <q-td :props="props">
-            <q-btn v-if="canReturn && props.row.status === 'active'" flat dense round size="sm" color="teal" icon="undo" @click="returnAsset(props.row)">
+            <q-btn v-if="canReturn && props.row.status === 'active'" flat dense round size="sm" color="primary" icon="undo" @click="returnAsset(props.row)">
               <q-tooltip>{{ t('assets.returnAsset') }}</q-tooltip>
             </q-btn>
           </q-td>
@@ -101,7 +101,7 @@ const $q = useQuasar()
 const authStore = useAuthStore()
 
 const barActions = computed(() => [
-  {key: 'add', icon: 'add', label: t('assignments.assignAsset'), color: 'teal', show: canAssign.value, handler: openAssign},
+  {key: 'add', icon: 'add', label: t('assignments.assignAsset'), color: 'primary', show: canAssign.value, handler: openAssign},
 ])
 
 const rows = ref([])
@@ -202,7 +202,7 @@ function returnAsset(row) {
     title: t('assets.returnAsset'),
     message: t('assets.returnConfirm', { name: row.asset_name, assignee: row.employee_name || row.assignee_name }),
     cancel: { label: t('common.cancel'), flat: true },
-    ok: { label: t('assets.returnAsset'), color: 'teal', icon: 'undo' },
+    ok: { label: t('assets.returnAsset'), color: 'primary', icon: 'undo' },
     persistent: true,
   }).onOk(async () => {
     try {

@@ -12,7 +12,7 @@
       <div class="row q-gutter-xs no-wrap">
         <q-btn v-if="canAssign && ['available', 'reserved'].includes(asset.status)" color="info" size="sm" icon="assignment_ind" :label="t('assets.assignAsset')" @click="assignOpen = true" />
         <q-btn v-if="canTransfer && !['disposed', 'retired'].includes(asset.status)" color="primary" size="sm" outline icon="swap_horiz" :label="t('assets.transferAsset')" @click="transferOpen = true" />
-        <q-btn v-if="canEdit && activeAssignment" color="teal" size="sm" outline icon="undo" :label="t('assets.returnAsset')" @click="returnAsset" />
+        <q-btn v-if="canEdit && activeAssignment" color="primary" size="sm" outline icon="undo" :label="t('assets.returnAsset')" @click="returnAsset" />
         <q-btn v-if="canEdit" color="primary" size="sm" icon="edit" :label="t('common.edit')" :to="{ name: 'assets' }" />
       </div>
     </div>
@@ -353,7 +353,7 @@ function returnAsset() {
     title: t('assets.returnAsset'),
     message: t('assets.returnConfirm', { name: asset.value.name, assignee: activeAssignment.value?.employee_name || activeAssignment.value?.assignee_name || t('common.user') }),
     cancel: { label: t('common.cancel'), flat: true },
-    ok: { label: t('assets.returnAsset'), color: 'teal', icon: 'undo' },
+    ok: { label: t('assets.returnAsset'), color: 'primary', icon: 'undo' },
     persistent: true,
   }).onOk(async () => {
     if (busy.return) return

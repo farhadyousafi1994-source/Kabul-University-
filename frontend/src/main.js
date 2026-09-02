@@ -52,9 +52,9 @@ app.use(Quasar, {
   config: {
     dark: Dark.isActive, // follow system preference; togglable from the layout
     brand: {
-      primary: '#1b5e20',
-      secondary: '#0d47a1',
-      accent: '#b71c1c',
+      primary: '#C8862D',
+      secondary: '#175A8C',
+      accent: '#0B1626',
     },
     notify: { position: 'top-right', timeout: 3500 },
   },

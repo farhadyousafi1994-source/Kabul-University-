@@ -86,7 +86,7 @@ const $q = useQuasar()
 const authStore = useAuthStore()
 
 const barActions = computed(() => [
-  { key: 'add', icon: 'add', label: t('admin.roles.add'), color: 'teal', show: canCreate.value, handler: () => openEdit(null) },
+  { key: 'add', icon: 'add', label: t('admin.roles.add'), color: 'primary', show: canCreate.value, handler: () => openEdit(null) },
 ])
 
 const rows = ref([])

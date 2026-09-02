@@ -439,7 +439,7 @@ const barActions = computed(() => [
     key: 'create',
     icon: props.createIcon,
     label: resolvedCreateLabel.value,
-    color: 'teal',
+    color: 'primary',
     show: Boolean(props.createForm && canCreate.value),
     handler: openCreate,
   },

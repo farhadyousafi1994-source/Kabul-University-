@@ -125,7 +125,7 @@ const barActions = computed(() => [
     key: 'csv',
     icon: 'file_download',
     label: t('admin.reports.exportCsv'),
-    color: 'teal',
+    color: 'primary',
     show: !!current.value && !resultLoading.value,
     handler: exportCsv,
   },
@@ -171,5 +171,5 @@ onMounted(loadList)
 <style lang="sass">
 .selected-report
   border: 2px solid $primary !important
-  background: rgba(27, 94, 32, .05)
+  background: color-mix(in srgb, var(--q-primary) 6%, transparent)
 </style>

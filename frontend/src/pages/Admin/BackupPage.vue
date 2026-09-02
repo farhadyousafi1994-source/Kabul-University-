@@ -137,7 +137,7 @@
         <div class="bk-list__head">
           <q-icon name="history" size="18px" />
           <span>{{ t('admin.backup.historyTitle') }}</span>
-          <q-chip dense color="teal-1" text-color="teal-9" class="bk-list__chip">
+          <q-chip dense color="blue-grey-1" text-color="blue-grey-8" class="bk-list__chip">
             {{ backups.length }} · {{ fileSize(meta.total_size) }}
           </q-chip>
           <div class="q-space" />
@@ -153,7 +153,7 @@
 
         <div v-else class="bk-rows">
           <div v-for="row in backups" :key="row.id" class="bk-row">
-            <q-icon name="description" size="19px" class="text-teal-7" />
+            <q-icon name="description" size="19px" class="text-blue-grey-7" />
             <div class="bk-row__body">
               <div class="bk-row__name">{{ row.filename }}</div>
               <div class="bk-row__meta">
@@ -478,7 +478,7 @@ onMounted(load)
     align-items: center
     justify-content: center
     color: $primary
-    background: rgba(27, 94, 32, .10)
+    background: color-mix(in srgb, var(--q-primary) 10%, transparent)
     margin-bottom: 12px
 
   &__title

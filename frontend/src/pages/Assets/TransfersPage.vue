@@ -110,7 +110,7 @@ const floorOptions = computed(() => opts(floors.value))
 const roomOptions = computed(() => opts(rooms.value))
 
 const barActions = computed(() => [
-  {key: 'add', icon: 'add', label: t('transfers.newTransfer'), color: 'teal', show: canTransfer.value, handler: () => { dialogOpen.value = true }},
+  {key: 'add', icon: 'add', label: t('transfers.newTransfer'), color: 'primary', show: canTransfer.value, handler: () => { dialogOpen.value = true }},
 ])
 
 const rows = ref([])

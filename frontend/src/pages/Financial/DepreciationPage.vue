@@ -67,7 +67,7 @@ const $q = useQuasar()
 const authStore = useAuthStore()
 
 const barActions = computed(() => [
-  {key: 'calculate', icon: 'calculate', label: t('financial.depreciation.calculate'), color: 'teal', show: canCalculate.value, handler: calculate},
+  {key: 'calculate', icon: 'calculate', label: t('financial.depreciation.calculate'), color: 'primary', show: canCalculate.value, handler: calculate},
 ])
 
 const rows = ref([])

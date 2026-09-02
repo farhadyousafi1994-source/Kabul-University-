@@ -191,8 +191,8 @@ export function printArea(selector = '.print-area', { title = '' } = {}) {
       ${selector} .q-table { box-shadow: none !important; border: 1px solid #ddd !important; }
       ${selector} .q-table__container { max-height: none !important; }
       ${selector} .print-hide, ${selector} .q-btn, ${selector} .q-pagination { display: none !important; }
-      ${selector} .ku-print-header { display: block !important; margin-bottom: 10px; border-bottom: 2px solid #1b5e20; padding-bottom: 6px; }
-      ${selector} .ku-print-header__title { font-size: 17px; font-weight: 700; color: #1b5e20; }
+      ${selector} .ku-print-header { display: block !important; margin-bottom: 10px; border-bottom: 2px solid #C8862D; padding-bottom: 6px; }
+      ${selector} .ku-print-header__title { font-size: 17px; font-weight: 700; color: #123A66; }
       ${selector} .ku-print-header__meta { font-size: 10px; color: #666; margin-top: 2px; }
       /* Keep tables tidy across page breaks. */
       ${selector} table { page-break-inside: auto !important; border-collapse: collapse !important; }

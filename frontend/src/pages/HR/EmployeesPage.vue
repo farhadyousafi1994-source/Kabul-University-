@@ -17,7 +17,7 @@
         <StatCard :label="t('hr.statInactive')" :value="stats.inactive" icon="do_not_disturb_on" color="grey-7" :side="sideOf(stats.inactive, stats.total)" />
       </div>
       <div class="col-6 col-sm-4 col-md-2">
-        <StatCard :label="t('hr.statWithAssets')" :value="stats.with_assets" icon="devices" color="teal" :side="sideOf(stats.with_assets, stats.total)" />
+        <StatCard :label="t('hr.statWithAssets')" :value="stats.with_assets" icon="devices" color="primary" :side="sideOf(stats.with_assets, stats.total)" />
       </div>
       <div class="col-6 col-sm-4 col-md-2">
         <StatCard :label="t('hr.statAssets')" :value="stats.assets" icon="inventory_2" color="secondary" />
@@ -319,7 +319,7 @@ const exportColumns = computed(() => [
 ])
 
 const barActions = computed(() => [
-  { key: 'add', icon: 'add', label: t('hr.add'), color: 'teal', show: canCreate.value, handler: openCreate },
+  { key: 'add', icon: 'add', label: t('hr.add'), color: 'primary', show: canCreate.value, handler: openCreate },
 ])
 
 // ----- data loading ---------------------------------------------------------

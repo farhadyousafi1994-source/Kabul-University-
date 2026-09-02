@@ -253,7 +253,7 @@ const canDelete = computed(() => authStore.hasPermission('assets.delete'))
 const canAssign = computed(() => authStore.hasPermission('assets.assign'))
 
 const barActions = computed(() => [
-  { key: 'add', icon: 'add', label: t('assets.addAsset'), color: 'teal', show: canCreate.value, handler: openCreate },
+  { key: 'add', icon: 'add', label: t('assets.addAsset'), color: 'primary', show: canCreate.value, handler: openCreate },
 ])
 
 const columns = computed(() => [

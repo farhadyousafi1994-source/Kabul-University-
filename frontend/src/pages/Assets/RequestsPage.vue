@@ -105,7 +105,7 @@ const departmentOptions = computed(() => opts(departments.value))
 const categoryOptions = computed(() => opts(categories.value))
 
 const barActions = computed(() => [
-  {key: 'add', icon: 'add', label: t('requests.newRequest'), color: 'teal', show: canCreate.value, handler: () => { dialogOpen.value = true }},
+  {key: 'add', icon: 'add', label: t('requests.newRequest'), color: 'primary', show: canCreate.value, handler: () => { dialogOpen.value = true }},
 ])
 
 const rows = ref([])
