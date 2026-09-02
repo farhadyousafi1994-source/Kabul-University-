@@ -36,6 +36,8 @@ class AssetRequest extends FormRequest
             'building_id' => ['nullable', 'integer', 'exists:buildings,id'],
             'floor_id' => ['nullable', 'integer', 'exists:floors,id'],
             'room_id' => ['nullable', 'integer', 'exists:rooms,id'],
+            // Direct assignment to an employee (nullable = unassigned).
+            'employee_id' => ['nullable', 'integer', 'exists:employees,id'],
         ];
     }
 }

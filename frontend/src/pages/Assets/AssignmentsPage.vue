@@ -8,7 +8,8 @@
       :actions="barActions"
       :rows="rows"
       :columns="columns"
-      :filename="'assignments'"
+      :filename="'Assignments_Report'"
+      :title="t('nav.items.assignments')"
     />
 
     <div class="row items-center q-col-gutter-sm q-mb-sm print-hide">

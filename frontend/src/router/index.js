@@ -458,37 +458,6 @@ const routes = [
         },
       },
       // ------------------------------------------------------------------
-      // Appearance & personal options (cloned from the reference app)
-      // Personal settings — any authenticated user may customize their own
-      // appearance and workstation preferences, so no extra permission.
-      // ------------------------------------------------------------------
-      {
-        path: 'theme',
-        name: 'theme',
-        component: () => import('src/pages/Settings/ThemePage.vue'),
-        meta: {
-          title: 'Appearance & Theme',
-          titleKey: 'nav.items.theme',
-          icon: 'palette',
-          section: 'Administration',
-          sectionKey: 'nav.sections.administration',
-          order: 80,
-        },
-      },
-      {
-        path: 'options',
-        name: 'options',
-        component: () => import('src/pages/Settings/OptionsPage.vue'),
-        meta: {
-          title: 'Options',
-          titleKey: 'nav.items.options',
-          icon: 'tune',
-          section: 'Administration',
-          sectionKey: 'nav.sections.administration',
-          order: 90,
-        },
-      },
-      // ------------------------------------------------------------------
       // HR — employees directory
       // ------------------------------------------------------------------
       {
@@ -501,25 +470,21 @@ const routes = [
           icon: 'badge',
           section: 'HR',
           sectionKey: 'nav.sections.hr',
-          permission: 'users.view',
+          permission: 'employees.view',
           order: 10,
         },
       },
-      // ------------------------------------------------------------------
-      // Control room — live operations overview
-      // ------------------------------------------------------------------
       {
-        path: 'control-room',
-        name: 'control-room',
-        component: () => import('src/pages/Dashboard/ControlRoomPage.vue'),
+        path: 'hr/employees/:id',
+        name: 'employee-detail',
+        component: () => import('src/pages/HR/EmployeeDetailPage.vue'),
         meta: {
-          title: 'Control Room',
-          titleKey: 'nav.items.controlRoom',
-          icon: 'monitoring',
-          section: 'General',
-          sectionKey: 'nav.sections.general',
-          permission: 'dashboard.view',
-          order: 20,
+          hidden: true,
+          title: 'Employee detail',
+          titleKey: 'nav.items.employeeDetail',
+          section: 'HR',
+          sectionKey: 'nav.sections.hr',
+          permission: 'employees.view',
         },
       },
     ],

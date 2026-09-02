@@ -14,13 +14,16 @@
     "apexcharts": "^5.16.0",
     "axios": "^1.20.0",
     "jsbarcode": "^3.12.3",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "pinia": "^3.0.4",
     "qrcode": "^1.5.4",
     "quasar": "^2.28.0",
     "vue": "^3.5.42",
     "vue-i18n": "^10.0.8",
     "vue-router": "^4.6.4",
-    "vue3-apexcharts": "^1.11.1"
+    "vue3-apexcharts": "^1.11.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@quasar/vite-plugin": "^2.0.2",

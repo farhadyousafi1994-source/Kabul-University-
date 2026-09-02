@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\BackupController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DisposalController;
+use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\DepreciationController;
 use App\Http\Controllers\Api\IncidentController;
 use App\Http\Controllers\Api\MaintenanceController;
@@ -39,6 +40,15 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('users/{user}/activate', [UserController::class, 'activate'])->middleware('permission:users.update');
     Route::post('users/{user}/deactivate', [UserController::class, 'deactivate'])->middleware('permission:users.update');
     Route::post('users/{user}/leave', [UserController::class, 'leave'])->middleware('permission:users.update');
+
+    // Employees (HR directory — separate from user accounts)
+    Route::get('employees', [EmployeeController::class, 'index'])->middleware('permission:employees.view');
+    Route::post('employees', [EmployeeController::class, 'store'])->middleware('permission:employees.create');
+    Route::get('employees/{employee}', [EmployeeController::class, 'show'])->middleware('permission:employees.view');
+    Route::put('employees/{employee}', [EmployeeController::class, 'update'])->middleware('permission:employees.update');
+    Route::patch('employees/{employee}', [EmployeeController::class, 'update'])->middleware('permission:employees.update');
+    Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])->middleware('permission:employees.delete');
+    Route::get('employees/{employee}/assets', [EmployeeController::class, 'assets'])->middleware('permission:employees.view');
 
     Route::get('roles', [RoleController::class, 'index'])->middleware('permission:roles.view');
     Route::get('roles/permissions', [RoleController::class, 'permissions'])->middleware('permission:roles.view');

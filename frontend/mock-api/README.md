@@ -38,6 +38,25 @@ history is created on first boot so the screen has something to show. A
 `pre_restore` safety snapshot is taken automatically before every restore;
 `sessions` and `backups` are never overwritten, so you stay logged in.
 
+## Employees module (HR)
+
+Employees live in a dedicated `employees` table — separate from `users`
+(auth accounts) — and can optionally be linked to an account via `user_id`.
+Assets carry a nullable `assets.employee_id` (Asset belongsTo Employee).
+
+| Method | Endpoint | Permission | Notes |
+| --- | --- | --- | --- |
+| GET | `/api/employees` | `employees.view` | search, `department_id`, `status`, `employment_type`, sort, pagination; rows include `full_name`, `department_name`, `assets_count` |
+| POST | `/api/employees` | `employees.create` | auto `employee_code` (`EMP-NNNN`) when blank |
+| GET | `/api/employees/:id` | `employees.view` | detail + `asset_summary` (total / active / under_maintenance / total_value) |
+| PUT | `/api/employees/:id` | `employees.update` | full update, unique email/code/user, manager ≠ self |
+| DELETE | `/api/employees/:id` | `employees.delete` | **422** while assets are still assigned — unassign/reassign first |
+| GET | `/api/employees/:id/assets` | `employees.view` | assets currently assigned to the employee |
+
+Setting `employee_id` on `PUT /api/assets/:id` auto-flips the asset status
+`available ⇄ assigned` (only from available/assigned/reserved and only when no
+explicit `status` is sent). Deleting an employee never touches user accounts.
+
 ## Switching to the real Laravel API
 
 ```bash

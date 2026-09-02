@@ -20,7 +20,7 @@ class AssetController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Asset::query()
-            ->with(['category', 'subcategory', 'supplier', 'campus', 'faculty', 'department', 'building', 'floor', 'room'])
+            ->with(['category', 'subcategory', 'supplier', 'campus', 'faculty', 'department', 'building', 'floor', 'room', 'employee'])
             ->withCount(['images', 'documents'])
             ->search($request->get('search'))
             ->filterStatus($request->get('status'))
@@ -32,7 +32,8 @@ class AssetController extends Controller
             ->filterLocation('building_id', $request->integer('building_id') ?: null)
             ->filterLocation('floor_id', $request->integer('floor_id') ?: null)
             ->filterLocation('room_id', $request->integer('room_id') ?: null)
-            ->filterLocation('supplier_id', $request->integer('supplier_id') ?: null);
+            ->filterLocation('supplier_id', $request->integer('supplier_id') ?: null)
+            ->filterLocation('employee_id', $request->integer('employee_id') ?: null);
 
         // Barcode / QR / asset-code lookup shortcut.
         if ($code = $request->get('code')) {
@@ -53,19 +54,19 @@ class AssetController extends Controller
     {
         $asset = AssetService::create($request->validated());
 
-        return ApiResponse::success('Asset created successfully.', new AssetResource($asset->load('category', 'subcategory', 'supplier', 'campus', 'faculty', 'department', 'building', 'floor', 'room')), null, 201);
+        return ApiResponse::success('Asset created successfully.', new AssetResource($asset->load('category', 'subcategory', 'supplier', 'campus', 'faculty', 'department', 'building', 'floor', 'room', 'employee')), null, 201);
     }
 
     public function show(Asset $asset): JsonResponse
     {
-        return ApiResponse::success('Asset retrieved successfully.', new AssetResource($asset->load('category', 'subcategory', 'supplier', 'campus', 'faculty', 'department', 'building', 'floor', 'room')->loadCount(['images', 'documents'])));
+        return ApiResponse::success('Asset retrieved successfully.', new AssetResource($asset->load('category', 'subcategory', 'supplier', 'campus', 'faculty', 'department', 'building', 'floor', 'room', 'employee')->loadCount(['images', 'documents'])));
     }
 
     public function update(AssetRequest $request, Asset $asset): JsonResponse
     {
         $asset = AssetService::update($asset, $request->validated());
 
-        return ApiResponse::success('Asset updated successfully.', new AssetResource($asset->load('category', 'subcategory', 'supplier', 'campus', 'faculty', 'department', 'building', 'floor', 'room')));
+        return ApiResponse::success('Asset updated successfully.', new AssetResource($asset->load('category', 'subcategory', 'supplier', 'campus', 'faculty', 'department', 'building', 'floor', 'room', 'employee')));
     }
 
     public function destroy(Asset $asset): JsonResponse

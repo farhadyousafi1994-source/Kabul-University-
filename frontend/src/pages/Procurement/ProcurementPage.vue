@@ -8,7 +8,8 @@
       :actions="barActions"
       :rows="rows"
       :columns="tab === 'pr' ? prColumns : poColumns"
-      :filename="'procurement'"
+      :filename="'Procurement_Report'"
+      :title="t('nav.items.procurement')"
     />
 
     <q-tabs v-model="tab" class="q-mb-md" dense>
