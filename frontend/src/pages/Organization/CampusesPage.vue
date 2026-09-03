@@ -1,5 +1,6 @@
 <template>
   <DataTablePage
+    stats-module="campuses"
     :title="t('organization.campuses.title')"
     :subtitle="t('organization.campuses.subtitle')"
     icon="location_city"

@@ -1,5 +1,6 @@
 <template>
   <DataTablePage
+    stats-module="users"
     :title="t('admin.users.title')"
     :subtitle="t('admin.users.subtitle')"
     icon="group"

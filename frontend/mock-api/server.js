@@ -106,6 +106,18 @@ class Router {
         user: null,
         token: null,
         send: (status, payload) => this.send(res, status, payload),
+        // Permission probe for handlers that authorize per request (the
+        // statistics and global-search endpoints serve many modules through
+        // one route, so the route table cannot declare a single permission).
+        can: (permission) => {
+          if (!ctx.user) return false
+          try {
+            this.authorize(ctx, permission)
+            return true
+          } catch {
+            return false
+          }
+        },
       }
 
       try {

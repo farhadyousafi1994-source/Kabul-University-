@@ -1,5 +1,6 @@
 <template>
   <DataTablePage
+    stats-module="activity"
     :title="t('admin.activityLogs.title')"
     :subtitle="t('admin.activityLogs.subtitle')"
     icon="receipt_long"

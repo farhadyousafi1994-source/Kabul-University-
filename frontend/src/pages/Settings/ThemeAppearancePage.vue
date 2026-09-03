@@ -339,9 +339,40 @@
                   @update:model-value="(v) => theme.patch({ lineHeight: clamp(Number(v) || 1.5, 1, 2.5) })"
                 />
               </div>
+              <!-- Font & link colour live with typography (not in the colour
+                   palette) because that is where users look for them. Both are
+                   ordinary theme tokens, so they persist and apply globally. -->
+              <div class="col-12 col-sm-6 col-md-3">
+                <ColorTokenField
+                  :model-value="theme.colors.text"
+                  :scheme-value="activeScheme.colors.text"
+                  :label="t('theme.fontColor')"
+                  :hint="t('theme.fontColorHint')"
+                  :palette="palette"
+                  :reset-label="t('theme.revertToScheme')"
+                  :close-label="t('common.close')"
+                  @update:model-value="theme.setFontColor"
+                  @reset="theme.clearFontColor"
+                />
+              </div>
+              <div class="col-12 col-sm-6 col-md-3">
+                <ColorTokenField
+                  :model-value="theme.colors.link"
+                  :scheme-value="activeScheme.colors.link"
+                  :label="t('theme.linkColor')"
+                  :hint="t('theme.linkColorHint')"
+                  :palette="palette"
+                  :reset-label="t('theme.revertToScheme')"
+                  :close-label="t('common.close')"
+                  @update:model-value="theme.setLinkColor"
+                  @reset="theme.clearLinkColor"
+                />
+              </div>
+
               <div class="col-12">
-                <div class="ta-type-sample" :style="{ fontFamily: theme.fontStackValue }">
+                <div class="ta-type-sample" :style="{ fontFamily: theme.fontStackValue, color: theme.colors.text }">
                   {{ t('common.universityName') }} · {{ t('common.appName') }} · ۱۲۳۴۵۶۷۸۹۰ · ١٢٣٤٥٦٧٨٩٠
+                  <a href="#" class="q-ml-sm" :style="{ color: theme.colors.link }" @click.prevent>{{ t('theme.linkColor') }}</a>
                 </div>
               </div>
             </div>

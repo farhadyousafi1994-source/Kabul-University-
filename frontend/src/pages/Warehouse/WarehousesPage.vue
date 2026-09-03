@@ -1,5 +1,6 @@
 <template>
   <DataTablePage
+    stats-module="warehouses"
     :title="t('warehouse.warehouses.title')"
     :subtitle="t('warehouse.warehouses.subtitle')"
     icon="warehouse"

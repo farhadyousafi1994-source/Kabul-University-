@@ -1876,6 +1876,94 @@ const OBSOLETE_COLUMNS = {
   users: ['employee_number', 'position', 'hire_type', 'salary'],
 }
 
+// Indexes that mention `column` on `table` — SQLite refuses to drop a column
+// that any index (including the implicit one behind a UNIQUE constraint) still
+// depends on, so they are dropped first and the ones that survive are rebuilt
+// by `createIndexes()` from SCHEMA afterwards.
+function dropIndexesForColumn(db, table, column) {
+  const indexes = db.prepare(`PRAGMA index_list("${table}")`).all()
+  for (const index of indexes) {
+    // Implicit indexes (`sqlite_autoindex_*`, created by UNIQUE / PRIMARY KEY
+    // in CREATE TABLE) cannot be dropped — the table has to be rebuilt.
+    if (String(index.name).startsWith('sqlite_')) continue
+    const columns = db.prepare(`PRAGMA index_info("${index.name}")`).all().map((c) => c.name)
+    if (!columns.includes(column)) continue
+    try {
+      db.exec(`DROP INDEX IF EXISTS "${index.name}"`)
+    } catch {
+      /* best effort — the rebuild path below still handles it */
+    }
+  }
+}
+
+/**
+ * Rebuild `table` without `columns`.
+ *
+ * This is the SQLite-blessed 12-step ALTER procedure and the only way to remove
+ * a column that a UNIQUE constraint declared inside CREATE TABLE depends on
+ * (`cannot drop UNIQUE column: "…"`). The table is recreated from the CURRENT
+ * SCHEMA definition — which never contains the obsolete columns — and the rows
+ * are copied over on the intersection of old and new columns, so no data that
+ * the application still uses is lost.
+ */
+function rebuildTableWithout(db, table, columns) {
+  const create = db
+    .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?")
+    .get(table)?.sql
+  if (!create) return false
+
+  const target = expectedColumns()[table]
+  if (!target || !target.length) return false
+
+  const keep = target.map(([name]) => name).filter((name) => !columns.includes(name))
+  const existing = new Set(db.prepare(`PRAGMA table_info("${table}")`).all().map((c) => c.name))
+  const copy = keep.filter((name) => existing.has(name))
+  if (!copy.length) return false
+
+  // The canonical CREATE TABLE for this table, taken from SCHEMA.
+  const statement = splitSqlStatements(SCHEMA).find((s) =>
+    new RegExp(`CREATE\\s+TABLE\\s+(IF\\s+NOT\\s+EXISTS\\s+)?["'\`]?${table}["'\`]?\\s*\\(`, 'i').test(s),
+  )
+  if (!statement) return false
+
+  const tmp = `${table}__rebuild`
+  const foreignKeys = db.prepare('PRAGMA foreign_keys').get()?.foreign_keys
+
+  db.exec('PRAGMA foreign_keys = OFF')
+  db.exec('BEGIN')
+  try {
+    db.exec(`DROP TABLE IF EXISTS "${tmp}"`)
+    db.exec(statement.replace(
+      new RegExp(`(CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?)["'\`]?${table}["'\`]?`, 'i'),
+      `$1"${tmp}"`,
+    ))
+
+    const list = copy.map((c) => `"${c}"`).join(', ')
+    db.exec(`INSERT INTO "${tmp}" (${list}) SELECT ${list} FROM "${table}"`)
+    db.exec(`DROP TABLE "${table}"`)
+    db.exec(`ALTER TABLE "${tmp}" RENAME TO "${table}"`)
+    db.exec('COMMIT')
+  } catch (err) {
+    try { db.exec('ROLLBACK') } catch { /* already rolled back */ }
+    try { db.exec(`DROP TABLE IF EXISTS "${tmp}"`) } catch { /* nothing to clean */ }
+    if (foreignKeys) db.exec('PRAGMA foreign_keys = ON')
+    throw err
+  }
+
+  // Integrity has to be verified while foreign keys are still off, exactly as
+  // the SQLite procedure prescribes.
+  const violations = db.prepare('PRAGMA foreign_key_check').all()
+  if (foreignKeys) db.exec('PRAGMA foreign_keys = ON')
+  if (violations.length) {
+    console.warn(
+      `[mock-api] Rebuilt "${table}" but ${violations.length} foreign-key reference(s) no longer resolve; `
+      + 'they are left in place for inspection.',
+    )
+  }
+
+  return true
+}
+
 export function dropObsoleteColumns(db) {
   const dropped = []
 
@@ -1886,15 +1974,39 @@ export function dropObsoleteColumns(db) {
     if (!exists) continue
 
     const present = new Set(db.prepare(`PRAGMA table_info("${table}")`).all().map((c) => c.name))
+    const pending = []
+
     for (const column of columns) {
       if (!present.has(column)) continue
+      // Step 1 — free the column from every explicit index first. Without this
+      // `DROP COLUMN` fails with "error in index … after drop column".
+      dropIndexesForColumn(db, table, column)
       try {
         db.exec(`ALTER TABLE "${table}" DROP COLUMN "${column}"`)
         present.delete(column)
         dropped.push(`${table}.${column}`)
-      } catch (err) {
-        console.warn(`[mock-api] Could not drop obsolete column ${table}.${column}: ${err.message}`)
+      } catch {
+        // Step 2 — UNIQUE / PRIMARY KEY / CHECK columns cannot be dropped in
+        // place ("cannot drop UNIQUE column"). Collect them and rebuild the
+        // table once, below, instead of failing.
+        pending.push(column)
       }
+    }
+
+    if (!pending.length) continue
+
+    try {
+      if (rebuildTableWithout(db, table, pending)) {
+        for (const column of pending) dropped.push(`${table}.${column}`)
+      }
+    } catch (err) {
+      // A rebuild that could not complete must never take the dev server down:
+      // the obsolete column is harmless apart from leaking through `SELECT *`,
+      // and the transaction above already rolled back cleanly.
+      console.warn(
+        `[mock-api] Left obsolete column(s) ${pending.map((c) => `${table}.${c}`).join(', ')} in place `
+        + `(safe rebuild failed: ${err.message}).`,
+      )
     }
   }
 

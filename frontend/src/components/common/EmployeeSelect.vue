@@ -21,7 +21,6 @@
     :error-message="loadError || externalErrorMessage || undefined"
     :no-option-label="searching ? t('common.loading') : t('hr.noEmployees')"
     @filter="onFilter"
-    @popup-show="onReopen"
     @clear="onClear"
   >
     <template #prepend><q-icon name="badge" /></template>
@@ -151,53 +150,109 @@ function mergeSelected(rows) {
   return list
 }
 
+/**
+ * Results cache, keyed by search term.
+ *
+ * Without it every keystroke — and every reopen of the menu — replaced
+ * `options` with a brand-new array. Quasar then rebuilt the whole menu, which
+ * is what produced the blinking, the dropdown closing itself and the input
+ * appearing to reset mid-typing. A cache hit now renders synchronously, so
+ * repeating a search or reopening the menu causes no visible work at all.
+ */
+const cache = new Map()
+const CACHE_MAX = 30
+
+function cacheKey(term) {
+  return `${props.activeOnly ? 'active' : 'all'}::${term}`
+}
+
+/** Fetch (or reuse) the option list for `term`. Never mutates `options`. */
+async function fetchOptions(term = '') {
+  const key = cacheKey(term)
+  if (cache.has(key)) return cache.get(key)
+
+  const payload = await employeeService.list({
+    search: term || '',
+    per_page: 50,
+    ...(props.activeOnly ? { status: 'active' } : {}),
+  })
+  const list = mergeSelected(extractRows(payload)).map(optionFor)
+  cache.set(key, list)
+  // Bounded so a long typing session cannot grow without limit.
+  if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value)
+  return list
+}
+
+/**
+ * Quasar calls `filter(value, update, abort)`. Everything that touches
+ * `options` must happen INSIDE the `update` callback — that is the only point
+ * at which Quasar expects the list to change, and doing it outside is what
+ * made the menu flicker and close.
+ *
+ * After a selection, `fill-input` writes the LABEL into the field. Searching
+ * for that full "CODE — Name — Dept" string would match nothing and empty the
+ * menu, so we treat it as an unfiltered listing.
+ */
+function onFilter(val, update, abort) {
+  const term = String(val ?? '').trim()
+  const selectedLabel = options.value.find((o) => Number(o.value) === Number(model.value))?.label
+  const query = selectedLabel && term === selectedLabel ? '' : term
+
+  // Cache hit: update synchronously — no loading flash, no rebuild.
+  const key = cacheKey(query)
+  if (cache.has(key)) {
+    update(() => { options.value = cache.get(key) })
+    return
+  }
+
+  const seq = ++searchSeq
+  searching.value = true
+  loadError.value = ''
+
+  fetchOptions(query)
+    .then((list) => {
+      if (seq !== searchSeq) return abort()
+      update(() => { options.value = list; emit('options', list) })
+    })
+    .catch((e) => {
+      if (seq !== searchSeq) return abort()
+      loadError.value = e?.message || t('common.loadFailed')
+      update(() => {
+        options.value = selectedExtra.value ? [optionFor(selectedExtra.value)] : []
+      })
+      if (!notifiedError) {
+        notifiedError = true
+        setTimeout(() => { notifiedError = false }, 4000)
+        notify.error(t('hr.employeesLoadFailed'), { caption: loadError.value })
+      }
+    })
+    .finally(() => {
+      if (seq === searchSeq) searching.value = false
+    })
+}
+
+/** Initial / programmatic load, used outside the filter lifecycle. */
 async function loadEmployees(term = '') {
   const seq = ++searchSeq
   searching.value = true
   loadError.value = ''
   try {
-    const payload = await employeeService.list({
-      search: term || '',
-      per_page: 50,
-      ...(props.activeOnly ? { status: 'active' } : {}),
-    })
+    const list = await fetchOptions(term)
     if (seq !== searchSeq) return
-    const rows = mergeSelected(extractRows(payload))
-    options.value = rows.map(optionFor)
-    emit('options', options.value)
+    options.value = list
+    emit('options', list)
   } catch (e) {
     if (seq !== searchSeq) return
     options.value = selectedExtra.value ? [optionFor(selectedExtra.value)] : []
     loadError.value = e?.message || t('common.loadFailed')
-    if (!notifiedError) {
-      notifiedError = true
-      setTimeout(() => { notifiedError = false }, 4000)
-      notify.error(t('hr.employeesLoadFailed'), { caption: loadError.value })
-    }
   } finally {
     if (seq === searchSeq) searching.value = false
   }
 }
 
-/**
- * Quasar calls `filter` with the current input text. After a selection,
- * fill-input writes the LABEL into the field — searching for that full
- * "CODE — Name — Dept" string would match nothing and empty the menu.
- * Treat the selected label (and reopen) as an unfiltered list.
- */
-function onFilter(val, update) {
-  const term = String(val || '').trim()
-  const selectedLabel = options.value.find((o) => Number(o.value) === Number(model.value))?.label
-  const query = selectedLabel && term === selectedLabel ? '' : term
-  loadEmployees(query).then(() => update())
-}
-
-function onReopen() {
-  loadEmployees('')
-}
-
 function onClear() {
   selectedExtra.value = null
+  cache.clear()
   emit('update:modelValue', null)
 }
 
@@ -236,5 +291,6 @@ loadEmployees('')
 
 onBeforeUnmount(() => {
   searchSeq += 1
+  cache.clear()
 })
 </script>

@@ -15,6 +15,7 @@ import { depreciationRoutes, disposalRoutes } from './financial.routes.js'
 import { settingsRoutes, reportRoutes } from './system.routes.js'
 import { backupRoutes } from './backup.routes.js'
 import { appearanceRoutes } from './appearance.routes.js'
+import { statisticsRoutes, globalSearchRoutes } from './statistics.routes.js'
 
 /**
  * Registers every module's route group on the mock router.
@@ -43,4 +44,6 @@ export function registerRoutes(router) {
   appearanceRoutes(router)
   reportRoutes(router)
   backupRoutes(router)
+  statisticsRoutes(router)
+  globalSearchRoutes(router)
 }

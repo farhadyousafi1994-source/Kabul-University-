@@ -1,6 +1,19 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
-    <AppPageHeader :title="t('maintenance.title')" :subtitle="t('maintenance.subtitle')" icon="build" />
+    <AppPageHeader
+      :title="t('maintenance.title')" :subtitle="t('maintenance.subtitle')" icon="build"
+      :breadcrumbs="[{ label: t('nav.sections.maintenance') }, { label: t('maintenance.title') }]"
+      :on-refresh="refreshAll"
+      :refreshing="loading"
+    />
+
+    <StatisticsCards
+      v-model:active="activeStatCard"
+      module="maintenance"
+      :filters="statisticsFilters"
+      :refresh-key="statsRefreshKey"
+      @filter="applyCardFilter"
+    />
 
     <!-- Shared action bar (same buttons on every table) -->
     <TableActionBar
@@ -125,6 +138,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
+import StatisticsCards from 'src/components/common/StatisticsCards.vue'
 import TableActionBar from 'src/components/common/TableActionBar.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
@@ -240,6 +254,30 @@ const orderColumns = computed(() => [
   { name: 'status', label: t('common.status'), field: 'status', align: 'left' },
   { name: 'actions', label: '', field: 'id', align: 'right' },
 ])
+
+// --- summary cards ------------------------------------------------------------
+const activeStatCard = ref('')
+const statsRefreshKey = ref(0)
+
+const statisticsFilters = computed(() => {
+  const out = {}
+  for (const [k, v] of Object.entries(filters)) {
+    if (v !== null && v !== undefined && v !== '') out[k] = v
+  }
+  return out
+})
+
+function applyCardFilter(patch) {
+  filters.status = patch?.status ?? null
+  page.value = 1
+  load()
+}
+
+/** Refresh: reload the table and the summary cards, keeping the current view. */
+async function refreshAll() {
+  statsRefreshKey.value += 1
+  await load()
+}
 
 async function load() {
   loading.value = true

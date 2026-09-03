@@ -1,6 +1,11 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
-    <AppPageHeader :title="t('financial.depreciation.title')" :subtitle="t('financial.depreciation.subtitle')" icon="trending_down" />
+    <AppPageHeader
+      :title="t('financial.depreciation.title')" :subtitle="t('financial.depreciation.subtitle')" icon="trending_down"
+      :breadcrumbs="[{ label: t('nav.sections.operations') }, { label: t('financial.depreciation.title') }]"
+      :on-refresh="refreshAll"
+      :refreshing="loading"
+    />
 
     <!-- Shared action bar (same buttons on every table) -->
     <TableActionBar
@@ -90,6 +95,11 @@ const columns = computed(() => [
   { name: 'accumulated_depreciation', label: t('financial.depreciation.accumulatedDepreciation'), field: 'accumulated_depreciation', align: 'right' },
   { name: 'book_value', label: t('assets.bookValue'), field: 'book_value', align: 'right' },
 ])
+
+/** Refresh: reload the table without a page reload, keeping filters intact. */
+async function refreshAll() {
+  await load()
+}
 
 async function load() {
   loading.value = true

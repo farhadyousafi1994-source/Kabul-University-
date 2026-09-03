@@ -1,6 +1,21 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
-    <AppPageHeader :title="t('assets.title')" :subtitle="t('assets.subtitle')" icon="inventory_2" />
+    <PageHeader
+      :title="t('assets.title')"
+      :subtitle="t('assets.subtitle')"
+      icon="inventory_2"
+      :breadcrumbs="[{ label: t('nav.sections.assets') }, { label: t('assets.title') }]"
+      :on-refresh="refreshAll"
+      :refreshing="loading"
+    />
+
+    <StatisticsCards
+      v-model:active="activeStatCard"
+      module="assets"
+      :filters="statisticsFilters"
+      :refresh-key="statsRefreshKey"
+      @filter="applyCardFilter"
+    />
 
     <!-- Shared action bar (same buttons on every table) -->
     <TableActionBar
@@ -210,7 +225,8 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import AppPageHeader from 'src/components/common/AppPageHeader.vue'
+import PageHeader from 'src/components/common/PageHeader.vue'
+import StatisticsCards from 'src/components/common/StatisticsCards.vue'
 import TableActionBar from 'src/components/common/TableActionBar.vue'
 import EmployeeSelect from 'src/components/common/EmployeeSelect.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
@@ -348,6 +364,41 @@ watch(page, load)
 watch(search, () => { page.value = 1; load() })
 watch(() => [filters.status, filters.category_id, filters.department_id], () => { page.value = 1; load() })
 
+// Changing the Status select by hand must clear (or move) the active card, so
+// the highlighted card never contradicts the table.
+watch(() => filters.status, (status) => {
+  if (!status) { activeStatCard.value = ''; return }
+  const card = { available: 'available', assigned: 'assigned', under_maintenance: 'under_maintenance', damaged: 'damaged', retired: 'retired' }[status]
+  activeStatCard.value = card || ''
+})
+
+// --- summary cards ------------------------------------------------------------
+const activeStatCard = ref('')
+const statsRefreshKey = ref(0)
+
+// The cards always describe exactly what the table is showing.
+const statisticsFilters = computed(() => {
+  const out = {}
+  if (search.value) out.search = search.value
+  if (filters.status) out.status = filters.status
+  if (filters.category_id) out.category_id = filters.category_id
+  if (filters.department_id) out.department_id = filters.department_id
+  return out
+})
+
+/** Clicking a card writes its filter into the page's own filter state. */
+function applyCardFilter(patch) {
+  filters.status = patch?.status ?? null
+  page.value = 1
+  load()
+}
+
+/** Refresh: same query, fresh rows and fresh statistics, no page reload. */
+async function refreshAll() {
+  statsRefreshKey.value += 1
+  await load()
+}
+
 function applyScan() {
   scanCode.value = filters.code || ''
   page.value = 1
@@ -393,6 +444,7 @@ function save() {
         dialogOpen.value = false
         editing.value = null
         await load()
+        statsRefreshKey.value += 1
       },
     },
   )

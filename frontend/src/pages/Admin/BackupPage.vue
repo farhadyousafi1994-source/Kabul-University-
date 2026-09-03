@@ -1,12 +1,13 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
-    <AppPageHeader :title="t('admin.backup.title')" :subtitle="t('admin.backup.subtitle')" icon="cloud_sync">
-      <template #actions>
-        <q-btn flat round dense color="primary" icon="refresh" :loading="loading" @click="load">
-          <q-tooltip>{{ t('common.refresh') }}</q-tooltip>
-        </q-btn>
-      </template>
-    </AppPageHeader>
+    <AppPageHeader
+      :title="t('admin.backup.title')"
+      :subtitle="t('admin.backup.subtitle')"
+      icon="cloud_sync"
+      :breadcrumbs="[{ label: t('nav.sections.administration') }, { label: t('admin.backup.title') }]"
+      :on-refresh="load"
+      :refreshing="loading"
+    />
 
     <!-- Loading / error ---------------------------------------------------->
     <div v-if="loading && !backups.length" class="q-mt-sm">

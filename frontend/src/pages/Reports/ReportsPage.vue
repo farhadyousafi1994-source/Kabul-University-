@@ -1,10 +1,13 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
-    <AppPageHeader :title="t('admin.reports.title')" :subtitle="t('admin.reports.subtitle')" icon="bar_chart">
-      <template #actions>
-        <q-btn color="primary" outline size="sm" icon="refresh" :label="t('common.refresh')" :loading="loading" @click="loadList" />
-      </template>
-    </AppPageHeader>
+    <AppPageHeader
+      :title="t('admin.reports.title')"
+      :subtitle="t('admin.reports.subtitle')"
+      icon="bar_chart"
+      :breadcrumbs="[{ label: t('nav.sections.administration') }, { label: t('admin.reports.title') }]"
+      :on-refresh="loadList"
+      :refreshing="loading"
+    />
 
     <!-- Report picker -->
     <div v-if="loading" class="q-mt-sm">

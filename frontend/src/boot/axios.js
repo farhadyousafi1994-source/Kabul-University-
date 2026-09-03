@@ -37,6 +37,12 @@ api.interceptors.response.use(
   (error) => {
     const response = error.response || {}
 
+    // A request the caller cancelled on purpose (a superseded search or
+    // statistics refresh) is not an error the UI should ever report.
+    if (axios.isCancel?.(error) || error.code === 'ERR_CANCELED') {
+      return Promise.reject({ canceled: true, status: 0, message: 'canceled', errors: {} })
+    }
+
     // Session expired or invalidated -> force re-login.
     if (response.status === 401) {
       localStorage.removeItem('ku_ams_token')

@@ -4,11 +4,12 @@
       :title="employee?.full_name || t('hr.profileTitle')"
       :subtitle="employee ? [employee.employee_code, employee.position].filter(Boolean).join(' · ') : ''"
       icon="badge"
-    >
-      <template #actions>
-        <q-btn flat dense no-caps color="primary" icon="arrow_back" :label="t('hr.backToList')" :to="{ name: 'employees' }" />
-      </template>
-    </AppPageHeader>
+      show-back
+      :back-fallback="{ name: 'employees' }"
+      :breadcrumbs="[{ label: t('nav.sections.hr') }, { label: t('hr.title'), to: { name: 'employees' } }, { label: employee?.full_name || t('hr.profileTitle') }]"
+      :on-refresh="refreshAll"
+      :refreshing="loading"
+    />
 
     <!-- Loading / error -->
     <div v-if="loading" class="q-mt-sm">
@@ -227,6 +228,11 @@ const assetColumns = computed(() => [
   { name: 'updated_at', label: t('hr.assignedDate'), field: 'updated_at', align: 'left', format: (v) => (v ? formatDate(v) : '—') },
   { name: 'actions', label: '', field: 'id', align: 'right' },
 ])
+
+/** Refresh: re-read the profile and its asset list, no page reload. */
+async function refreshAll() {
+  await Promise.all([load(), loadAssets()])
+}
 
 async function load() {
   loading.value = true

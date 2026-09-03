@@ -1,6 +1,11 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
-    <AppPageHeader :title="t('warehouse.transactions.title')" :subtitle="t('warehouse.transactions.subtitle')" icon="swap_vert" />
+    <AppPageHeader
+      :title="t('warehouse.transactions.title')" :subtitle="t('warehouse.transactions.subtitle')" icon="swap_vert"
+      :breadcrumbs="[{ label: t('nav.sections.operations') }, { label: t('warehouse.transactions.title') }]"
+      :on-refresh="refreshAll"
+      :refreshing="loading"
+    />
 
     <!-- Shared action bar (same buttons on every table) -->
     <TableActionBar
@@ -170,6 +175,11 @@ const columns = computed(() => [
   { name: 'quantity', label: t('common.quantity'), field: 'quantity', align: 'right' },
   { name: 'user_name', label: t('common.user'), field: 'user_name', align: 'left' },
 ])
+
+/** Refresh: reload the table without a page reload, keeping filters intact. */
+async function refreshAll() {
+  await load()
+}
 
 async function load() {
   loading.value = true

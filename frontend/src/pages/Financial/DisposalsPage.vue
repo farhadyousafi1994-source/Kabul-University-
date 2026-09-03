@@ -1,6 +1,19 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
-    <AppPageHeader :title="t('financial.disposals.title')" :subtitle="t('financial.disposals.subtitle')" icon="delete_forever" />
+    <AppPageHeader
+      :title="t('financial.disposals.title')" :subtitle="t('financial.disposals.subtitle')" icon="delete_forever"
+      :breadcrumbs="[{ label: t('nav.sections.operations') }, { label: t('financial.disposals.title') }]"
+      :on-refresh="refreshAll"
+      :refreshing="loading"
+    />
+
+    <StatisticsCards
+      v-model:active="activeStatCard"
+      module="disposals"
+      :filters="statisticsFilters"
+      :refresh-key="statsRefreshKey"
+      @filter="applyCardFilter"
+    />
 
     <!-- Shared action bar (same buttons on every table) -->
     <TableActionBar
@@ -105,6 +118,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
+import StatisticsCards from 'src/components/common/StatisticsCards.vue'
 import TableActionBar from 'src/components/common/TableActionBar.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
@@ -175,6 +189,34 @@ const columns = computed(() => [
   { name: 'actions', label: '', field: 'id', align: 'right' },
 ])
 
+// --- summary cards ------------------------------------------------------------
+// One aggregated request describes the SAME rows the table is showing, and a
+// card click writes its filter straight into the page's filter state — so the
+// cards, the filter controls and the table can never disagree.
+const activeStatCard = ref('')
+const statsRefreshKey = ref(0)
+
+const statisticsFilters = computed(() => {
+  const out = {}
+  if (search.value) out.search = search.value
+  for (const [k, v] of Object.entries(filters)) {
+    if (v !== null && v !== undefined && v !== '') out[k] = v
+  }
+  return out
+})
+
+function applyCardFilter(patch) {
+  filters.status = patch?.status ?? null
+  page.value = 1
+  load()
+}
+
+/** Refresh: reload rows and statistics, keeping filters, search and sorting. */
+async function refreshAll() {
+  statsRefreshKey.value += 1
+  await load()
+}
+
 async function load() {
   loading.value = true
   error.value = ''
@@ -195,7 +237,12 @@ async function load() {
 
 watch(page, load)
 watch(search, () => { page.value = 1; load() })
-watch(() => filters.status, () => { page.value = 1; load() })
+watch(() => filters.status, (status) => {
+  page.value = 1
+  // A status chosen from the select must move (or clear) the highlighted card.
+  if (!status) activeStatCard.value = ''
+  load()
+})
 
 watch(dialogOpen, async (open) => {
   if (!open) return

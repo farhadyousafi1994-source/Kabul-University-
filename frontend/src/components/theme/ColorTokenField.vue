@@ -15,7 +15,7 @@
     <q-input
       :model-value="modelValue || ''"
       :label="label"
-      :hint="hex ? hex.toUpperCase() : undefined"
+      :hint="hint || (hex ? hex.toUpperCase() : undefined)"
       :error="invalid"
       :error-message="invalid ? invalidMessage : undefined"
       :disable="disable"
@@ -86,6 +86,8 @@ const props = defineProps({
   closeLabel: { type: String, default: 'Close' },
   invalidMessage: { type: String, default: 'Enter a hex colour, e.g. #2E7D32' },
   palette: { type: Array, default: () => [] },
+  /** Optional explanatory hint; falls back to showing the normalised hex. */
+  hint: { type: String, default: '' },
 })
 
 const emit = defineEmits(['update:modelValue', 'reset'])

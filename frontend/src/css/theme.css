@@ -36,6 +36,7 @@
   /* Typography -------------------------------------------------------- */
   --app-text-primary: #16233a;
   --app-text-secondary: #5c6b84;
+  --app-link: #175a8c;
   --app-font-family: 'Roboto', -apple-system, 'Segoe UI', sans-serif;
   --app-font-size: 15px;
   --app-font-weight: 400;
@@ -75,6 +76,7 @@
   --ku-line: var(--app-border);
   --ku-ink: var(--app-text-primary);
   --ku-ink-soft: var(--app-text-secondary);
+  --ku-link: var(--app-link);
   --ku-header-from: var(--app-topbar-start);
   --ku-header-to: var(--app-topbar-end);
   --ku-accent-bg: var(--app-accent-background);
@@ -98,6 +100,61 @@ body {
   line-height: var(--app-line-height);
   background: var(--app-background);
   color: var(--app-text-primary);
+}
+
+/* ---------------------------------------------------------------------------
+   Global font colour — Appearance → Typography → "Font colour".
+   Headings, body copy, labels, form controls, tables, cards and dashboard
+   content all read the SAME token, so one setting re-inks the whole app.
+   Deliberately scoped so semantic colours (status chips, .text-negative,
+   buttons with their own colour, the coloured top bar) are left alone.
+   --------------------------------------------------------------------------- */
+h1, h2, h3, h4, h5, h6,
+.text-h1, .text-h2, .text-h3, .text-h4, .text-h5, .text-h6,
+.text-subtitle1, .text-subtitle2, .text-body1, .text-body2,
+.q-item__label, .q-field__label, .q-field__native, .q-field__input,
+.q-table thead th, .q-table tbody td,
+.q-card__section, .q-expansion-item__content, .q-tab__label {
+  color: var(--app-text-primary);
+}
+
+.q-table thead th,
+.text-caption,
+.q-field__label,
+.q-item__label--caption {
+  color: var(--app-text-secondary);
+}
+
+/* ---------------------------------------------------------------------------
+   Global link colour — Appearance → Typography → "Link colour".
+   Navigation links, table links, inline links and interactive text.
+   --------------------------------------------------------------------------- */
+a,
+a:visited,
+.app-link,
+.q-table a,
+.ku-link {
+  color: var(--app-link);
+  text-decoration: none;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+a:hover,
+.app-link:hover,
+.ku-link:hover {
+  color: var(--app-link);
+  opacity: 0.82;
+  text-decoration: underline;
+}
+
+/* Router links used as list/menu rows must keep their own component colours. */
+a.q-item,
+a.q-btn,
+a.q-tab,
+a.q-chip,
+a.q-card {
+  color: inherit;
+  text-decoration: none;
 }
 
 /* RTL content keeps its own reading stack on top of the chosen family. */

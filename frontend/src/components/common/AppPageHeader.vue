@@ -1,49 +1,42 @@
 <template>
-  <div class="ku-hero q-px-md q-py-md print-hide">
-    <div class="row items-center justify-between no-wrap q-col-gutter-sm">
-      <div class="row items-center no-wrap">
-        <div v-if="icon" class="ku-hero__icon-tile q-mr-md">
-          <q-icon :name="icon" size="28px" />
-        </div>
-        <div class="min-width-0">
-          <div class="ku-hero__title ellipsis-2-lines">{{ title }}</div>
-          <div v-if="subtitle" class="ku-hero__subtitle ellipsis-2-lines">{{ subtitle }}</div>
-          <div v-if="resolvedMeta.length" class="row items-center q-gutter-xs q-mt-xs">
-            <span v-for="(m, i) in resolvedMeta" :key="i" class="ku-hero__meta">
-              <q-icon v-if="m.icon" :name="m.icon" size="14px" />
-              {{ m.label }}
-            </span>
-          </div>
-        </div>
-      </div>
-      <div class="ku-hero__actions gt-xs">
-        <slot name="actions" />
-      </div>
-    </div>
-    <!-- Actions move below the title on phones so buttons never squeeze the heading -->
-    <div v-if="$slots.actions" class="lt-sm q-mt-sm">
+  <PageHeader
+    :title="title"
+    :subtitle="subtitle"
+    :icon="icon"
+    :meta="meta"
+    :breadcrumbs="breadcrumbs"
+    :show-back="showBack"
+    :back-fallback="backFallback"
+    :on-refresh="onRefresh"
+    :refreshing="refreshing"
+  >
+    <template v-if="$slots.actions" #actions>
       <slot name="actions" />
-    </div>
-  </div>
+    </template>
+  </PageHeader>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+/**
+ * AppPageHeader — kept as the historical name so every existing page keeps
+ * working, but it is now a thin pass-through to the unified <PageHeader>.
+ * That is what gives the whole application ONE header (back button, breadcrumb,
+ * title, meta chips, action row, refresh) without touching 28 page templates.
+ *
+ * New pages should import PageHeader directly.
+ */
+import PageHeader from './PageHeader.vue'
 
-const props = defineProps({
+defineProps({
   title: { type: String, required: true },
   subtitle: { type: String, default: '' },
   icon: { type: String, default: '' },
-  /** Optional metadata chips shown under the subtitle: 'text' or { icon, label }. */
+  /** Metadata chips shown under the subtitle: 'text' or { icon, label }. */
   meta: { type: Array, default: () => [] },
+  breadcrumbs: { type: Array, default: () => [] },
+  showBack: { type: Boolean, default: false },
+  backFallback: { type: [String, Object], default: () => ({ name: 'dashboard' }) },
+  onRefresh: { type: Function, default: null },
+  refreshing: { type: Boolean, default: false },
 })
-
-const resolvedMeta = computed(() =>
-  props.meta.map((m) => (typeof m === 'string' ? { label: m } : m)).filter((m) => m.label),
-)
 </script>
-
-<style lang="sass" scoped>
-.min-width-0
-  min-width: 0
-</style>

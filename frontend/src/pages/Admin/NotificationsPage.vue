@@ -6,6 +6,9 @@
         :title="t('nav.items.notifications')"
         icon="notifications"
         :meta="unreadMeta"
+        :breadcrumbs="[{ label: t('nav.sections.administration') }, { label: t('nav.items.notifications') }]"
+        :on-refresh="load"
+        :refreshing="loading"
       >
         <template #actions>
         <q-btn flat round dense icon="more_horiz" color="grey-7">
