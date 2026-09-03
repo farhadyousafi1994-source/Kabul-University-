@@ -1,10 +1,30 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
-    <AppPageHeader :title="title" :subtitle="subtitle" :icon="icon" :meta="headerMeta">
+    <PageHeader
+      :title="title"
+      :subtitle="subtitle"
+      :icon="icon"
+      :meta="headerMeta"
+      :breadcrumbs="breadcrumbs"
+      :show-back="showBack"
+      :back-fallback="backFallback"
+      :on-refresh="refreshAll"
+      :refreshing="loading"
+    >
       <template #actions>
         <slot name="headerActions" />
       </template>
-    </AppPageHeader>
+    </PageHeader>
+
+    <!-- Summary cards — above the filters, below the header (task §4). -->
+    <StatisticsCards
+      v-if="statsModule"
+      v-model:active="activeStatCard"
+      :module="statsModule"
+      :filters="statisticsFilters"
+      :refresh-key="statsRefreshKey"
+      @filter="applyCardFilter"
+    />
 
     <!-- Shared action bar (same buttons on every table) -->
     <TableActionBar
@@ -329,7 +349,8 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import AppPageHeader from 'src/components/common/AppPageHeader.vue'
+import PageHeader from 'src/components/common/PageHeader.vue'
+import StatisticsCards from 'src/components/common/StatisticsCards.vue'
 import TableActionBar from 'src/components/common/TableActionBar.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
@@ -365,6 +386,13 @@ const props = defineProps({
   exportFilename: { type: String, default: '' },
   /** Metadata chips for the page hero, e.g. ['1,240 records'] or [{icon,label}]. */
   headerMeta: { type: Array, default: () => [] },
+  /** Statistics module for the summary cards (see src/config/statistics.js). */
+  statsModule: { type: String, default: '' },
+  /** Breadcrumb trail rendered in the page header. */
+  breadcrumbs: { type: Array, default: () => [] },
+  /** Show the Back button in the header (nested / drill-down tables). */
+  showBack: { type: Boolean, default: false },
+  backFallback: { type: [String, Object], default: () => ({ name: 'dashboard' }) },
 })
 
 const { t } = useI18n()
@@ -421,6 +449,44 @@ function clearFieldError(key) {
 
 const filterValues = reactive({})
 for (const f of props.filters) filterValues[f.key] = null
+
+// --- summary cards ------------------------------------------------------------
+// The cards describe the SAME query the table is showing, so they take the live
+// search term and filters; clicking a card writes its filter into that very
+// state, which is what keeps cards, filters and table permanently in sync.
+const activeStatCard = ref('')
+const statsRefreshKey = ref(0)
+
+const statisticsFilters = computed(() => {
+  const out = {}
+  if (search.value) out.search = search.value
+  for (const [k, v] of Object.entries(filterValues)) {
+    if (v !== null && v !== undefined && v !== '') out[k] = v
+  }
+  return out
+})
+
+/** A card was clicked (or cleared): patch the page filters, reload page 1. */
+function applyCardFilter(patch) {
+  if (!patch) {
+    // Clearing only drops the keys the card owned, never the user's own filters.
+    for (const key of Object.keys(filterValues)) {
+      if (key === 'status') filterValues[key] = null
+    }
+  } else {
+    for (const [key, value] of Object.entries(patch)) {
+      if (key in filterValues) filterValues[key] = value
+    }
+  }
+  page.value = 1
+  load()
+}
+
+/** Refresh button: same query, fresh data, cards included. */
+async function refreshAll() {
+  statsRefreshKey.value += 1
+  await load()
+}
 
 const canCreate = computed(() => authStore.hasPermission(`${props.perms}.create`))
 const canEdit = computed(() => authStore.hasPermission(`${props.perms}.update`))
@@ -516,6 +582,7 @@ async function save() {
         Object.assign(form, props.createForm?.defaults || {})
       }
       await load()
+      statsRefreshKey.value += 1
     },
   })
 }
@@ -537,6 +604,7 @@ async function confirmDestroy(row) {
     onConfirmed: async () => {
       notify.success(notify.archived(entityName.value))
       await load()
+      statsRefreshKey.value += 1
     },
   })
 }
@@ -573,6 +641,7 @@ async function bulkDestroy() {
         }
         selected.value = []
         await load()
+        statsRefreshKey.value += 1
       },
     })
     if (!ok) selected.value = []

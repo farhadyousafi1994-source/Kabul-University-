@@ -1,5 +1,6 @@
 <template>
   <DataTablePage
+    stats-module="rooms"
     :title="t('organization.rooms.title')"
     :subtitle="t('organization.rooms.subtitle')"
     icon="meeting_room"

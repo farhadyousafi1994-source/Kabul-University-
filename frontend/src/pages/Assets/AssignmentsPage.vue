@@ -4,7 +4,17 @@
       :title="t('assignments.title')"
       :subtitle="t('assignments.subtitle')"
       icon="assignment_ind"
-      :meta="headerMeta"
+      :breadcrumbs="[{ label: t('nav.sections.assets') }, { label: t('assignments.title') }]"
+      :on-refresh="refreshAll"
+      :refreshing="loading"
+    />
+
+    <StatisticsCards
+      v-model:active="activeStatCard"
+      module="assignments"
+      :filters="statisticsFilters"
+      :refresh-key="statsRefreshKey"
+      @filter="applyCardFilter"
     />
 
     <!-- Shared action bar (same buttons on every table) -->
@@ -392,6 +402,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
+import StatisticsCards from 'src/components/common/StatisticsCards.vue'
 import TableActionBar from 'src/components/common/TableActionBar.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
@@ -447,11 +458,31 @@ const columns = computed(() => [
   { name: 'actions', label: '', field: 'id', align: 'right' },
 ])
 
-const headerMeta = computed(() => [
-  { icon: 'assignment_ind', label: `${t('assignments.statTotal')}: ${total.value}` },
-  { icon: 'check_circle', label: `${t('assignments.statActive')}: ${countBy('active')}` },
-  { icon: 'event_busy', label: `${t('assignments.statOverdue')}: ${countBy('overdue')}` },
-])
+// --- summary cards ------------------------------------------------------------
+// These replace the old header chips, which could only count the CURRENT PAGE.
+// The cards are computed by the API over the whole (filtered) result set.
+const activeStatCard = ref('')
+const statsRefreshKey = ref(0)
+
+const statisticsFilters = computed(() => {
+  const out = {}
+  if (search.value) out.search = search.value
+  if (filters.status) out.status = filters.status
+  if (filters.employee_id) out.employee_id = filters.employee_id
+  return out
+})
+
+function applyCardFilter(patch) {
+  filters.status = patch?.status ?? null
+  page.value = 1
+  load()
+}
+
+/** Refresh: rows + statistics, filters and search preserved. */
+async function refreshAll() {
+  statsRefreshKey.value += 1
+  await load()
+}
 
 const barActions = computed(() => [
   {
@@ -465,10 +496,6 @@ const barActions = computed(() => [
 ])
 
 const hasActiveFilters = computed(() => Boolean(search.value || filters.status || filters.employee_id))
-
-function countBy(status) {
-  return rows.value.filter((r) => r.status === status).length
-}
 
 const employeeName = (row) => row?.employee_name || row?.assignee_name || ''
 const initials = (name) => String(name || '?').split(/\s+/).slice(0, 2).map((p) => p[0] || '').join('').toUpperCase()
@@ -504,6 +531,11 @@ function resetFilters() {
 watch(page, load)
 watch(search, () => { page.value = 1; load() })
 watch(() => [filters.status, filters.employee_id], () => { page.value = 1; load() })
+
+// Selecting a status by hand must move (or clear) the highlighted card.
+watch(() => filters.status, (status) => {
+  activeStatCard.value = status && ['active', 'returned', 'overdue'].includes(status) ? status : ''
+})
 
 // -- assign ------------------------------------------------------------------
 const dialogOpen = ref(false)

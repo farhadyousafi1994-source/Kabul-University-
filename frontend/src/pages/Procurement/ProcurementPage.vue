@@ -1,6 +1,19 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
-    <AppPageHeader :title="t('procurement.title')" :subtitle="t('procurement.subtitle')" icon="shopping_cart" />
+    <AppPageHeader
+      :title="t('procurement.title')" :subtitle="t('procurement.subtitle')" icon="shopping_cart"
+      :breadcrumbs="[{ label: t('nav.sections.operations') }, { label: t('procurement.title') }]"
+      :on-refresh="refreshAll"
+      :refreshing="loading"
+    />
+
+    <StatisticsCards
+      v-model:active="activeStatCard"
+      module="procurement"
+      :filters="statisticsFilters"
+      :refresh-key="statsRefreshKey"
+      @filter="applyCardFilter"
+    />
 
     <!-- Shared action bar (same buttons on every table) -->
     <TableActionBar
@@ -160,6 +173,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
+import StatisticsCards from 'src/components/common/StatisticsCards.vue'
 import TableActionBar from 'src/components/common/TableActionBar.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
@@ -259,6 +273,30 @@ const poItemColumns = computed(() => [
   { name: 'received_quantity', label: t('status.received'), field: 'received_quantity', align: 'right' },
   { name: 'unit_price', label: t('financial.depreciation.originalCost'), field: 'unit_price', align: 'right' },
 ])
+
+// --- summary cards ------------------------------------------------------------
+const activeStatCard = ref('')
+const statsRefreshKey = ref(0)
+
+const statisticsFilters = computed(() => {
+  const out = {}
+  for (const [k, v] of Object.entries(filters)) {
+    if (v !== null && v !== undefined && v !== '') out[k] = v
+  }
+  return out
+})
+
+function applyCardFilter(patch) {
+  filters.status = patch?.status ?? null
+  page.value = 1
+  load()
+}
+
+/** Refresh: reload the table and the summary cards, keeping the current view. */
+async function refreshAll() {
+  statsRefreshKey.value += 1
+  await load()
+}
 
 async function load() {
   loading.value = true

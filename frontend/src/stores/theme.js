@@ -191,6 +191,7 @@ export const useThemeStore = defineStore('theme', {
       const body = document.body
       const s = this.settings
       const c = this.colors
+      const custom = s.custom || {}
       const dark = this.resolvedMode === 'dark'
 
       // Quasar brand variables — every Quasar component reads these.
@@ -215,8 +216,12 @@ export const useThemeStore = defineStore('theme', {
         '--app-background': dark ? '#121418' : c.background,
         '--app-surface': dark ? '#1D2025' : c.surface,
         '--app-card': dark ? '#1D2025' : c.card,
-        '--app-text-primary': dark ? '#E8ECF4' : c.text,
-        '--app-text-secondary': dark ? '#97A3B8' : c.textSecondary,
+        // A user-chosen font colour wins over the mode default — that is the
+        // whole point of the setting — so only fall back to the dark ink when
+        // the token was not overridden.
+        '--app-text-primary': custom.text || (dark ? '#E8ECF4' : c.text),
+        '--app-text-secondary': custom.textSecondary || (dark ? '#97A3B8' : c.textSecondary),
+        '--app-link': custom.link || c.link || c.secondary,
         '--app-border': dark ? 'rgba(255,255,255,.10)' : c.border,
         '--app-hover': dark ? 'rgba(255,255,255,.06)' : c.hover,
         '--app-focus': c.focus,
@@ -242,6 +247,7 @@ export const useThemeStore = defineStore('theme', {
       root.style.setProperty('--ku-card-bg', tokens['--app-card'])
       root.style.setProperty('--ku-ink', tokens['--app-text-primary'])
       root.style.setProperty('--ku-ink-soft', tokens['--app-text-secondary'])
+      root.style.setProperty('--ku-link', tokens['--app-link'])
       root.style.setProperty('--ku-card-border', tokens['--app-border'])
       root.style.setProperty('--ku-line', tokens['--app-border'])
       root.style.setProperty('--ku-navy-2', c.secondary)
@@ -384,6 +390,25 @@ export const useThemeStore = defineStore('theme', {
 
     setFontFamily(id) {
       this.patch({ fontFamily: id })
+    },
+
+    /** Global font (text) colour — headings, body, labels, tables, cards. */
+    setFontColor(value) {
+      this.updateCustomColor('text', value)
+    },
+
+    /** Global link colour — nav links, table links, inline/interactive text. */
+    setLinkColor(value) {
+      this.updateCustomColor('link', value)
+    },
+
+    /** Drop the font/link overrides so they follow the active preset again. */
+    clearFontColor() {
+      this.clearCustomColor('text')
+    },
+
+    clearLinkColor() {
+      this.clearCustomColor('link')
     },
 
     setBorderRadius(radius) {

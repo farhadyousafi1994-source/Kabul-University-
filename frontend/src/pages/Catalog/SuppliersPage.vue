@@ -1,5 +1,6 @@
 <template>
   <DataTablePage
+    stats-module="suppliers"
     :title="t('catalog.suppliers.title')"
     :subtitle="t('catalog.suppliers.subtitle')"
     icon="local_shipping"

@@ -10,6 +10,10 @@
           <span class="text-caption q-ml-xs gt-sm ku-header-sub">{{ t('common.appName') }}</span>
         </q-toolbar-title>
 
+        <!-- Global search (Ctrl/⌘ + K) -->
+        <GlobalSearch class="ku-header-search gt-sm q-mr-sm" />
+        <q-btn flat round icon="search" class="lt-md" :aria-label="t('search.placeholder')" @click="mobileSearchOpen = true" />
+
         <!-- Language Selector -->
         <LanguageSwitcher flat text-color="white" class="q-mr-xs" />
 
@@ -124,28 +128,40 @@
         </div>
         <q-separator />
 
-        <q-list padding class="menu-list">
-          <template v-for="section in menuSections" :key="section.label">
-            <div v-if="section.label && !miniSidebar" class="text-overline text-grey-6 q-px-md q-mt-md q-mb-xs">
-              {{ section.label }}
-            </div>
-            <q-item
-              v-for="item in section.items"
-              :key="item.name"
-              :to="{ name: item.name }"
-              exact
-              clickable
-              v-ripple
-              class="q-mx-sm rounded-borders menu-item"
+        <!-- Sidebar menu search -->
+        <SidebarSearch v-if="!miniSidebar" v-model="menuFilter" />
+
+        <nav class="ku-nav" :aria-label="t('nav.sections.general')">
+          <template v-for="group in visibleMenu" :key="group.key">
+            <!-- Single-page modules stay flat links; only real modules with
+                 sub-pages become dropdowns. -->
+            <router-link
+              v-if="group.items.length === 1 && !group.alwaysGroup"
+              :to="{ name: group.items[0].name }"
+              class="ku-nav__solo"
+              :class="{ 'ku-nav__solo--active': route.name === group.items[0].name, 'ku-nav__solo--mini': miniSidebar }"
             >
-              <q-item-section avatar class="q-pr-none" :class="{ 'menu-item__icon-only': miniSidebar }">
-                <q-icon :name="item.icon" size="20px" />
-              </q-item-section>
-              <q-item-section v-if="!miniSidebar">{{ item.title }}</q-item-section>
-              <q-tooltip v-if="miniSidebar" anchor="bottom start" self="top start">{{ item.title }}</q-tooltip>
-            </q-item>
+              <q-icon :name="group.items[0].icon" size="19px" />
+              <span v-if="!miniSidebar" class="ku-nav__solo-label">{{ group.items[0].title }}</span>
+              <q-tooltip v-if="miniSidebar" anchor="center right" self="center left">{{ group.items[0].title }}</q-tooltip>
+            </router-link>
+
+            <SidebarDropdown
+              v-else
+              :label="group.label"
+              :icon="group.icon"
+              :items="group.items"
+              :mini="miniSidebar"
+              :expanded="isExpanded(group.key)"
+              @toggle="toggleGroup(group.key)"
+            />
           </template>
-        </q-list>
+
+          <div v-if="!visibleMenu.length" class="ku-nav__empty">
+            <q-icon name="search_off" size="20px" />
+            {{ t('nav.noMenuResults', { term: menuFilter }) }}
+          </div>
+        </nav>
       </q-scroll-area>
     </q-drawer>
 
@@ -162,6 +178,15 @@
         <div class="text-caption gt-xs">{{ t('common.version') }}</div>
       </q-toolbar>
     </q-footer>
+
+    <!-- Global search on phones — same component, full-width sheet -->
+    <q-dialog v-model="mobileSearchOpen" position="top">
+      <q-card class="q-dialog-card ku-mobile-search">
+        <q-card-section class="q-pa-sm">
+          <GlobalSearch />
+        </q-card-section>
+      </q-card>
+    </q-dialog>
 
     <!-- Change password dialog -->
     <q-dialog v-model="changePasswordDialog">
@@ -208,16 +233,20 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref, watch, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from 'src/stores/auth'
 import { useNotificationStore } from 'src/stores/notifications'
 import { useThemeStore } from 'src/stores/theme'
 import LanguageSwitcher from 'src/components/common/LanguageSwitcher.vue'
+import GlobalSearch from 'src/components/common/GlobalSearch.vue'
+import SidebarSearch from 'src/components/common/SidebarSearch.vue'
+import SidebarDropdown from 'src/components/common/SidebarDropdown.vue'
 import ChangePasswordDialog from 'src/components/auth/ChangePasswordDialog.vue'
 
 const router = useRouter()
+const route = useRoute()
 const { t, te } = useI18n()
 const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
@@ -226,6 +255,8 @@ const themeStore = useThemeStore()
 const drawerOpen = ref(true)
 const changePasswordDialog = ref(false)
 const themeOpen = ref(false)
+const mobileSearchOpen = ref(false)
+const menuFilter = ref('')
 
 // `resolvedMode` collapses `system` into the mode the OS currently reports, so
 // the header toggle always flips between two concrete states.
@@ -243,36 +274,103 @@ function toggleDark() {
 }
 
 // ---------------------------------------------------------------------------
-// Sidebar menu — derived dynamically from the router table of contents and
-// localized reactively using vue-i18n.
+// Sidebar menu
 // ---------------------------------------------------------------------------
-const menuSections = computed(() => {
+// The menu is DERIVED from the router table (title / icon / section / order /
+// permission), so a new route appears in the sidebar automatically and can
+// never drift out of sync with the routes that actually exist. Sections with
+// more than one page render as collapsible dropdowns; a section with a single
+// page (Dashboard) stays a flat link.
+
+/** Icon shown on the collapsed group header, per section key. */
+const SECTION_ICONS = {
+  'nav.sections.general': 'dashboard',
+  'nav.sections.assets': 'inventory_2',
+  'nav.sections.hr': 'badge',
+  'nav.sections.operations': 'sync_alt',
+  'nav.sections.maintenance': 'build',
+  'nav.sections.catalog': 'category',
+  'nav.sections.organization': 'account_balance',
+  'nav.sections.administration': 'settings',
+}
+
+const menuGroups = computed(() => {
   const toc = router.getRoutes()
     .filter((r) => r.meta?.title && r.meta?.section && !r.meta?.hidden)
     .filter((r) => !r.meta.permission || authStore.hasPermission(r.meta.permission))
     .sort((a, b) => (a.meta.order || 0) - (b.meta.order || 0))
 
-  const sections = []
+  const groups = []
   const index = new Map()
-  for (const route of toc) {
-    const sectionKey = route.meta.sectionKey
-    const sectionLabel = sectionKey && te(sectionKey) ? t(sectionKey) : route.meta.section
-    const titleKey = route.meta.titleKey
-    const itemTitle = titleKey && te(titleKey) ? t(titleKey) : route.meta.title
 
-    if (!index.has(sectionLabel)) {
-      const entry = { label: sectionLabel, items: [] }
-      index.set(sectionLabel, entry)
-      sections.push(entry)
+  for (const r of toc) {
+    const key = r.meta.sectionKey || r.meta.section
+    const label = r.meta.sectionKey && te(r.meta.sectionKey) ? t(r.meta.sectionKey) : r.meta.section
+    const title = r.meta.titleKey && te(r.meta.titleKey) ? t(r.meta.titleKey) : r.meta.title
+
+    if (!index.has(key)) {
+      const entry = { key, label, icon: SECTION_ICONS[key] || 'folder', items: [] }
+      index.set(key, entry)
+      groups.push(entry)
     }
-    index.get(sectionLabel).items.push({
-      name: route.name,
-      title: itemTitle,
-      icon: route.meta.icon,
-    })
+    index.get(key).items.push({ name: r.name, title, icon: r.meta.icon })
   }
-  return sections
+
+  return groups
 })
+
+/** Route name -> section key, so the active parent can auto-expand. */
+const groupOfRoute = computed(() => {
+  const map = {}
+  for (const g of menuGroups.value) for (const i of g.items) map[i.name] = g.key
+  return map
+})
+
+// Sidebar search: filters items (and their parents) locally — no request, no
+// reload, no flicker. Matching groups are expanded automatically; clearing the
+// box restores exactly the previous expansion state.
+const visibleMenu = computed(() => {
+  const term = menuFilter.value.trim().toLowerCase()
+  if (!term) return menuGroups.value
+
+  const out = []
+  for (const g of menuGroups.value) {
+    const groupMatches = g.label.toLowerCase().includes(term)
+    const items = groupMatches ? g.items : g.items.filter((i) => i.title.toLowerCase().includes(term))
+    // `alwaysGroup` keeps a one-hit section rendered as a labelled group while
+    // searching, so the user still sees WHERE the match lives.
+    if (items.length) out.push({ ...g, items, alwaysGroup: true })
+  }
+  return out
+})
+
+const expandedGroups = ref(new Set())
+
+function isExpanded(key) {
+  // While searching every matching group is open; otherwise the user's own
+  // expansion state (seeded with the active route's group) decides.
+  if (menuFilter.value.trim()) return true
+  return expandedGroups.value.has(key)
+}
+
+function toggleGroup(key) {
+  const next = new Set(expandedGroups.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  expandedGroups.value = next
+}
+
+/** Always keep the group that owns the current page open. */
+watch(
+  () => route.name,
+  (name) => {
+    const key = groupOfRoute.value[name]
+    if (key && !expandedGroups.value.has(key)) {
+      expandedGroups.value = new Set([...expandedGroups.value, key])
+    }
+  },
+  { immediate: true },
+)
 
 function modeIcon(mode) {
   return { light: 'light_mode', dark: 'dark_mode', system: 'desktop_windows' }[mode] || 'contrast'
@@ -320,6 +418,72 @@ onMounted(() => {
 </script>
 
 <style lang="sass">
+.ku-header-search
+  flex: 1 1 320px
+  max-width: 420px
+
+.ku-mobile-search
+  width: 96vw
+  max-width: 620px
+
+  .gsearch
+    max-width: none
+
+  .gsearch__field
+    background: var(--app-background)
+    border-color: var(--app-border)
+
+  .gsearch__input
+    color: var(--app-text-primary)
+
+    &::placeholder
+      color: var(--app-text-secondary)
+
+  .gsearch__icon
+    color: var(--app-text-secondary)
+
+.ku-nav
+  padding: 6px 0 14px
+
+  &__solo
+    display: flex
+    align-items: center
+    gap: 10px
+    margin: 0 8px 2px
+    padding: 8px 10px
+    border-radius: var(--app-radius)
+    font-size: 13px
+    font-weight: 600
+    color: var(--app-text-primary)
+    text-decoration: none
+    transition: background-color .14s ease, color .14s ease
+
+    &:hover
+      background: var(--app-hover)
+      text-decoration: none
+
+    &--mini
+      justify-content: center
+
+    &--active
+      background: color-mix(in srgb, var(--q-primary) 12%, transparent)
+      color: var(--q-primary)
+
+  &__solo-label
+    overflow: hidden
+    text-overflow: ellipsis
+    white-space: nowrap
+
+  &__empty
+    display: flex
+    align-items: center
+    justify-content: center
+    gap: 6px
+    padding: 24px 14px
+    font-size: 12px
+    color: var(--app-text-secondary)
+    text-align: center
+
 .ku-header-sub
   color: rgba(255, 255, 255, .72)
 
@@ -349,37 +513,6 @@ onMounted(() => {
     background: linear-gradient(160deg, #F3D48B 0%, #C8862D 100%)
     color: #0B1626
     box-shadow: 0 4px 12px rgba(200, 134, 45, .35)
-
-.menu-list .menu-item
-  color: var(--ku-ink)
-  border-radius: 10px
-  margin-bottom: 2px
-  transition: background-color .12s ease
-
-  .q-item__section--avatar
-    min-width: 34px
-
-  .q-icon
-    color: var(--ku-ink-soft)
-    transition: color .12s ease
-
-  &:hover
-    background: color-mix(in srgb, var(--ku-navy-2) 6%, transparent)
-
-    .q-icon
-      color: var(--ku-navy-2)
-
-.menu-item.q-router-link--active
-  color: var(--ku-navy-2)
-  background: color-mix(in srgb, var(--q-primary) 12%, transparent)
-  font-weight: 700
-
-  .q-icon
-    color: var(--q-primary)
-
-.body--dark
-  .menu-item.q-router-link--active
-    color: #fff
 
 .ku-drawer--floating .q-drawer__content
   margin: 10px

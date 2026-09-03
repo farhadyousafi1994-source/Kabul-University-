@@ -1,6 +1,11 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
-    <AppPageHeader :title="t('admin.roles.title')" :subtitle="t('admin.roles.subtitle')" icon="admin_panel_settings" />
+    <AppPageHeader
+      :title="t('admin.roles.title')" :subtitle="t('admin.roles.subtitle')" icon="admin_panel_settings"
+      :breadcrumbs="[{ label: t('nav.sections.administration') }, { label: t('admin.roles.title') }]"
+      :on-refresh="refreshAll"
+      :refreshing="loading"
+    />
 
     <!-- Shared action bar (same buttons on every table) -->
     <TableActionBar
@@ -145,6 +150,11 @@ const permissionGroups = computed(() => {
 
 function permissionsByGroup(group) {
   return allPermissions.value.filter((p) => p.name.startsWith(group + '.'))
+}
+
+/** Refresh: reload the table without a page reload, keeping filters intact. */
+async function refreshAll() {
+  await load()
 }
 
 async function load() {

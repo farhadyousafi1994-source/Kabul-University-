@@ -49,6 +49,7 @@ export const SUPPORTED_LANGUAGES = [
 ]
 
 import { deepMerge, extensions } from './extensions.js'
+import { uiExtensions } from './ui.extensions.js'
 
 // Base bundles, then the additive keys introduced by the global CRUD /
 // notification layer and the Theme & Appearance center. `deepMerge` walks the
@@ -56,6 +57,10 @@ import { deepMerge, extensions } from './extensions.js'
 // already had and only gain the new ones.
 const messages = { en, fa, ps, ar }
 for (const [code, extra] of Object.entries(extensions)) {
+  if (messages[code]) deepMerge(messages[code], extra)
+}
+// Page header / statistics cards / global + sidebar search / typography colours.
+for (const [code, extra] of Object.entries(uiExtensions)) {
   if (messages[code]) deepMerge(messages[code], extra)
 }
 

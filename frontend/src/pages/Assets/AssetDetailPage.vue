@@ -1,21 +1,45 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md" v-if="asset">
-    <!-- Header -->
-    <div class="row items-center q-mb-md no-wrap">
-      <q-btn flat round dense icon="arrow_back" :aria-label="t('common.back')" :to="{ name: 'assets' }" class="q-mr-sm" />
-      <q-icon name="inventory_2" size="30px" color="primary" class="q-mr-sm" />
-      <div class="col">
-        <div class="text-h6 text-weight-bold q-mb-none">{{ asset.name }}</div>
-        <div class="text-caption text-grey-6">{{ asset.asset_code }} · <StatusBadge :value="asset.status" /></div>
-      </div>
-      <q-space />
-      <div class="row q-gutter-xs no-wrap">
-        <q-btn v-if="canAssign && ['available', 'reserved'].includes(asset.status)" color="info" size="sm" icon="assignment_ind" :label="t('assets.assignAsset')" @click="assignOpen = true" />
-        <q-btn v-if="canTransfer && !['disposed', 'retired'].includes(asset.status)" color="primary" size="sm" outline icon="swap_horiz" :label="t('assets.transferAsset')" @click="transferOpen = true" />
-        <q-btn v-if="canEdit && activeAssignment" color="primary" size="sm" outline icon="undo" :label="t('assets.returnAsset')" @click="returnAsset" />
-        <q-btn v-if="canEdit" color="primary" size="sm" icon="edit" :label="t('common.edit')" :to="{ name: 'assets' }" />
-      </div>
-    </div>
+    <!-- Header — unified page header with Back, breadcrumb and page actions -->
+    <AppPageHeader
+      :title="asset.name"
+      :subtitle="asset.asset_code"
+      icon="inventory_2"
+      show-back
+      :back-fallback="{ name: 'assets' }"
+      :breadcrumbs="[{ label: t('nav.sections.assets') }, { label: t('assets.title'), to: { name: 'assets' } }, { label: asset.asset_code || asset.name }]"
+      :meta="detailMeta"
+      :on-refresh="refreshAll"
+      :refreshing="loading"
+    >
+      <template #actions>
+        <ActionButton
+          v-if="canAssign && ['available', 'reserved'].includes(asset.status)"
+          variant="primary"
+          icon="assignment_ind"
+          :label="t('assets.assignAsset')"
+          @click="assignOpen = true"
+        />
+        <ActionButton
+          v-if="canTransfer && !['disposed', 'retired'].includes(asset.status)"
+          icon="swap_horiz"
+          :label="t('assets.transferAsset')"
+          @click="transferOpen = true"
+        />
+        <ActionButton
+          v-if="canEdit && activeAssignment"
+          icon="undo"
+          :label="t('assets.returnAsset')"
+          @click="returnAsset"
+        />
+        <ActionButton
+          v-if="canEdit"
+          icon="edit"
+          :label="t('common.edit')"
+          :to="{ name: 'assets' }"
+        />
+      </template>
+    </AppPageHeader>
 
     <div class="row q-col-gutter-md">
       <!-- Left column: identity & finance -->
@@ -286,6 +310,7 @@ import { useI18n } from 'vue-i18n'
 import QRCode from 'qrcode'
 import JsBarcode from 'jsbarcode'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
+import ActionButton from 'src/components/common/ActionButton.vue'
 import EmployeeSelect from 'src/components/common/EmployeeSelect.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
 import ErrorState from 'src/components/common/ErrorState.vue'
@@ -299,7 +324,7 @@ import { notify } from 'src/utils/notify'
 import { useAction } from 'src/composables/useAction'
 import { confirmAction, confirmDelete } from 'src/utils/confirm'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const route = useRoute()
 const authStore = useAuthStore()
 const { campuses, faculties, departments, buildings, floors, rooms, opts } = useOptions()
@@ -358,6 +383,21 @@ const canEdit = computed(() => authStore.hasPermission('assets.update'))
 
 function timelineIcon(type) {
   return { location: 'place', assignment: 'assignment_ind', maintenance: 'build', transfer: 'swap_horiz', request: 'request_page' }[type] || 'history'
+}
+
+/** Chips that used to live in the old inline header row. */
+const detailMeta = computed(() => {
+  if (!asset.value) return []
+  return [
+    { icon: 'label', label: te(`status.${asset.value.status}`) ? t(`status.${asset.value.status}`) : asset.value.status },
+    asset.value.category_name ? { icon: 'category', label: asset.value.category_name } : null,
+    asset.value.department_name ? { icon: 'account_tree', label: asset.value.department_name } : null,
+  ].filter(Boolean)
+})
+
+/** Refresh: re-read the asset and its related lists without a page reload. */
+async function refreshAll() {
+  await Promise.all([load(), loadAux()])
 }
 
 async function load() {

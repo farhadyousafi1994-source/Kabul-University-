@@ -1,5 +1,6 @@
 <template>
   <DataTablePage
+    stats-module="categories"
     :title="t('catalog.categories.title')"
     :subtitle="t('catalog.categories.subtitle')"
     icon="category"

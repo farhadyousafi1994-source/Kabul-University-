@@ -1,28 +1,23 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
-    <AppPageHeader :title="t('hr.title')" :subtitle="t('hr.subtitle')" icon="badge" />
+    <AppPageHeader
+      :title="t('hr.title')"
+      :subtitle="t('hr.subtitle')"
+      icon="badge"
+      :breadcrumbs="[{ label: t('nav.sections.hr') }, { label: t('hr.title') }]"
+      :on-refresh="refreshAll"
+      :refreshing="loading"
+    />
 
-    <!-- Stat cards -->
-    <div class="row q-col-gutter-sm q-mb-md">
-      <div class="col-6 col-sm-4 col-md-2">
-        <StatCard :label="t('hr.statTotal')" :value="stats.total" icon="group" color="primary" />
-      </div>
-      <div class="col-6 col-sm-4 col-md-2">
-        <StatCard :label="t('hr.statActive')" :value="stats.active" icon="check_circle" color="positive" :side="sideOf(stats.active, stats.total)" />
-      </div>
-      <div class="col-6 col-sm-4 col-md-2">
-        <StatCard :label="t('hr.statOnLeave')" :value="stats.on_leave" icon="beach_access" color="orange" :side="sideOf(stats.on_leave, stats.total)" />
-      </div>
-      <div class="col-6 col-sm-4 col-md-2">
-        <StatCard :label="t('hr.statInactive')" :value="stats.inactive" icon="do_not_disturb_on" color="grey-7" :side="sideOf(stats.inactive, stats.total)" />
-      </div>
-      <div class="col-6 col-sm-4 col-md-2">
-        <StatCard :label="t('hr.statWithAssets')" :value="stats.with_assets" icon="devices" color="primary" :side="sideOf(stats.with_assets, stats.total)" />
-      </div>
-      <div class="col-6 col-sm-4 col-md-2">
-        <StatCard :label="t('hr.statAssets')" :value="stats.assets" icon="inventory_2" color="secondary" />
-      </div>
-    </div>
+    <!-- Summary cards — server-aggregated, so they describe every matching
+         employee rather than only the rows on the current page. -->
+    <StatisticsCards
+      v-model:active="activeStatCard"
+      module="employees"
+      :filters="statisticsFilters"
+      :refresh-key="statsRefreshKey"
+      @filter="applyCardFilter"
+    />
 
     <!-- Shared action bar (same buttons on every table) -->
     <TableActionBar
@@ -226,7 +221,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppPageHeader from 'src/components/common/AppPageHeader.vue'
-import StatCard from 'src/components/common/StatCard.vue'
+import StatisticsCards from 'src/components/common/StatisticsCards.vue'
 import StatusBadge from 'src/components/common/StatusBadge.vue'
 import TableActionBar from 'src/components/common/TableActionBar.vue'
 import EmptyState from 'src/components/common/EmptyState.vue'
@@ -254,7 +249,6 @@ const tableSort = ref({ sortBy: 'full_name', descending: false, rowsPerPage: 0 }
 const loading = ref(false)
 const error = ref('')
 
-const stats = reactive({ total: 0, active: 0, inactive: 0, on_leave: 0, with_assets: 0, assets: 0 })
 
 const dialogOpen = ref(false)
 const editing = ref(null)
@@ -294,7 +288,6 @@ const employmentTypeOptions = computed(() => [
 const typeLabel = (v) => ({ full_time: t('hr.fullTime'), part_time: t('hr.partTime'), contract: t('hr.contract') }[v] || v || '—')
 const typeColor = (v) => ({ full_time: 'secondary', part_time: 'indigo', contract: 'deep-orange' }[v] || 'grey-7')
 const initials = (name) => String(name || '?').split(/\s+/).slice(0, 2).map((p) => p[0] || '').join('').toUpperCase()
-const sideOf = (n, totalN) => (totalN ? Math.round((n / totalN) * 100) : 0) + '%'
 const required = (v) => (v !== null && v !== undefined && String(v).trim() !== '') || t('common.required')
 const emailRule = (v) => !v || /^\S+@\S+\.\S+$/.test(String(v)) || t('common.invalidEmail')
 
@@ -349,19 +342,32 @@ async function load() {
   }
 }
 
-async function loadStats() {
-  try {
-    const { data } = await employeeService.list({ per_page: 100 })
-    const all = data?.data || []
-    stats.total = data?.meta?.total ?? all.length
-    stats.active = all.filter((e) => e.status === 'active').length
-    stats.inactive = all.filter((e) => e.status === 'inactive').length
-    stats.on_leave = all.filter((e) => e.status === 'on_leave').length
-    stats.with_assets = all.filter((e) => e.assets_count > 0).length
-    stats.assets = all.reduce((s, e) => s + (e.assets_count || 0), 0)
-  } catch {
-    /* stats are decorative — the table shows the real error state */
-  }
+// --- summary cards ------------------------------------------------------------
+// The old client-side `loadStats()` fetched 100 rows and counted them in the
+// browser, so the numbers were wrong as soon as there were more employees than
+// that. They now come from one aggregated API call over the full result set.
+const activeStatCard = ref('')
+const statsRefreshKey = ref(0)
+
+const statisticsFilters = computed(() => {
+  const out = {}
+  if (search.value) out.search = search.value
+  if (filters.department_id) out.department_id = filters.department_id
+  if (filters.status) out.status = filters.status
+  if (filters.employment_type) out.employment_type = filters.employment_type
+  return out
+})
+
+function applyCardFilter(patch) {
+  filters.status = patch?.status ?? null
+  page.value = 1
+  load()
+}
+
+/** Refresh: rows + statistics, preserving search, filters, sorting and page. */
+async function refreshAll() {
+  statsRefreshKey.value += 1
+  await load()
 }
 
 function onSort(props) {
@@ -375,6 +381,11 @@ function onSort(props) {
 watch(page, load)
 watch(search, () => { page.value = 1; load() })
 watch(() => [filters.department_id, filters.status, filters.employment_type], () => { page.value = 1; load() })
+
+// Keep the highlighted card in step with a status chosen from the select.
+watch(() => filters.status, (status) => {
+  activeStatCard.value = ['active', 'inactive', 'on_leave'].includes(status) ? status : ''
+})
 
 // ----- create / edit --------------------------------------------------------
 /** Delegate to the composable so error state can never drift out of sync. */
@@ -427,7 +438,8 @@ function save() {
       onSuccess: async () => {
         dialogOpen.value = false
         editing.value = null
-        await Promise.all([load(), loadStats()])
+        await load()
+        statsRefreshKey.value += 1
       },
     },
   )
@@ -442,7 +454,8 @@ async function doDelete() {
     await employeeService.remove(row.id)
     notify.success(t('common.deletedSuccessEntity', { entity: t('common.entities.employee') }))
     pendingDelete.value = null
-    await Promise.all([load(), loadStats()])
+    await load()
+        statsRefreshKey.value += 1
   } catch (e) {
     notify.error(e.message || t('common.saveFailed'))
   } finally {
@@ -452,7 +465,6 @@ async function doDelete() {
 
 onMounted(() => {
   load()
-  loadStats()
 })
 </script>
 

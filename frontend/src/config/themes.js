@@ -23,7 +23,7 @@ export const COLOR_TOKENS = [
   // Backgrounds
   'background', 'surface', 'card',
   // Typography
-  'text', 'textSecondary',
+  'text', 'textSecondary', 'link',
   // UI elements
   'border', 'hover', 'focus',
   // Status
@@ -96,6 +96,10 @@ export function expandColors({ primary, secondary, accent, topBarStart, topBarEn
     accentBackground: dark ? tint(base.accent, 0.86, '#1D2025') : tint(base.accent, 0.9),
     sidebarBackground: dark ? '#171A1F' : '#FFFFFF',
     sidebarActive: tint(base.primary, dark ? 0.82 : 0.9),
+    // Interactive text (navigation links, table links, inline links). Defaults
+    // to the secondary brand colour, which is always the readable-on-surface
+    // one; users can override it from Appearance → Typography.
+    link: dark ? tint(base.secondary, 0.45, '#1D2025') : base.secondary,
     positive: '#21BA45',
     negative: '#C10015',
     warning: '#F2C037',

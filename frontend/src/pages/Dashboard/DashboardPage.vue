@@ -4,11 +4,10 @@
       :title="t('dashboard.title')"
       :subtitle="t('dashboard.subtitle')"
       icon="dashboard"
-    >
-      <template #actions>
-        <q-btn color="primary" icon="refresh" :label="t('common.refresh')" outline size="sm" :loading="dashboardStore.statsLoading" @click="dashboardStore.fetchAll()" />
-      </template>
-    </AppPageHeader>
+      :breadcrumbs="[{ label: t('dashboard.title') }]"
+      :on-refresh="() => dashboardStore.fetchAll()"
+      :refreshing="dashboardStore.statsLoading"
+    />
 
     <!-- Loading skeleton -->
     <div v-if="loading" class="row q-col-gutter-md">

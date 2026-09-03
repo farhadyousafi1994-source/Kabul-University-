@@ -1,6 +1,13 @@
 <template>
   <div class="page-container q-pa-md q-pa-lg-md">
-    <AppPageHeader :title="t('admin.settings.title')" :subtitle="t('admin.settings.subtitle')" icon="settings">
+    <AppPageHeader
+      :title="t('admin.settings.title')"
+      :subtitle="t('admin.settings.subtitle')"
+      icon="settings"
+      :breadcrumbs="[{ label: t('nav.sections.administration') }, { label: t('admin.settings.title') }]"
+      :on-refresh="load"
+      :refreshing="loading"
+    >
       <template #actions>
         <q-btn
           color="primary"
