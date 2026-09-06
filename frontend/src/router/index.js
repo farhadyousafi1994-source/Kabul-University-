@@ -419,7 +419,7 @@ const routes = [
         meta: {
           title: 'Reports',
           titleKey: 'nav.items.reports',
-          icon: 'bar_chart',
+          icon: 'query_stats',
           section: 'Administration',
           sectionKey: 'nav.sections.administration',
           permission: 'reports.view',

@@ -1,13 +1,14 @@
 <template>
   <div class="auth-bg">
     <!-- Language Switcher in the top bar of login screen -->
-    <div class="auth-lang-picker absolute-top-right q-pa-md">
-      <LanguageSwitcher flat text-color="white" />
+    <div class="auth-lang-picker q-pa-md">
+      <LanguageSwitcher flat />
     </div>
 
-    <div class="row items-center justify-center full-width q-px-md q-py-lg auth-split">
-      <!-- Brand hero panel (reference-style) — hidden below 960px -->
-      <div class="auth-hero gt-sm">
+    <div class="auth-split">
+      <!-- Brand panel — solid enterprise surface, hidden below 960px -->
+      <div class="auth-panel column items-center justify-center gt-sm">
+        <div class="auth-hero">
         <div class="auth-hero__logo q-mb-lg">
           <q-icon name="account_balance" size="34px" />
         </div>
@@ -22,39 +23,41 @@
         </div>
         <div class="auth-hero__desc">{{ t('auth.heroDesc') }}</div>
 
-        <div class="column q-gutter-sm q-mt-xl">
-          <div class="auth-hero__chip">
-            <q-icon name="inventory_2" size="20px" />
-            <div>
-              <div class="text-subtitle2 text-weight-bold">{{ t('assets.title') }}</div>
-              <div class="text-caption hero-dim-2">{{ t('assets.subtitle') }}</div>
+          <div class="column q-gutter-sm q-mt-xl">
+            <div class="auth-hero__chip">
+              <q-icon name="inventory_2" size="20px" />
+              <div>
+                <div class="text-subtitle2 text-weight-bold">{{ t('assets.title') }}</div>
+                <div class="text-caption hero-dim-2">{{ t('assets.subtitle') }}</div>
+              </div>
             </div>
-          </div>
-          <div class="auth-hero__chip">
-            <q-icon name="build" size="20px" />
-            <div>
-              <div class="text-subtitle2 text-weight-bold">{{ t('maintenance.title') }}</div>
-              <div class="text-caption hero-dim-2">{{ t('maintenance.subtitle') }}</div>
+            <div class="auth-hero__chip">
+              <q-icon name="build" size="20px" />
+              <div>
+                <div class="text-subtitle2 text-weight-bold">{{ t('maintenance.title') }}</div>
+                <div class="text-caption hero-dim-2">{{ t('maintenance.subtitle') }}</div>
+              </div>
             </div>
-          </div>
-          <div class="auth-hero__chip">
-            <q-icon name="badge" size="20px" />
-            <div>
-              <div class="text-subtitle2 text-weight-bold">{{ t('hr.title') }}</div>
-              <div class="text-caption hero-dim-2">{{ t('hr.subtitle') }}</div>
+            <div class="auth-hero__chip">
+              <q-icon name="badge" size="20px" />
+              <div>
+                <div class="text-subtitle2 text-weight-bold">{{ t('hr.title') }}</div>
+                <div class="text-caption hero-dim-2">{{ t('hr.subtitle') }}</div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Sign-in card -->
-      <q-card class="auth-card q-pa-lg ku-shadow-md">
+      <!-- Sign-in side -->
+      <div class="auth-form column items-center justify-center q-px-md q-py-lg">
+      <q-card class="auth-card q-pa-lg">
         <div class="column items-center q-mb-lg">
           <div class="auth-card__logo q-mb-md">
             <q-icon name="account_balance" size="30px" />
           </div>
           <div class="text-h6 text-weight-bold text-center">{{ t('auth.welcomeBack') }}</div>
-          <div class="text-subtitle2 text-grey-7 text-center">{{ t('auth.welcomeBackSub') }}</div>
+          <div class="app-small text-center">{{ t('auth.welcomeBackSub') }}</div>
         </div>
 
         <q-form @submit="submit" class="q-gutter-md" greedy>
@@ -114,11 +117,12 @@
 
         <q-separator class="q-my-lg" />
 
-        <div class="text-caption text-grey-6 text-center">
-          {{ t('auth.demoAccess') }}: <code class="bg-grey-3 q-px-xs rounded-borders">superadmin</code> /
-          <code class="bg-grey-3 q-px-xs rounded-borders">password</code>
+        <div class="app-caption text-center">
+          {{ t('auth.demoAccess') }}: <code class="auth-code">superadmin</code> /
+          <code class="auth-code">password</code>
         </div>
       </q-card>
+      </div>
     </div>
   </div>
 </template>
@@ -162,23 +166,39 @@ async function submit() {
   color: rgba(255, 255, 255, .55)
 
 .auth-split
+  display: grid
+  grid-template-columns: 1fr
   min-height: 100vh
+  width: 100%
 
-.auth-hero
-  padding: 40px
+  @media (min-width: 960px)
+    grid-template-columns: 1.05fr 1fr
+
+.auth-form
+  background: var(--app-background)
+
+.auth-code
+  background: var(--app-hover)
+  border: 1px solid var(--app-border)
+  border-radius: var(--app-radius-sm)
+  padding: 1px 6px
+  color: var(--app-text-primary)
 
 .auth-card
   &__logo
-    width: 60px
-    height: 60px
-    border-radius: 16px
+    width: 56px
+    height: 56px
+    border-radius: var(--app-radius-lg)
     display: flex
     align-items: center
     justify-content: center
-    background: linear-gradient(160deg, #F3D48B 0%, #C8862D 100%)
-    color: #0B1626
-    box-shadow: 0 8px 22px rgba(200, 134, 45, .4)
+    background: var(--app-primary)
+    color: var(--app-on-primary)
+    box-shadow: var(--app-shadow-sm)
 
   &__submit
-    letter-spacing: .4px
+    letter-spacing: .02em
+    min-height: 44px
+    border-radius: var(--app-radius)
+    font-weight: 650
 </style>

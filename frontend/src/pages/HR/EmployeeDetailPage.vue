@@ -290,9 +290,10 @@ onMounted(load)
   gap: 16px
   padding: 18px
   border-radius: 14px
-  color: #fff
-  background: linear-gradient(115deg, var(--ku-header-from, $primary) 0%, var(--ku-header-to, #00695c) 100%)
-  box-shadow: 0 6px 18px rgba(0, 0, 0, .10)
+  color: var(--app-text-primary)
+  background: var(--app-card)
+  border: 1px solid var(--app-border)
+  box-shadow: var(--app-shadow-sm)
 
   &__avatar
     font-size: 22px

@@ -19,7 +19,19 @@ const RADII = ['sharp', 'normal', 'round']
 const SIDEBARS = ['mini', 'normal', 'expanded', 'floating']
 const DENSITIES = ['compact', 'comfortable', 'spacious']
 const CALENDARS = ['gregorian', 'solar']
-const FONT_FAMILIES = ['inter', 'roboto', 'poppins', 'open-sans', 'noto-sans', 'arial']
+const FONT_FAMILIES = ['inter', 'roboto', 'poppins', 'open-sans', 'noto-sans', 'vazirmatn', 'arial', 'system']
+// Language & Typography (persisted inside `layout_preferences.typography`).
+const PERSIAN_FONTS = ['vazirmatn', 'iransans', 'sahel', 'shabnam', 'samim', 'estedad', 'noto-naskh', 'system-fa']
+const ARABIC_FONTS = ['noto-sans-arabic', 'noto-naskh', 'cairo', 'vazirmatn', 'system-ar']
+const LETTER_SPACINGS = ['tight', 'normal', 'relaxed', 'wide']
+const NUMERAL_SYSTEMS = ['auto', 'latin', 'persian', 'arabic']
+const HEADING_WEIGHTS = [600, 700, 800]
+// Interface preferences.
+const CARD_STYLES = ['elevated', 'flat', 'outlined']
+const NAV_STYLES = ['solid', 'primary', 'light']
+const HEADERS = ['fixed', 'sticky', 'normal']
+const CONTENT_WIDTHS = ['boxed', 'full']
+const SIDEBAR_POSITIONS = ['auto', 'left', 'right']
 const HEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 
 const COLOR_TOKENS = [
@@ -34,7 +46,50 @@ const COLOR_TOKENS = [
 const SCHEME_IDS = [
   'softcora', 'steel', 'minimal', 'forest', 'royal', 'amber', 'dark',
   'pastel', 'vivid', 'neutral', 'gradient', 'crimson', 'teal',
+  'indigo', 'carbon',
 ]
+
+/**
+ * Whitelist for `layout_preferences`. Unknown keys are dropped rather than
+ * rejected so an older client never fails to save, but every known key must
+ * carry a supported value — the store only ever sends these.
+ */
+const LAYOUT_ENUMS = {
+  header: HEADERS,
+  contentWidth: CONTENT_WIDTHS,
+  dashboardDensity: DENSITIES,
+  sidebarPosition: SIDEBAR_POSITIONS,
+  cardStyle: CARD_STYLES,
+  navigation: NAV_STYLES,
+}
+
+const TYPOGRAPHY_ENUMS = {
+  persianFont: PERSIAN_FONTS,
+  arabicFont: ARABIC_FONTS,
+  letterSpacing: LETTER_SPACINGS,
+  numerals: NUMERAL_SYSTEMS,
+}
+
+/** Keep only recognised layout / typography preferences with valid values. */
+function sanitiseLayout(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  const out = {}
+  for (const [key, allowed] of Object.entries(LAYOUT_ENUMS)) {
+    if (allowed.includes(value[key])) out[key] = value[key]
+  }
+  const typography = value.typography
+  if (typography && typeof typography === 'object' && !Array.isArray(typography)) {
+    const type = {}
+    for (const [key, allowed] of Object.entries(TYPOGRAPHY_ENUMS)) {
+      if (allowed.includes(typography[key])) type[key] = typography[key]
+    }
+    if (HEADING_WEIGHTS.includes(Number(typography.headingWeight))) {
+      type.headingWeight = Number(typography.headingWeight)
+    }
+    if (Object.keys(type).length) out.typography = type
+  }
+  return out
+}
 
 function parseJson(value, fallback = null) {
   if (value === null || value === undefined || value === '') return fallback
@@ -155,7 +210,7 @@ function validate(body = {}) {
     table_density: pick(body.table_density, DENSITIES, undefined),
     animations_enabled: body.animations_enabled === undefined ? undefined : (body.animations_enabled ? 1 : 0),
     calendar_type: pick(body.calendar_type, CALENDARS, undefined),
-    layout_preferences: body.layout_preferences === undefined ? undefined : JSON.stringify(body.layout_preferences || {}),
+    layout_preferences: body.layout_preferences === undefined ? undefined : JSON.stringify(sanitiseLayout(body.layout_preferences)),
     accessibility_preferences:
       body.accessibility_preferences === undefined ? undefined : JSON.stringify(body.accessibility_preferences || {}),
   }

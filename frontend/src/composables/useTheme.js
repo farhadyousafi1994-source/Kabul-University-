@@ -2,8 +2,11 @@ import { computed, onBeforeUnmount, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useThemeStore } from 'src/stores/theme'
 import {
+  ARABIC_FONTS,
   COLOR_TOKENS,
   FONT_FAMILIES,
+  LETTER_SPACINGS,
+  PERSIAN_FONTS,
   QUICK_COLORS,
   THEME_SCHEMES,
 } from 'src/config/themes'
@@ -127,8 +130,64 @@ export function useTheme() {
   )
 
   const fontFamilyOptions = computed(() =>
-    FONT_FAMILIES.map((family) => ({ label: family.name, value: family.id, stack: family.stack })),
+    FONT_FAMILIES.map((family) => ({
+      label: family.multilingual ? `${family.name} · ${t('theme.multilingual')}` : family.name,
+      value: family.id,
+      stack: family.stack,
+    })),
   )
+
+  /**
+   * Farsi / Dari families. Vazirmatn is flagged as the recommendation because
+   * it is modern, highly readable at table sizes and covers Persian, Dari and
+   * Arabic-Indic numerals — the safest default for an ERP.
+   */
+  const persianFontOptions = computed(() =>
+    PERSIAN_FONTS.map((font) => ({
+      label: font.recommended ? `${font.name} · ${t('theme.recommended')}` : font.name,
+      value: font.id,
+      native: font.native,
+      stack: font.stack,
+    })),
+  )
+
+  const arabicFontOptions = computed(() =>
+    ARABIC_FONTS.map((font) => ({
+      label: font.recommended ? `${font.name} · ${t('theme.recommended')}` : font.name,
+      value: font.id,
+      native: font.native,
+      stack: font.stack,
+    })),
+  )
+
+  const letterSpacingOptions = computed(() =>
+    Object.keys(LETTER_SPACINGS).map((key) => ({ value: key, label: t(`theme.spacing.${key}`) })),
+  )
+
+  const numeralOptions = computed(() => [
+    { value: 'auto', label: t('theme.numerals.auto'), tooltip: t('theme.numerals.autoHint') },
+    { value: 'latin', label: '1234' },
+    { value: 'persian', label: '۱۲۳۴' },
+    { value: 'arabic', label: '١٢٣٤' },
+  ])
+
+  const cardStyleOptions = computed(() => [
+    { value: 'elevated', label: t('theme.cardElevated'), icon: 'layers' },
+    { value: 'flat', label: t('theme.cardFlat'), icon: 'crop_square' },
+    { value: 'outlined', label: t('theme.cardOutlined'), icon: 'check_box_outline_blank' },
+  ])
+
+  const navigationOptions = computed(() => [
+    { value: 'solid', label: t('theme.navSolid'), icon: 'dark_mode' },
+    { value: 'primary', label: t('theme.navPrimary'), icon: 'palette' },
+    { value: 'light', label: t('theme.navLight'), icon: 'light_mode' },
+  ])
+
+  const headingWeightOptions = computed(() => [
+    { value: 600, label: '600' },
+    { value: 700, label: '700' },
+    { value: 800, label: '800' },
+  ])
 
   const schemeOptions = computed(() =>
     THEME_SCHEMES.map((scheme) => ({
@@ -171,6 +230,13 @@ export function useTheme() {
     accessibilityOptions,
     colorGroups,
     fontFamilyOptions,
+    persianFontOptions,
+    arabicFontOptions,
+    letterSpacingOptions,
+    numeralOptions,
+    cardStyleOptions,
+    navigationOptions,
+    headingWeightOptions,
     schemeOptions,
     palette,
     tokenLabelKey,
@@ -206,6 +272,9 @@ export function useSystemAppearance() {
     contentWidth: computed(() => theme.settings.layout?.contentWidth || 'boxed'),
     calendarType: computed(() => theme.settings.calendar),
     density: computed(() => theme.settings.tableDensity),
+    cardStyle: computed(() => theme.cardStyle),
+    navigationStyle: computed(() => theme.navigationStyle),
+    typography: computed(() => theme.typography),
   }
 }
 

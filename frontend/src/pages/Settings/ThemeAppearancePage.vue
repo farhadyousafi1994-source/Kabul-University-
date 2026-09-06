@@ -178,6 +178,30 @@
                   </FineTuneCard>
                 </div>
 
+                <!-- Card style -->
+                <div class="col-12 col-sm-6">
+                  <FineTuneCard icon="dashboard" :title="t('theme.cardStyle')" :hint="t('theme.cardStyleHint')">
+                    <SegmentedControl
+                      :model-value="theme.cardStyle"
+                      :options="cardStyleOptions"
+                      :aria-label="t('theme.cardStyle')"
+                      @update:model-value="theme.setCardStyle"
+                    />
+                  </FineTuneCard>
+                </div>
+
+                <!-- Navigation appearance -->
+                <div class="col-12 col-sm-6">
+                  <FineTuneCard icon="toolbar" :title="t('theme.navigationStyle')" :hint="t('theme.navigationStyleHint')">
+                    <SegmentedControl
+                      :model-value="theme.navigationStyle"
+                      :options="navigationOptions"
+                      :aria-label="t('theme.navigationStyle')"
+                      @update:model-value="theme.setNavigationStyle"
+                    />
+                  </FineTuneCard>
+                </div>
+
                 <!-- Primary colour quick picker -->
                 <div class="col-12 col-sm-6">
                   <FineTuneCard icon="colorize" :title="t('theme.primaryColor')" :hint="t('theme.primaryColorHint')">
@@ -273,47 +297,126 @@
 
         <q-separator />
 
-        <!-- Typography -->
+        <!-- Language & Typography -->
         <q-expansion-item
           v-model="openTypography"
           group="ta-advanced"
-          icon="text_format"
-          :label="t('theme.typography')"
+          icon="translate"
+          :label="t('theme.languageTypography')"
           header-class="ta-exp__header"
-          :caption="t('theme.typographyHint')"
+          :caption="t('theme.languageTypographyHint')"
         >
           <q-separator />
           <q-card-section>
-            <div class="row q-col-gutter-sm">
-              <div class="col-12 col-sm-6 col-md-3">
+            <!-- ---------------------------------------------------------
+                 Fonts per script: the interface must look equally polished
+                 in English, Farsi, Dari, Pashto and Arabic.
+                 --------------------------------------------------------- -->
+            <div class="ta-group-title">{{ t('theme.fontFamilies') }}</div>
+            <div class="row q-col-gutter-sm q-mb-md">
+              <div class="col-12 col-md-4">
                 <q-select
                   :model-value="theme.settings.fontFamily"
                   :options="fontFamilyOptions"
-                  :label="t('theme.fontFamily')"
+                  :label="t('theme.latinFont')"
+                  :hint="t('theme.latinFontHint')"
                   emit-value
                   map-options
                   options-dense
                   dense
                   outlined
+                  data-cy="font-latin"
                   @update:model-value="theme.setFontFamily"
                 >
+                  <template #prepend><q-icon name="abc" /></template>
                   <template #option="scope">
                     <q-item v-bind="scope.itemProps" :style="{ fontFamily: scope.opt.stack }">
-                      <q-item-section>{{ scope.opt.label }}</q-item-section>
+                      <q-item-section>
+                        <q-item-label>{{ scope.opt.label }}</q-item-label>
+                        <q-item-label caption>The quick brown fox · 1234567890</q-item-label>
+                      </q-item-section>
                     </q-item>
                   </template>
                 </q-select>
               </div>
+
+              <div class="col-12 col-md-4">
+                <q-select
+                  :model-value="typography.persianFont"
+                  :options="persianFontOptions"
+                  :label="t('theme.persianFont')"
+                  :hint="t('theme.persianFontHint')"
+                  emit-value
+                  map-options
+                  options-dense
+                  dense
+                  outlined
+                  data-cy="font-persian"
+                  @update:model-value="theme.setPersianFont"
+                >
+                  <template #prepend><q-icon name="language" /></template>
+                  <template #option="scope">
+                    <q-item v-bind="scope.itemProps" :style="{ fontFamily: scope.opt.stack }">
+                      <q-item-section>
+                        <q-item-label>{{ scope.opt.label }}</q-item-label>
+                        <q-item-label caption dir="rtl">{{ scope.opt.native }} · مدیریت دارایی‌ها · ۱۲۳۴۵۶</q-item-label>
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
+              </div>
+
+              <div class="col-12 col-md-4">
+                <q-select
+                  :model-value="typography.arabicFont"
+                  :options="arabicFontOptions"
+                  :label="t('theme.arabicFont')"
+                  :hint="t('theme.arabicFontHint')"
+                  emit-value
+                  map-options
+                  options-dense
+                  dense
+                  outlined
+                  data-cy="font-arabic"
+                  @update:model-value="theme.setArabicFont"
+                >
+                  <template #prepend><q-icon name="translate" /></template>
+                  <template #option="scope">
+                    <q-item v-bind="scope.itemProps" :style="{ fontFamily: scope.opt.stack }">
+                      <q-item-section>
+                        <q-item-label>{{ scope.opt.label }}</q-item-label>
+                        <q-item-label caption dir="rtl">{{ scope.opt.native }} · إدارة الأصول · ١٢٣٤٥٦</q-item-label>
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
+              </div>
+            </div>
+
+            <!-- Metrics --------------------------------------------------- -->
+            <div class="ta-group-title">{{ t('theme.textMetrics') }}</div>
+            <div class="row q-col-gutter-sm q-mb-md">
               <div class="col-12 col-sm-6 col-md-3">
                 <FineTuneCard icon="format_size" :title="t('theme.fontSize')">
                   <SegmentedControl
                     :model-value="theme.settings.fontSize"
                     :options="fontSizeOptions"
+                    :aria-label="t('theme.fontSize')"
                     @update:model-value="theme.setFontSize"
                   />
                 </FineTuneCard>
               </div>
-              <div class="col-6 col-sm-3 col-md-3">
+              <div class="col-12 col-sm-6 col-md-3">
+                <FineTuneCard icon="format_letter_spacing" :title="t('theme.letterSpacing')">
+                  <SegmentedControl
+                    :model-value="typography.letterSpacing"
+                    :options="letterSpacingOptions"
+                    :aria-label="t('theme.letterSpacing')"
+                    @update:model-value="theme.setLetterSpacing"
+                  />
+                </FineTuneCard>
+              </div>
+              <div class="col-6 col-sm-3 col-md-2">
                 <q-input
                   :model-value="theme.settings.fontWeight"
                   type="number"
@@ -326,7 +429,7 @@
                   @update:model-value="(v) => theme.patch({ fontWeight: clamp(Number(v) || 400, 300, 800) })"
                 />
               </div>
-              <div class="col-6 col-sm-3 col-md-3">
+              <div class="col-6 col-sm-3 col-md-2">
                 <q-input
                   :model-value="theme.settings.lineHeight"
                   type="number"
@@ -336,12 +439,58 @@
                   min="1"
                   max="2.5"
                   step="0.05"
-                  @update:model-value="(v) => theme.patch({ lineHeight: clamp(Number(v) || 1.5, 1, 2.5) })"
+                  @update:model-value="(v) => theme.patch({ lineHeight: clamp(Number(v) || 1.55, 1, 2.5) })"
                 />
               </div>
-              <!-- Font & link colour live with typography (not in the colour
-                   palette) because that is where users look for them. Both are
-                   ordinary theme tokens, so they persist and apply globally. -->
+              <div class="col-12 col-sm-6 col-md-2">
+                <q-select
+                  :model-value="typography.headingWeight"
+                  :options="headingWeightOptions"
+                  :label="t('theme.headingWeight')"
+                  emit-value
+                  map-options
+                  options-dense
+                  dense
+                  outlined
+                  @update:model-value="theme.setHeadingWeight"
+                />
+              </div>
+            </div>
+
+            <!-- Numerals + RTL ------------------------------------------- -->
+            <div class="ta-group-title">{{ t('theme.numbersDirection') }}</div>
+            <div class="row q-col-gutter-sm q-mb-md">
+              <div class="col-12 col-md-5">
+                <FineTuneCard icon="pin" :title="t('theme.numeralSystem')" :hint="t('theme.numeralSystemHint')">
+                  <SegmentedControl
+                    :model-value="typography.numerals"
+                    :options="numeralOptions"
+                    :aria-label="t('theme.numeralSystem')"
+                    @update:model-value="theme.setNumerals"
+                  />
+                </FineTuneCard>
+              </div>
+              <div class="col-12 col-md-4">
+                <FineTuneCard icon="swap_horiz" :title="t('theme.direction')" :hint="t('theme.directionHint')">
+                  <div class="ta-static">
+                    <q-icon :name="isRtl ? 'format_textdirection_r_to_l' : 'format_textdirection_l_to_r'" size="18px" class="q-mr-xs" />
+                    <span>{{ isRtl ? 'RTL' : 'LTR' }} · {{ currentLanguage.nativeName }}</span>
+                  </div>
+                </FineTuneCard>
+              </div>
+              <div class="col-12 col-md-3">
+                <FineTuneCard icon="g_translate" :title="t('common.language')" :hint="t('theme.languageHint')">
+                  <LanguageSwitcher mode="select" dense />
+                </FineTuneCard>
+              </div>
+            </div>
+
+            <!-- Ink -------------------------------------------------------
+                 Font & link colour live with typography (not in the colour
+                 palette) because that is where users look for them. Both are
+                 ordinary theme tokens, so they persist and apply globally. -->
+            <div class="ta-group-title">{{ t('theme.colours.typography') }}</div>
+            <div class="row q-col-gutter-sm q-mb-md">
               <div class="col-12 col-sm-6 col-md-3">
                 <ColorTokenField
                   :model-value="theme.colors.text"
@@ -368,13 +517,40 @@
                   @reset="theme.clearLinkColor"
                 />
               </div>
+            </div>
 
-              <div class="col-12">
-                <div class="ta-type-sample" :style="{ fontFamily: theme.fontStackValue, color: theme.colors.text }">
-                  {{ t('common.universityName') }} · {{ t('common.appName') }} · ۱۲۳۴۵۶۷۸۹۰ · ١٢٣٤٥٦٧٨٩٠
-                  <a href="#" class="q-ml-sm" :style="{ color: theme.colors.link }" @click.prevent>{{ t('theme.linkColor') }}</a>
+            <!-- Multilingual live sample ---------------------------------- -->
+            <div class="ta-group-title">{{ t('theme.typePreview') }}</div>
+            <div class="row q-col-gutter-sm">
+              <div class="col-12 col-md-4">
+                <div class="ta-sample" :style="latinSampleStyle">
+                  <div class="ta-sample__tag">English · Latin</div>
+                  <div class="ta-sample__title">{{ t('common.universityName') }}</div>
+                  <div class="ta-sample__body">{{ t('common.appName') }} — assets, maintenance, reports.</div>
+                  <div class="ta-sample__nums">1234567890 · 12,450 AFN</div>
                 </div>
               </div>
+              <div class="col-12 col-md-4">
+                <div class="ta-sample" dir="rtl" :style="persianSampleStyle">
+                  <div class="ta-sample__tag">فارسی / دری · Farsi / Dari</div>
+                  <div class="ta-sample__title">پوهنتون کابل</div>
+                  <div class="ta-sample__body">سیستم مدیریت دارایی‌ها — دارایی‌ها، ترمیمات و راپورها.</div>
+                  <div class="ta-sample__nums">۱۲۳۴۵۶۷۸۹۰ · ۱۲٬۴۵۰ افغانی</div>
+                </div>
+              </div>
+              <div class="col-12 col-md-4">
+                <div class="ta-sample" dir="rtl" :style="arabicSampleStyle">
+                  <div class="ta-sample__tag">العربية · Arabic</div>
+                  <div class="ta-sample__title">جامعة كابول</div>
+                  <div class="ta-sample__body">نظام إدارة الأصول — الأصول والصيانة والتقارير.</div>
+                  <div class="ta-sample__nums">١٢٣٤٥٦٧٨٩٠ · ١٢٬٤٥٠</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="app-caption q-mt-sm">
+              <q-icon name="info_outline" size="14px" class="q-mr-xs" />
+              {{ t('theme.rtlNote') }}
             </div>
           </q-card-section>
         </q-expansion-item>
@@ -705,17 +881,18 @@ import ColorTokenField from 'src/components/theme/ColorTokenField.vue'
 import { useThemeStore } from 'src/stores/theme'
 import { useAuthStore } from 'src/stores/auth'
 import { useLanguage } from 'src/composables/useLanguage'
+import LanguageSwitcher from 'src/components/common/LanguageSwitcher.vue'
 import { useTheme } from 'src/composables/useTheme'
 import { notify } from 'src/utils/notify'
 import { useAction } from 'src/composables/useAction'
 import { confirmAction } from 'src/utils/confirm'
 import { debounce } from 'src/utils/timing'
-import { COLOR_TOKENS, FONT_FAMILIES, QUICK_COLORS, contrastText, normaliseHex } from 'src/config/themes'
+import { COLOR_TOKENS, QUICK_COLORS, contrastText, fontStackFor, normaliseHex } from 'src/config/themes'
 
 const { t } = useI18n()
 const theme = useThemeStore()
 const authStore = useAuthStore()
-const { isRtl } = useLanguage()
+const { isRtl, currentLanguage } = useLanguage()
 const {
   modeOptions,
   fontSizeOptions,
@@ -729,6 +906,13 @@ const {
   accessibilityOptions,
   colorGroups,
   fontFamilyOptions,
+  persianFontOptions,
+  arabicFontOptions,
+  letterSpacingOptions,
+  numeralOptions,
+  cardStyleOptions,
+  navigationOptions,
+  headingWeightOptions,
   schemeOptions,
   palette,
   tokenLabelKey,
@@ -767,6 +951,19 @@ const headerMeta = computed(() => [
 ])
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
+
+/** Live typography preferences (Language & Typography section). */
+const typography = computed(() => theme.typography)
+
+const sampleBase = computed(() => ({
+  color: theme.colors.text,
+  fontWeight: String(theme.settings.fontWeight || 400),
+  lineHeight: String(theme.settings.lineHeight || 1.55),
+}))
+
+const latinSampleStyle = computed(() => ({ ...sampleBase.value, fontFamily: theme.fontStackValue }))
+const persianSampleStyle = computed(() => ({ ...sampleBase.value, fontFamily: fontStackFor('persian', typography.value.persianFont) }))
+const arabicSampleStyle = computed(() => ({ ...sampleBase.value, fontFamily: fontStackFor('arabic', typography.value.arabicFont) }))
 const contrastFor = (hex) => contrastText(hex)
 
 function isQuickActive(hex) {
@@ -833,7 +1030,7 @@ async function onResetToDefault() {
 // -- Administrator defaults -------------------------------------------------
 const adminDraft = reactive({})
 const adminBranding = reactive({ organizationName: '', brandName: '', logoUrl: '', faviconUrl: '' })
-const adminPrimary = ref('#C8862D')
+const adminPrimary = ref('#2563EB')
 
 function loadAdminDraft() {
   const source = theme.system || {}
@@ -841,7 +1038,7 @@ function loadAdminDraft() {
   Object.assign(adminDraft, {
     selected_theme: source.schemeId || 'softcora',
     theme_mode: source.mode || 'system',
-    font_family: source.fontFamily || 'roboto',
+    font_family: source.fontFamily || 'inter',
     sidebar_style: source.sidebar || 'normal',
     table_density: source.tableDensity || 'compact',
     custom_colors: source.custom ? { ...source.custom } : null,
@@ -852,7 +1049,7 @@ function loadAdminDraft() {
     logoUrl: theme.systemBranding?.logoUrl || '',
     faviconUrl: theme.systemBranding?.faviconUrl || '',
   })
-  adminPrimary.value = normaliseHex(adminDraft.custom_colors?.primary) || '#c8862d'
+  adminPrimary.value = normaliseHex(adminDraft.custom_colors?.primary) || '#2563eb'
 }
 
 function saveSystemDefaults() {
@@ -962,13 +1159,39 @@ onBeforeUnmount(() => {
   padding-bottom: 4px
   margin-bottom: 8px
 
-.ta-type-sample
-  padding: 10px 12px
-  border: 1px dashed var(--app-border)
+.ta-sample
+  height: 100%
+  padding: 12px 14px
+  border: 1px solid var(--app-border)
   border-radius: var(--app-radius)
-  color: var(--app-text-primary)
   background: var(--app-surface)
-  font-size: 14px
+  transition: border-color var(--app-transition-fast)
+
+  &:hover
+    border-color: color-mix(in srgb, var(--app-primary) 32%, var(--app-border))
+
+  &__tag
+    font-size: var(--app-text-caption)
+    font-weight: 700
+    letter-spacing: .04em
+    text-transform: uppercase
+    color: var(--app-text-secondary)
+    margin-bottom: 6px
+
+  &__title
+    font-size: 1.05rem
+    font-weight: 700
+    color: inherit
+
+  &__body
+    font-size: var(--app-text-body)
+    margin-top: 2px
+
+  &__nums
+    margin-top: 6px
+    font-size: var(--app-text-small)
+    font-variant-numeric: tabular-nums
+    color: var(--app-text-secondary)
 
 .ta-a11y
   border: 1px solid var(--app-border)

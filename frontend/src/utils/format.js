@@ -108,6 +108,52 @@ function calendarNow() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Numerals — Appearance → Language & Typography → "Numbers"
+//
+//   auto     Persian digits for fa/ps, Arabic-Indic for ar, Latin otherwise
+//   latin    1234567890   ·  persian  ۱۲۳۴۵۶۷۸۹۰  ·  arabic  ١٢٣٤٥٦٧٨٩٠
+//
+// Every formatter below funnels its output through `digits()`, so switching the
+// preference re-renders the whole ERP (tables, KPIs, dates, currency) at once.
+// ---------------------------------------------------------------------------
+
+const PERSIAN_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹']
+const ARABIC_DIGITS = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩']
+
+function numeralPreference() {
+  try {
+    return useThemeStore().typography?.numerals || 'auto'
+  } catch {
+    return 'auto'
+  }
+}
+
+/** Convert the Latin digits in `value` to the preferred numeral system. */
+export function digits(value) {
+  const text = value === null || value === undefined ? '' : String(value)
+  if (!text) return text
+
+  let system = numeralPreference()
+  if (system === 'auto') {
+    const locale = i18n?.global?.locale?.value || 'en'
+    if (locale === 'fa' || locale === 'ps') system = 'persian'
+    else if (locale === 'ar') system = 'arabic'
+    else system = 'latin'
+  }
+  if (system === 'latin') return text
+
+  const table = system === 'arabic' ? ARABIC_DIGITS : PERSIAN_DIGITS
+  return text.replace(/[0-9]/g, (d) => table[Number(d)])
+}
+
+/** Localised integer / decimal with thousands separators. */
+export function number(value, options = {}) {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return digits('0')
+  return digits(new Intl.NumberFormat(localeFor(), { maximumFractionDigits: 2, ...options }).format(n))
+}
+
 export function currency(value, currencyCode) {
   const opts = optionsNow()
   const code = currencyCode || opts.currency || 'AFN'
@@ -117,7 +163,7 @@ export function currency(value, currencyCode) {
   const formattedNum = new Intl.NumberFormat(localeFor(), { maximumFractionDigits: code === 'USD' ? 2 : 0 }).format(n)
   const t = i18n?.global?.t
   const currencyLabel = t ? (code === 'USD' ? t('common.currency_USD') : t('common.currency')) : code
-  return `${formattedNum} ${currencyLabel}`
+  return `${digits(formattedNum)} ${currencyLabel}`
 }
 
 export function date(value, withTime = false) {
@@ -130,15 +176,17 @@ export function date(value, withTime = false) {
     if (j) {
       const months = localeFor() === 'en' ? JALALI_MONTHS_EN : JALALI_MONTHS_FA
       const out = `${String(j.jd).padStart(2, '0')} ${months[j.jm - 1]} ${j.jy}`
-      if (withTime) return out + ` ${d.toLocaleTimeString(localeFor(), { hour: '2-digit', minute: '2-digit' })}`
-      return out
+      if (withTime) return digits(out + ` ${d.toLocaleTimeString(localeFor(), { hour: '2-digit', minute: '2-digit' })}`)
+      return digits(out)
     }
   }
 
   const dateLocale = localeFor()
   const timeLocale = localeFor() === 'en' ? 'en-GB' : dateLocale
-  return d.toLocaleDateString(dateLocale, { day: '2-digit', month: 'short', year: 'numeric' }) +
-    (withTime ? ` ${d.toLocaleTimeString(timeLocale, { hour: '2-digit', minute: '2-digit' })}` : '')
+  return digits(
+    d.toLocaleDateString(dateLocale, { day: '2-digit', month: 'short', year: 'numeric' }) +
+      (withTime ? ` ${d.toLocaleTimeString(timeLocale, { hour: '2-digit', minute: '2-digit' })}` : ''),
+  )
 }
 
 export function timeAgo(value) {
@@ -181,5 +229,5 @@ export function fileSize(bytes) {
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
   const i = Math.min(Math.floor(Math.log(n) / Math.log(1024)), units.length - 1)
   const value = n / 1024 ** i
-  return `${value.toFixed(i === 0 ? 0 : 1)} ${units[i]}`
+  return `${digits(value.toFixed(i === 0 ? 0 : 1))} ${units[i]}`
 }

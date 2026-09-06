@@ -1,22 +1,26 @@
 <template>
   <q-btn
     v-bind="$attrs"
-    class="app-btn"
-    :class="[`app-btn--${variant}`, { 'app-btn--icon-only': !resolvedLabel }]"
-    :color="quasarColor"
-    :text-color="textColor"
-    :outline="variant === 'secondary'"
-    :flat="variant === 'ghost'"
-    :unelevated="variant !== 'ghost' && variant !== 'secondary'"
+    class="app-btn ab-btn"
+    :class="[
+      `app-btn--${emphasis}`,
+      `app-btn--intent-${intentToken}`,
+      { 'app-btn--icon-only': !resolvedLabel },
+    ]"
+    flat
     no-caps
     :dense="dense"
-    :icon="icon || undefined"
+    :icon="resolvedIcon || undefined"
     :label="resolvedLabel || undefined"
     :loading="loading"
     :disable="disable"
-    :aria-label="ariaLabel || label || undefined"
+    :aria-label="ariaLabel || label || tooltip || undefined"
+    :aria-busy="loading ? 'true' : undefined"
   >
     <q-tooltip v-if="!resolvedLabel && (tooltip || label)">{{ tooltip || label }}</q-tooltip>
+    <template v-if="loading" #loading>
+      <q-spinner-dots />
+    </template>
     <slot />
   </q-btn>
 </template>
@@ -27,28 +31,47 @@
  * ActionButton — the single button voice of the application.
  * ---------------------------------------------------------------------------
  *
- * Four intents, chosen by MEANING rather than by colour:
+ * Buttons are declared by MEANING (`intent`), never by colour:
  *
- *   primary    Add · Create · Save · Submit
- *   secondary  Print · Export · Refresh · Back · Cancel (outlined)
- *   danger     Delete · Remove · Archive
- *   ghost      low-emphasis inline actions
+ *   save · create · submit      brand primary, filled
+ *   success · approve           green, filled
+ *   excel · export              Excel green + spreadsheet icon  (always)
+ *   pdf                         red-tinted
+ *   edit                        blue
+ *   view · details              cyan
+ *   info · import               blue, tinted
+ *   warning                     amber
+ *   delete · danger · archive   red
+ *   cancel · secondary · print  neutral grey, outlined
+ *   ghost                       low-emphasis inline action
  *
- * Every instance gets the same height, padding, radius, icon/label alignment,
- * hover lift and focus ring — so no page can invent its own button style. The
- * label collapses on narrow screens (`hideLabelOn`) while the tooltip and
- * aria-label keep the action fully described.
+ * The intent maps to a CSS token (`--app-action-*`) in
+ * `src/config/actions.js`, so a theme change or a light/dark switch restyles
+ * every button in the ERP at once — no colour is written in a page component.
+ *
+ * Shared by construction: height, padding, radius, typography, icon spacing,
+ * hover lift, focus ring, disabled and loading states. The label collapses on
+ * narrow screens (`hideLabelOn`) while the tooltip and aria-label keep the
+ * action fully described for screen readers.
+ *
+ * The legacy `variant` prop ('primary' | 'secondary' | 'danger' | 'ghost')
+ * still works and is mapped onto the matching intent.
  */
 import { computed } from 'vue'
 import { useQuasar } from 'quasar'
+import { intentConfig, resolveIntent } from 'src/config/actions'
 
 defineOptions({ inheritAttrs: false })
 
 const props = defineProps({
   label: { type: String, default: '' },
   icon: { type: String, default: '' },
-  /** 'primary' | 'secondary' | 'danger' | 'ghost' */
-  variant: { type: String, default: 'secondary' },
+  /** Semantic meaning of the action — see the list above. */
+  intent: { type: String, default: '' },
+  /** Legacy alias: 'primary' | 'secondary' | 'danger' | 'ghost'. */
+  variant: { type: String, default: '' },
+  /** Override the intent's default emphasis: 'solid' | 'soft' | 'quiet' | 'ghost'. */
+  emphasis: { type: String, default: '' },
   loading: { type: Boolean, default: false },
   disable: { type: Boolean, default: false },
   dense: { type: Boolean, default: true },
@@ -62,14 +85,11 @@ const props = defineProps({
 
 const $q = useQuasar()
 
-const quasarColor = computed(() => ({
-  primary: 'primary',
-  secondary: 'grey-8',
-  danger: 'negative',
-  ghost: 'grey-8',
-}[props.variant] || 'primary'))
-
-const textColor = computed(() => (props.variant === 'primary' || props.variant === 'danger' ? 'white' : undefined))
+const intentName = computed(() => resolveIntent(props.intent || props.variant || 'secondary'))
+const config = computed(() => intentConfig(intentName.value))
+const intentToken = computed(() => config.value.token)
+const emphasis = computed(() => props.emphasis || config.value.emphasis)
+const resolvedIcon = computed(() => props.icon || config.value.icon)
 
 const resolvedLabel = computed(() => {
   if (props.iconOnly || !props.label) return ''
@@ -78,43 +98,6 @@ const resolvedLabel = computed(() => {
   if (props.hideLabelOn === 'sm' && screen.lt.md) return ''
   return props.label
 })
+
+defineExpose({ intent: intentName })
 </script>
-
-<style lang="sass">
-.app-btn
-  min-height: 34px
-  padding: 0 14px
-  border-radius: var(--app-radius)
-  font-weight: 600
-  letter-spacing: .2px
-  transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease, transform .15s ease
-
-  .q-icon
-    font-size: 18px
-
-  .q-btn__content
-    gap: 6px
-    flex-wrap: nowrap
-
-  &--icon-only
-    padding: 0 9px
-    min-width: 34px
-
-  &:hover:not([disabled])
-    transform: translateY(-1px)
-
-  &:active:not([disabled])
-    transform: translateY(0)
-
-  &:focus-visible
-    outline: 2px solid var(--q-primary)
-    outline-offset: 2px
-
-  &--secondary
-    border-color: var(--app-border)
-    background: var(--app-card)
-
-    &:hover:not([disabled])
-      background: var(--app-hover)
-      border-color: color-mix(in srgb, var(--q-primary) 40%, var(--app-border))
-</style>

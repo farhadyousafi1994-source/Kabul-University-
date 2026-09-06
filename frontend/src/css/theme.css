@@ -5,63 +5,124 @@
    `--app-*` custom property onto <html>. This file declares the fallbacks,
    maps the legacy `--ku-*` aliases and the Quasar brand variables onto them,
    and holds the global rules that react to the appearance preferences
-   (density, sidebar style, layout, accessibility).
+   (density, sidebar style, layout, typography, accessibility).
 
-   Rule of thumb for component authors: never hardcode a colour — read a token
-   (`var(--app-primary)`, `var(--app-text-secondary)`, …).
+   Rule of thumb for component authors: never hardcode a colour, radius, shadow
+   or font size — read a token (`var(--app-primary)`, `var(--app-shadow-sm)`,
+   `var(--app-text-secondary)`, …). The component layer that consumes these
+   tokens lives in `src/css/design-system.css`.
    --------------------------------------------------------------------------- */
 
 :root {
   /* Brand ------------------------------------------------------------- */
-  --app-primary: #c8862d;
-  --app-secondary: #175a8c;
-  --app-accent: #0b1626;
-  --app-accent-background: #f4f7fb;
-  --app-on-primary: #16233a;
+  --app-primary: #2563eb;
+  --app-primary-soft: rgba(37, 99, 235, 0.1);
+  --app-secondary: #1d4ed8;
+  --app-accent: #6366f1;
+  --app-accent-background: #eef2ff;
+  --app-on-primary: #ffffff;
 
   /* Navigation -------------------------------------------------------- */
-  --app-topbar-start: #123a66;
-  --app-topbar-end: #175a8c;
+  --app-topbar-start: #101828;
+  --app-topbar-end: #101828;
+  --app-topbar: #101828;
+  --app-topbar-text: #ffffff;
+  --app-topbar-muted: rgba(255, 255, 255, 0.66);
+  --app-topbar-border: rgba(255, 255, 255, 0.08);
   --app-sidebar-background: #ffffff;
-  --app-sidebar-active: #f6e7cf;
+  --app-sidebar-active: #dbe6fd;
 
   /* Surfaces ---------------------------------------------------------- */
-  --app-background: #f4f7fb;
+  --app-background: #f5f7fa;
   --app-surface: #ffffff;
   --app-card: #ffffff;
-  --app-border: #e6eaf2;
-  --app-hover: #edf1f8;
-  --app-focus: #f6e7cf;
+  --app-border: #e4e8ef;
+  --app-border-strong: #d3d9e4;
+  --app-hover: #f1f4f9;
+  --app-focus: #dbe6fd;
 
   /* Typography -------------------------------------------------------- */
-  --app-text-primary: #16233a;
-  --app-text-secondary: #5c6b84;
-  --app-link: #175a8c;
-  --app-font-family: 'Roboto', -apple-system, 'Segoe UI', sans-serif;
+  --app-text-primary: #101828;
+  --app-text-secondary: #667085;
+  --app-text-muted: #98a2b3;
+  --app-link: #2563eb;
+  --app-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+  --app-font-family-rtl: 'Vazirmatn', 'Segoe UI', Tahoma, 'Noto Sans Arabic', Arial, sans-serif;
   --app-font-size: 15px;
   --app-font-weight: 400;
-  --app-line-height: 1.5;
+  --app-heading-weight: 700;
+  --app-line-height: 1.55;
+  --app-letter-spacing: 0em;
+
+  /* Typography scale — every text style in the app derives from these. */
+  --app-text-page-title: 1.375rem;
+  --app-text-section-title: 1.0625rem;
+  --app-text-card-title: 0.9375rem;
+  --app-text-body: 0.875rem;
+  --app-text-small: 0.8125rem;
+  --app-text-caption: 0.75rem;
+  --app-text-table-head: 0.6875rem;
+  --app-text-button: 0.8125rem;
 
   /* Shape ------------------------------------------------------------- */
   --app-radius: 10px;
   --app-radius-sm: calc(var(--app-radius) * 0.6);
   --app-radius-lg: calc(var(--app-radius) + 4px);
+  --app-radius-pill: 999px;
+
+  /* Elevation — soft, layered, never heavy ---------------------------- */
+  --app-shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --app-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.05);
+  --app-shadow-md: 0 2px 4px rgba(16, 24, 40, 0.04), 0 8px 20px rgba(16, 24, 40, 0.08);
+  --app-shadow-lg: 0 4px 8px rgba(16, 24, 40, 0.06), 0 18px 40px rgba(16, 24, 40, 0.12);
+  --app-ring: 0 0 0 3px color-mix(in srgb, var(--app-primary) 22%, transparent);
+
+  /* Motion ------------------------------------------------------------ */
+  --app-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --app-transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --app-transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Status ------------------------------------------------------------ */
-  --app-positive: #21ba45;
-  --app-negative: #c10015;
-  --app-warning: #f2c037;
-  --app-info: #31ccec;
+  --app-positive: #16a34a;
+  --app-negative: #dc2626;
+  --app-warning: #d97706;
+  --app-info: #0284c7;
+
+  /* Action colours — meaning → colour, see src/config/actions.js ------- */
+  --app-action-primary: var(--app-primary);
+  --app-action-success: #16a34a;
+  --app-action-excel: #107c41;
+  --app-action-edit: #2563eb;
+  --app-action-view: #0891b2;
+  --app-action-info: #0284c7;
+  --app-action-warning: #d97706;
+  --app-action-danger: #dc2626;
+  --app-action-pdf: #b42318;
+  --app-action-print: #475569;
+  --app-action-neutral: #64748b;
+  --app-action-cancel: #64748b;
 
   /* Density (overridden by body.app-density-*) ------------------------ */
-  --app-row-padding-y: 7px;
+  --app-row-padding-y: 8px;
   --app-card-padding: 16px;
   --app-gap: 12px;
+  --app-control-height: 34px;
 
   /* Layout ------------------------------------------------------------ */
-  --app-content-max-width: 1440px;
+  --app-content-max-width: 1520px;
   --app-sidebar-width: 264px;
   --app-sidebar-mini-width: 76px;
+}
+
+/* Dark mode surface + elevation ramp. The store also writes the concrete
+   values inline; these keep the stylesheet self-sufficient. */
+.body--dark {
+  --app-border-strong: rgba(255, 255, 255, 0.16);
+  --app-text-muted: #7d879c;
+  --app-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --app-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.35);
+  --app-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.35), 0 10px 24px rgba(0, 0, 0, 0.45);
+  --app-shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.4), 0 18px 44px rgba(0, 0, 0, 0.55);
 }
 
 /* Legacy aliases — the existing stylesheets (app.sass, component <style>
@@ -80,6 +141,9 @@
   --ku-header-from: var(--app-topbar-start);
   --ku-header-to: var(--app-topbar-end);
   --ku-accent-bg: var(--app-accent-background);
+  --ku-shadow-sm: var(--app-shadow-sm);
+  --ku-shadow-md: var(--app-shadow-md);
+  --ku-shadow-lg: var(--app-shadow-lg);
 }
 
 /* Quasar reads its palette from these; the store also writes them inline so
@@ -98,8 +162,11 @@ body {
   font-family: var(--app-font-family);
   font-weight: var(--app-font-weight);
   line-height: var(--app-line-height);
+  letter-spacing: var(--app-letter-spacing);
   background: var(--app-background);
   color: var(--app-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ---------------------------------------------------------------------------
@@ -118,6 +185,12 @@ h1, h2, h3, h4, h5, h6,
   color: var(--app-text-primary);
 }
 
+h1, h2, h3, h4, h5, h6,
+.text-h1, .text-h2, .text-h3, .text-h4, .text-h5, .text-h6 {
+  font-weight: var(--app-heading-weight);
+  letter-spacing: -0.01em;
+}
+
 .q-table thead th,
 .text-caption,
 .q-field__label,
@@ -127,7 +200,6 @@ h1, h2, h3, h4, h5, h6,
 
 /* ---------------------------------------------------------------------------
    Global link colour — Appearance → Typography → "Link colour".
-   Navigation links, table links, inline links and interactive text.
    --------------------------------------------------------------------------- */
 a,
 a:visited,
@@ -136,7 +208,7 @@ a:visited,
 .ku-link {
   color: var(--app-link);
   text-decoration: none;
-  transition: color 0.15s ease, opacity 0.15s ease;
+  transition: color var(--app-transition-fast), opacity var(--app-transition-fast);
 }
 
 a:hover,
@@ -157,32 +229,64 @@ a.q-card {
   text-decoration: none;
 }
 
-/* RTL content keeps its own reading stack on top of the chosen family. */
+/* ---------------------------------------------------------------------------
+   Script-aware typography — Farsi / Dari / Pashto / Arabic
+   ---------------------------------------------------------------------------
+   `--app-font-family-rtl` is written by the theme store from the font the user
+   picked in Appearance → Language & Typography for the ACTIVE language, so
+   Persian text renders in Vazirmatn (or Sahel, Shabnam, …) while Latin text
+   keeps the chosen Latin family.
+   --------------------------------------------------------------------------- */
 [dir='rtl'] body,
-body[dir='rtl'] {
-  font-family: var(--app-font-family), 'Segoe UI', Tahoma, 'Vazirmatn',
-    'Noto Sans Arabic', 'Noto Naskh Arabic', Arial, sans-serif;
+body[dir='rtl'],
+body.q-body--rtl,
+html[lang='fa'] body,
+html[lang='ps'] body,
+html[lang='ar'] body {
+  font-family: var(--app-font-family-rtl);
+}
+
+/* Persian/Dari glyphs sit higher in the em box: a slightly larger line height
+   keeps tables and forms comfortable without changing the Latin rhythm. */
+[dir='rtl'] body {
+  line-height: calc(var(--app-line-height) + 0.1);
+}
+
+[dir='rtl'] .text-overline,
+[dir='rtl'] .app-table thead th,
+[dir='rtl'] .data-table thead th {
+  letter-spacing: normal;
+}
+
+/* Numbers stay legible and aligned in both directions. */
+.app-numeric,
+.q-table td.text-right,
+.app-kpi__value {
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------------------------------------------------------------------------
    Table density — compact / comfortable / spacious
    --------------------------------------------------------------------------- */
 body.app-density-compact {
-  --app-row-padding-y: 7px;
+  --app-row-padding-y: 8px;
   --app-card-padding: 14px;
   --app-gap: 10px;
+  --app-control-height: 32px;
 }
 
 body.app-density-comfortable {
   --app-row-padding-y: 12px;
   --app-card-padding: 18px;
   --app-gap: 14px;
+  --app-control-height: 36px;
 }
 
 body.app-density-spacious {
   --app-row-padding-y: 18px;
   --app-card-padding: 22px;
   --app-gap: 18px;
+  --app-control-height: 40px;
 }
 
 body.app-density-comfortable .q-table td,
@@ -211,7 +315,7 @@ body.app-sidebar-floating .ku-drawer .q-drawer__content {
   margin: 10px;
   border-radius: var(--app-radius-lg);
   border: 1px solid var(--app-border);
-  box-shadow: var(--app-shadow-md, 0 10px 24px rgba(11, 22, 38, 0.08));
+  box-shadow: var(--app-shadow-md);
   overflow: hidden;
 }
 
@@ -245,9 +349,10 @@ body.app-high-contrast {
 
 body.app-high-contrast .q-card,
 body.app-high-contrast .ku-card,
+body.app-high-contrast .app-card,
 body.app-high-contrast .data-table,
 body.app-high-contrast .ku-toolbar,
-body.app-high-contrast .ku-hero {
+body.app-high-contrast .page-head {
   border-width: 2px !important;
   border-color: var(--app-text-primary) !important;
 }
@@ -289,7 +394,7 @@ body.ku-no-anim *::after {
    --------------------------------------------------------------------------- */
 .ku-notify {
   border-radius: var(--app-radius) !important;
-  box-shadow: 0 8px 24px rgba(11, 22, 38, 0.18) !important;
+  box-shadow: var(--app-shadow-md) !important;
   font-weight: 600;
   max-width: min(460px, calc(100vw - 24px));
 }

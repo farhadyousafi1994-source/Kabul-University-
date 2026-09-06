@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\MaintenanceController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ProcurementController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\ReportGeneratorController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\SettingsController;
 use App\Http\Controllers\Api\SupplierController;
@@ -139,7 +140,26 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('dashboard/recent-activities', [DashboardController::class, 'recentActivities'])->middleware('permission:dashboard.view');
     Route::get('dashboard/upcoming', [DashboardController::class, 'upcoming'])->middleware('permission:dashboard.view');
 
-    // Reports
+    // Reports — Advanced Report Generator (Module 23b).
+    // Declared BEFORE the legacy `reports/{report}` routes so the fixed
+    // segments below are never swallowed by the wildcard.
+    Route::get('reports/catalog', [ReportGeneratorController::class, 'catalog'])->middleware('permission:reports.view');
+    Route::get('reports/lookups/{kind}', [ReportGeneratorController::class, 'lookup'])->middleware('permission:reports.view');
+    Route::post('reports/query/validate', [ReportGeneratorController::class, 'validateQuery'])->middleware('permission:reports.view');
+    Route::post('reports/query', [ReportGeneratorController::class, 'run'])->middleware('permission:reports.generate|reports.view');
+
+    Route::get('reports/saved', [ReportGeneratorController::class, 'savedIndex'])->middleware('permission:reports.view');
+    Route::post('reports/saved', [ReportGeneratorController::class, 'savedStore'])->middleware('permission:reports.generate|reports.view');
+    Route::put('reports/saved/{savedReport}', [ReportGeneratorController::class, 'savedUpdate'])->middleware('permission:reports.view');
+    Route::delete('reports/saved/{savedReport}', [ReportGeneratorController::class, 'savedDestroy'])->middleware('permission:reports.view');
+    Route::post('reports/saved/{savedReport}/run', [ReportGeneratorController::class, 'savedRun'])->middleware('permission:reports.generate|reports.view');
+
+    Route::get('reports/schedules', [ReportGeneratorController::class, 'scheduleIndex'])->middleware('permission:reports.schedule');
+    Route::post('reports/schedules', [ReportGeneratorController::class, 'scheduleStore'])->middleware('permission:reports.schedule');
+    Route::put('reports/schedules/{reportSchedule}', [ReportGeneratorController::class, 'scheduleUpdate'])->middleware('permission:reports.schedule');
+    Route::delete('reports/schedules/{reportSchedule}', [ReportGeneratorController::class, 'scheduleDestroy'])->middleware('permission:reports.schedule');
+
+    // Reports — the ready-made, system-maintained reports.
     Route::get('reports', [ReportController::class, 'index'])->middleware('permission:reports.view');
     Route::get('reports/{report}/export', [ReportController::class, 'export'])->middleware('permission:reports.view')->whereIn('report', [
         'asset_register', 'assets_by_category', 'assets_by_location', 'assigned_assets',

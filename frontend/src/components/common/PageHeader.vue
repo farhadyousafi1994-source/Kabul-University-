@@ -1,5 +1,5 @@
 <template>
-  <header class="page-head print-hide">
+  <header class="page-head print-hide" :style="{ '--page-accent': resolvedAccent }">
     <div class="page-head__row">
       <div class="page-head__lead">
         <BackButton v-if="showBack" :fallback="backFallback" class="page-head__back" />
@@ -55,8 +55,10 @@
  */
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import BackButton from './BackButton.vue'
 import RefreshButton from './RefreshButton.vue'
+import { moduleAccent } from 'src/config/themes'
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -70,6 +72,12 @@ const props = defineProps({
   backFallback: { type: [String, Object], default: () => ({ name: 'dashboard' }) },
   /** Metadata chips under the title: 'text' or { icon, label }. */
   meta: { type: Array, default: () => [] },
+  /**
+   * Module accent for the icon tile. Defaults to the accent of the current
+   * route's section (MODULE_ACCENTS) so every module is instantly recognisable
+   * without each page having to opt in; pass a hex to override.
+   */
+  accent: { type: String, default: '' },
   /** Async reload handler — renders the standard Refresh button when given. */
   onRefresh: { type: Function, default: null },
   refreshing: { type: Boolean, default: false },
@@ -77,6 +85,15 @@ const props = defineProps({
 })
 
 const { t } = useI18n()
+
+// `useRoute()` is undefined outside a router context (unit tests, storybook),
+// hence the optional chaining below.
+const route = useRoute()
+
+/** Explicit accent → route section accent → theme primary. */
+const resolvedAccent = computed(
+  () => props.accent || moduleAccent(route?.meta?.sectionKey || route?.meta?.section),
+)
 
 const crumbs = computed(() => props.breadcrumbs.filter((c) => c && c.label))
 
@@ -153,8 +170,8 @@ const resolvedMeta = computed(() =>
     height: 38px
     min-width: 38px
     border-radius: var(--app-radius)
-    background: color-mix(in srgb, var(--q-primary) 12%, transparent)
-    color: var(--q-primary)
+    background: color-mix(in srgb, var(--page-accent, var(--app-primary)) 12%, transparent)
+    color: var(--page-accent, var(--app-primary))
 
   &__title
     margin: 0

@@ -1,10 +1,17 @@
 import { defineStore } from 'pinia'
 import { Dark } from 'quasar'
 import {
+  ACTION_COLORS,
+  CARD_STYLES,
   COLOR_TOKENS,
+  DARK_SURFACES,
   DENSITIES,
   DEFAULT_THEME_SETTINGS,
+  DEFAULT_TYPOGRAPHY,
   FONT_SIZES,
+  LETTER_SPACINGS,
+  NAV_STYLES,
+  NUMERAL_SYSTEMS,
   RADII,
   RTL_FONT_STACK,
   THEME_SCHEMES,
@@ -13,9 +20,12 @@ import {
   contrastText,
   findScheme,
   fontStack,
+  fontStackFor,
   isValidHex,
   normaliseHex,
+  scriptForLocale,
 } from 'src/config/themes'
+import { ensureWebFonts } from 'src/utils/webfonts'
 import { themeService } from 'src/services/theme.service'
 import { notify } from 'src/utils/notify'
 import i18n from 'src/i18n'
@@ -68,6 +78,36 @@ function migrateCustom(custom) {
   return Object.keys(next).length ? next : null
 }
 
+/** Merge + validate the typography block (Language & Typography settings). */
+function sanitiseTypography(raw) {
+  const out = { ...DEFAULT_TYPOGRAPHY }
+  if (!raw || typeof raw !== 'object') return out
+  if (typeof raw.persianFont === 'string') out.persianFont = raw.persianFont
+  if (typeof raw.arabicFont === 'string') out.arabicFont = raw.arabicFont
+  if (LETTER_SPACINGS[raw.letterSpacing]) out.letterSpacing = raw.letterSpacing
+  if (NUMERAL_SYSTEMS.includes(raw.numerals)) out.numerals = raw.numerals
+  if (typeof raw.headingWeight === 'number' && raw.headingWeight >= 500 && raw.headingWeight <= 900) {
+    out.headingWeight = raw.headingWeight
+  }
+  return out
+}
+
+/** Merge + validate the layout block (interface preferences). */
+function sanitiseLayout(raw, base) {
+  const out = { ...base }
+  if (!raw || typeof raw !== 'object') {
+    out.typography = sanitiseTypography(base.typography)
+    return out
+  }
+  if (['fixed', 'sticky', 'normal', 'static'].includes(raw.header)) out.header = raw.header
+  if (['boxed', 'full'].includes(raw.contentWidth)) out.contentWidth = raw.contentWidth
+  if (DENSITIES.includes(raw.dashboardDensity)) out.dashboardDensity = raw.dashboardDensity
+  if (CARD_STYLES.includes(raw.cardStyle)) out.cardStyle = raw.cardStyle
+  if (NAV_STYLES.includes(raw.navigation)) out.navigation = raw.navigation
+  out.typography = sanitiseTypography(raw.typography ?? base.typography)
+  return out
+}
+
 function sanitise(raw) {
   const base = clone(DEFAULT_THEME_SETTINGS)
   if (!raw || typeof raw !== 'object') return base
@@ -98,8 +138,7 @@ function sanitise(raw) {
   if (typeof raw.animation === 'boolean') out.animation = raw.animation
   if (typeof raw.animationsEnabled === 'boolean') out.animation = raw.animationsEnabled
 
-  if (raw.layout && typeof raw.layout === 'object') out.layout = { ...base.layout, ...raw.layout }
-  if (raw.layoutPreferences && typeof raw.layoutPreferences === 'object') out.layout = { ...base.layout, ...raw.layoutPreferences }
+  out.layout = sanitiseLayout(raw.layout ?? raw.layoutPreferences, base.layout)
   if (raw.accessibility && typeof raw.accessibility === 'object') out.accessibility = { ...base.accessibility, ...raw.accessibility }
   if (raw.accessibilityPreferences && typeof raw.accessibilityPreferences === 'object') {
     out.accessibility = { ...base.accessibility, ...raw.accessibilityPreferences }
@@ -143,6 +182,7 @@ function prefersDark() {
 
 let mediaQuery = null
 let mediaHandler = null
+let localeHandler = null
 
 export const useThemeStore = defineStore('theme', {
   state: () => ({
@@ -173,6 +213,29 @@ export const useThemeStore = defineStore('theme', {
       return this.resolvedMode === 'dark'
     },
     fontStackValue: (state) => fontStack(state.settings.fontFamily),
+    /** Typography block (Language & Typography settings), always complete. */
+    typography: (state) => ({ ...DEFAULT_TYPOGRAPHY, ...(state.settings.layout?.typography || {}) }),
+    /** Script implied by the active <html lang> — 'latin' | 'persian' | 'arabic'. */
+    activeScript: () => scriptForLocale(
+      (typeof document !== 'undefined' && document.documentElement.getAttribute('lang')) || 'en',
+    ),
+    /** Font stack currently used for Farsi / Dari text. */
+    persianFontStack() {
+      return fontStackFor('persian', this.typography.persianFont)
+    },
+    /** Font stack currently used for Arabic text. */
+    arabicFontStack() {
+      return fontStackFor('arabic', this.typography.arabicFont)
+    },
+    /** The stack that the ACTIVE language renders with. */
+    activeFontStack() {
+      const script = this.activeScript
+      if (script === 'persian') return this.persianFontStack
+      if (script === 'arabic') return this.arabicFontStack
+      return this.fontStackValue
+    },
+    cardStyle: (state) => state.settings.layout?.cardStyle || 'elevated',
+    navigationStyle: (state) => state.settings.layout?.navigation || 'solid',
     radiusValue: (state) => RADII[state.settings.radius] || RADII.normal,
     fontSizeValue: (state) => FONT_SIZES[state.settings.fontSize] || FONT_SIZES.M,
     /** Text colour that stays readable on the primary colour. */
@@ -193,6 +256,9 @@ export const useThemeStore = defineStore('theme', {
       const c = this.colors
       const custom = s.custom || {}
       const dark = this.resolvedMode === 'dark'
+      const layout = s.layout || {}
+      const typo = layout.typography || DEFAULT_TYPOGRAPHY
+      const actions = dark ? ACTION_COLORS.dark : ACTION_COLORS.light
 
       // Quasar brand variables — every Quasar component reads these.
       root.style.setProperty('--q-primary', c.primary)
@@ -203,27 +269,49 @@ export const useThemeStore = defineStore('theme', {
       root.style.setProperty('--q-info', c.info)
       root.style.setProperty('--q-warning', c.warning)
 
+      // Navigation bar: solid brand-neutral, brand primary, or light surface.
+      const navStyle = NAV_STYLES.includes(layout.navigation) ? layout.navigation : 'solid'
+      const topbar = navStyle === 'primary' ? c.primary : navStyle === 'light' ? (dark ? DARK_SURFACES.surface : c.surface) : c.topBarStart
+      const topbarText = contrastText(navStyle === 'light' && !dark ? '#ffffff' : topbar)
+
+      // Script-aware typography: the family follows the ACTIVE language.
+      const locale = (typeof document !== 'undefined' && root.getAttribute('lang')) || 'en'
+      const script = scriptForLocale(locale)
+      const rtlFontId = script === 'arabic' ? typo.arabicFont : typo.persianFont
+      const rtlStack = script === 'latin'
+        ? `${fontStack(s.fontFamily)}, ${RTL_FONT_STACK}`
+        : fontStackFor(script, rtlFontId)
+
+      // Pull in the web fonts the user actually selected (once each).
+      ensureWebFonts([s.fontFamily, typo.persianFont, typo.arabicFont])
+
       // Canonical app tokens (src/css/theme.css maps the rest onto these).
       const tokens = {
         '--app-primary': c.primary,
+        '--app-primary-soft': `color-mix(in srgb, ${c.primary} 12%, transparent)`,
         '--app-secondary': c.secondary,
         '--app-accent': c.accent,
         '--app-accent-background': c.accentBackground,
         '--app-topbar-start': c.topBarStart,
         '--app-topbar-end': c.topBarEnd,
-        '--app-sidebar-background': c.sidebarBackground,
+        '--app-topbar': topbar,
+        '--app-topbar-text': topbarText,
+        '--app-topbar-muted': topbarText === '#ffffff' ? 'rgba(255,255,255,.68)' : 'rgba(16,24,40,.62)',
+        '--app-topbar-border': topbarText === '#ffffff' ? 'rgba(255,255,255,.08)' : 'var(--app-border)',
+        '--app-sidebar-background': dark ? '#171A1F' : c.sidebarBackground,
         '--app-sidebar-active': c.sidebarActive,
-        '--app-background': dark ? '#121418' : c.background,
-        '--app-surface': dark ? '#1D2025' : c.surface,
-        '--app-card': dark ? '#1D2025' : c.card,
+        '--app-background': dark ? DARK_SURFACES.background : c.background,
+        '--app-surface': dark ? DARK_SURFACES.surface : c.surface,
+        '--app-card': dark ? DARK_SURFACES.card : c.card,
         // A user-chosen font colour wins over the mode default — that is the
         // whole point of the setting — so only fall back to the dark ink when
         // the token was not overridden.
-        '--app-text-primary': custom.text || (dark ? '#E8ECF4' : c.text),
-        '--app-text-secondary': custom.textSecondary || (dark ? '#97A3B8' : c.textSecondary),
-        '--app-link': custom.link || c.link || c.secondary,
-        '--app-border': dark ? 'rgba(255,255,255,.10)' : c.border,
-        '--app-hover': dark ? 'rgba(255,255,255,.06)' : c.hover,
+        '--app-text-primary': custom.text || (dark ? DARK_SURFACES.text : c.text),
+        '--app-text-secondary': custom.textSecondary || (dark ? DARK_SURFACES.textSecondary : c.textSecondary),
+        '--app-link': custom.link || c.link || c.primary,
+        '--app-border': dark ? DARK_SURFACES.border : c.border,
+        '--app-border-strong': dark ? 'rgba(255,255,255,.16)' : `color-mix(in srgb, ${c.text} 16%, ${c.border})`,
+        '--app-hover': dark ? DARK_SURFACES.hover : c.hover,
         '--app-focus': c.focus,
         '--app-positive': c.positive,
         '--app-negative': c.negative,
@@ -232,10 +320,20 @@ export const useThemeStore = defineStore('theme', {
         '--app-on-primary': contrastText(c.primary),
         '--app-radius': RADII[s.radius] || RADII.normal,
         '--app-font-size': FONT_SIZES[s.fontSize] || FONT_SIZES.M,
-        '--app-font-family': dark || s.fontFamily ? fontStack(s.fontFamily) : fontStack('roboto'),
+        '--app-font-family': fontStack(s.fontFamily),
+        '--app-font-family-rtl': rtlStack,
         '--app-font-weight': String(s.fontWeight || 400),
-        '--app-line-height': String(s.lineHeight || 1.5),
+        '--app-heading-weight': String(typo.headingWeight || 700),
+        '--app-line-height': String(s.lineHeight || 1.55),
+        '--app-letter-spacing': LETTER_SPACINGS[typo.letterSpacing] || LETTER_SPACINGS.normal,
       }
+
+      // Action colours (Excel green, Edit blue, Delete red …). `null` means
+      // "follow the brand primary", which keeps Save/Create on-theme.
+      for (const [intent, value] of Object.entries(actions)) {
+        tokens[`--app-action-${intent}`] = value || c.primary
+      }
+
       for (const [name, value] of Object.entries(tokens)) root.style.setProperty(name, value)
 
       // Legacy `--ku-*` aliases kept alive for existing stylesheets.
@@ -251,15 +349,15 @@ export const useThemeStore = defineStore('theme', {
       root.style.setProperty('--ku-card-border', tokens['--app-border'])
       root.style.setProperty('--ku-line', tokens['--app-border'])
       root.style.setProperty('--ku-navy-2', c.secondary)
-      root.style.setProperty('--ku-gold', c.primary)
-      root.style.setProperty('--ku-gold-light', c.accent)
-      root.style.setProperty('--ku-gold-grad', `linear-gradient(160deg, ${c.accent} 0%, ${c.primary} 100%)`)
+      root.style.setProperty('--ku-brand', c.primary)
+      root.style.setProperty('--ku-brand-soft', tokens['--app-primary-soft'])
       root.style.fontSize = tokens['--app-font-size']
 
       // Body classes — density, animation, sidebar, accessibility, layout.
       const a11y = s.accessibility || {}
-      const layout = s.layout || {}
       const density = s.tableDensity || 'compact'
+      const cardStyle = CARD_STYLES.includes(layout.cardStyle) ? layout.cardStyle : 'elevated'
+      const numerals = NUMERAL_SYSTEMS.includes(typo.numerals) ? typo.numerals : 'auto'
       const classes = {
         'ku-density-loose': density !== 'compact',
         'app-density-compact': density === 'compact',
@@ -282,6 +380,13 @@ export const useThemeStore = defineStore('theme', {
         'app-header-normal': layout.header === 'normal',
         'app-dash-compact': layout.dashboardDensity === 'compact',
         'app-dash-spacious': layout.dashboardDensity === 'spacious',
+        'app-cards-elevated': cardStyle === 'elevated',
+        'app-cards-flat': cardStyle === 'flat',
+        'app-cards-outlined': cardStyle === 'outlined',
+        'app-nav-solid': navStyle === 'solid',
+        'app-nav-primary': navStyle === 'primary',
+        'app-nav-light': navStyle === 'light',
+        'app-numerals-persian': numerals === 'persian' || (numerals === 'auto' && script !== 'latin'),
       }
       for (const [name, on] of Object.entries(classes)) body.classList.toggle(name, on)
 
@@ -303,6 +408,18 @@ export const useThemeStore = defineStore('theme', {
     applyInitial() {
       this.applyTheme()
       this.watchSystemPreference()
+      this.watchLocale()
+    },
+
+    /**
+     * Re-apply the theme whenever the interface language changes, so the
+     * Farsi/Dari/Arabic font, the numeral system and the RTL metrics switch
+     * together with the translation (see `applyLocale()` in src/i18n).
+     */
+    watchLocale() {
+      if (typeof window === 'undefined' || localeHandler) return
+      localeHandler = () => this.applyTheme()
+      window.addEventListener('app:locale-changed', localeHandler)
     },
 
     // -- system colour-scheme listener --------------------------------------
@@ -430,6 +547,46 @@ export const useThemeStore = defineStore('theme', {
 
     setCalendarType(type) {
       if (['gregorian', 'solar'].includes(type)) this.patch({ calendar: type })
+    },
+
+    /** Language & Typography — Farsi/Dari font. */
+    setPersianFont(id) {
+      this.setTypography({ persianFont: id })
+    },
+
+    /** Language & Typography — Arabic font. */
+    setArabicFont(id) {
+      this.setTypography({ arabicFont: id })
+    },
+
+    setLetterSpacing(value) {
+      if (LETTER_SPACINGS[value]) this.setTypography({ letterSpacing: value })
+    },
+
+    /** Digit rendering: auto / latin / persian / arabic. */
+    setNumerals(value) {
+      if (NUMERAL_SYSTEMS.includes(value)) this.setTypography({ numerals: value })
+    },
+
+    setHeadingWeight(value) {
+      const weight = Number(value)
+      if (weight >= 500 && weight <= 900) this.setTypography({ headingWeight: weight })
+    },
+
+    /** Merge a partial typography block (nested inside `layout`). */
+    setTypography(partial) {
+      const layout = this.settings.layout || {}
+      this.setLayout({ typography: { ...DEFAULT_TYPOGRAPHY, ...(layout.typography || {}), ...partial } })
+    },
+
+    /** Card surface treatment: elevated / flat / outlined. */
+    setCardStyle(style) {
+      if (CARD_STYLES.includes(style)) this.setLayout({ cardStyle: style })
+    },
+
+    /** Navigation appearance: solid / primary / light. */
+    setNavigationStyle(style) {
+      if (NAV_STYLES.includes(style)) this.setLayout({ navigation: style })
     },
 
     setLayout(partial) {
