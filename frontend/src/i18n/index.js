@@ -51,6 +51,7 @@ export const SUPPORTED_LANGUAGES = [
 import { deepMerge, extensions } from './extensions.js'
 import { uiExtensions } from './ui.extensions.js'
 import { appearanceExtensions } from './appearance.extensions.js'
+import { reportsExtensions } from './reports.extensions.js'
 
 // Base bundles, then the additive keys introduced by the global CRUD /
 // notification layer and the Theme & Appearance center. `deepMerge` walks the
@@ -66,6 +67,11 @@ for (const [code, extra] of Object.entries(uiExtensions)) {
 }
 // Design-system redesign: language & typography settings, card / navigation style.
 for (const [code, extra] of Object.entries(appearanceExtensions)) {
+  if (messages[code]) deepMerge(messages[code], extra)
+}
+// Reports & the Advanced Report Generator, including the data vocabulary the
+// report catalog refers to through label keys.
+for (const [code, extra] of Object.entries(reportsExtensions)) {
   if (messages[code]) deepMerge(messages[code], extra)
 }
 

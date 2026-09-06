@@ -29,7 +29,12 @@ class RolesAndPermissionsSeeder extends Seeder
         'audit' => ['view', 'create', 'complete'],
         'depreciation' => ['view', 'calculate'],
         'requests' => ['view', 'create', 'approve'],
-        'reports' => ['view'],
+        // Module 23b — the Advanced Report Generator. `view` opens the page and
+        // the catalog, `generate` runs queries, `export` unlocks Excel/PDF/CSV,
+        // `schedule` automates delivery, `manage` administers other people's
+        // saved reports, `view_financial` reveals money columns and
+        // `view_all_branches` lifts the department row scope.
+        'reports' => ['view', 'generate', 'export', 'schedule', 'manage', 'view_financial', 'view_all_branches'],
         'settings' => ['manage'],
         // Module 24b — Theme & Appearance. `appearance.manage` gates the
         // organisation-wide defaults; every authenticated user may always edit
@@ -54,23 +59,27 @@ class RolesAndPermissionsSeeder extends Seeder
             'maintenance.view', 'maintenance.create',
             'maintenance.update', 'incidents.view', 'incidents.create', 'incidents.update',
             'requests.view', 'requests.create', 'requests.approve', 'audit.view', 'audit.create',
-            'depreciation.view', 'reports.view', 'notifications.view',
+            'depreciation.view', 'notifications.view',
+            'reports.view', 'reports.generate', 'reports.export', 'reports.schedule',
+            'reports.view_financial', 'reports.view_all_branches',
         ],
         'Faculty Manager' => [
             'dashboard.view', 'assets.view', 'assets.assign', 'assets.return', 'employees.view',
             'requests.view', 'requests.create', 'requests.approve',
             'maintenance.view', 'maintenance.create', 'incidents.view', 'incidents.create',
-            'reports.view', 'notifications.view',
+            'notifications.view', 'reports.view', 'reports.generate', 'reports.export',
         ],
         'Department Manager' => [
             'dashboard.view', 'assets.view', 'employees.view', 'requests.view', 'requests.create',
             'maintenance.view', 'maintenance.create', 'incidents.view', 'incidents.create',
-            'notifications.view',
+            'notifications.view', 'reports.view', 'reports.generate',
         ],
         'Warehouse Manager' => [
             'dashboard.view', 'assets.view', 'assets.create', 'assets.update', 'employees.view',
             'warehouse.view', 'warehouse.create', 'warehouse.update', 'warehouse.transfer',
-            'procurement.view', 'suppliers.view', 'reports.view', 'notifications.view',
+            'procurement.view', 'suppliers.view', 'notifications.view',
+            'reports.view', 'reports.generate', 'reports.export',
+            'reports.view_financial', 'reports.view_all_branches',
         ],
         'Maintenance Technician' => [
             'dashboard.view', 'assets.view', 'maintenance.view', 'maintenance.create',
@@ -78,7 +87,8 @@ class RolesAndPermissionsSeeder extends Seeder
         ],
         'Auditor' => [
             'dashboard.view', 'assets.view', 'employees.view', 'audit.view', 'audit.create', 'audit.complete',
-            'reports.view', 'notifications.view',
+            'notifications.view', 'reports.view', 'reports.generate', 'reports.export',
+            'reports.view_financial', 'reports.view_all_branches',
         ],
         'Employee' => [
             'dashboard.view', 'assets.view', 'requests.create', 'notifications.view',

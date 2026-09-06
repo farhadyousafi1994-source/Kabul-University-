@@ -13,6 +13,7 @@ import { auditRoutes, procurementRoutes } from './audit-procurement.routes.js'
 import { warehouseRoutes } from './warehouse.routes.js'
 import { depreciationRoutes, disposalRoutes } from './financial.routes.js'
 import { settingsRoutes, reportRoutes } from './system.routes.js'
+import { reportGeneratorRoutes } from './reports.routes.js'
 import { backupRoutes } from './backup.routes.js'
 import { appearanceRoutes } from './appearance.routes.js'
 import { statisticsRoutes, globalSearchRoutes } from './statistics.routes.js'
@@ -42,6 +43,9 @@ export function registerRoutes(router) {
   disposalRoutes(router)
   settingsRoutes(router)
   appearanceRoutes(router)
+  // Registered BEFORE the legacy report routes: `/api/reports/catalog` and
+  // friends must win over the catch-all `/api/reports/:name`.
+  reportGeneratorRoutes(router)
   reportRoutes(router)
   backupRoutes(router)
   statisticsRoutes(router)

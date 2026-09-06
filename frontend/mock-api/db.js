@@ -641,6 +641,45 @@ CREATE TABLE IF NOT EXISTS appearance_defaults (
 -- Module 29 — Backup & disaster recovery index.
 -- One row per backup file kept on the server (.sqlite copy of this database,
 -- or a .json dump). Column "kind" is manual | scheduled | pre_restore.
+CREATE TABLE IF NOT EXISTS saved_reports (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  description TEXT,
+  question TEXT,
+  module TEXT NOT NULL,
+  query TEXT NOT NULL,
+  chart_type TEXT NOT NULL DEFAULT 'auto',
+  locale TEXT,
+  is_shared INTEGER NOT NULL DEFAULT 0,
+  created_by INTEGER,
+  last_run_at TEXT,
+  run_count INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT, updated_at TEXT,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS report_schedules (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  saved_report_id INTEGER NOT NULL,
+  frequency TEXT NOT NULL DEFAULT 'monthly',
+  day_of_week INTEGER,
+  day_of_month INTEGER,
+  time_of_day TEXT NOT NULL DEFAULT '08:00',
+  delivery TEXT NOT NULL DEFAULT 'notification',
+  recipients TEXT,
+  format TEXT NOT NULL DEFAULT 'pdf',
+  active INTEGER NOT NULL DEFAULT 1,
+  next_run_at TEXT,
+  last_run_at TEXT,
+  created_by INTEGER,
+  created_at TEXT, updated_at TEXT,
+  FOREIGN KEY (saved_report_id) REFERENCES saved_reports(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_saved_reports_owner ON saved_reports(created_by, updated_at);
+CREATE INDEX IF NOT EXISTS idx_report_schedules_report ON report_schedules(saved_report_id);
+
 CREATE TABLE IF NOT EXISTS backups (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   filename TEXT NOT NULL,
@@ -760,6 +799,52 @@ export const APPEARANCE_DEFAULTS = {
 }
 
 export const APPEARANCE_PERMISSION = 'appearance.manage'
+
+/**
+ * Advanced Report Generator bootstrap.
+ *
+ * Adds the reporting permissions introduced with the report generator and
+ * grants them to the roles that already hold `reports.view`, so an existing
+ * development database keeps working without a reset.
+ */
+const REPORT_PERMISSIONS = [
+  'reports.view',
+  'reports.generate',
+  'reports.export',
+  'reports.schedule',
+  'reports.manage',
+  'reports.view_financial',
+  'reports.view_all_branches',
+]
+
+function ensureReportingModule(db) {
+  const now = new Date().toISOString()
+
+  for (const name of REPORT_PERMISSIONS) {
+    if (!db.prepare('SELECT id FROM permissions WHERE name = ?').get(name)) {
+      insert(db, 'permissions', { name, guard_name: 'web', created_at: now, updated_at: now })
+    }
+  }
+
+  const ROLE_GRANTS = {
+    'Super Admin': REPORT_PERMISSIONS,
+    'University Administrator': REPORT_PERMISSIONS,
+    'Asset Manager': ['reports.view', 'reports.generate', 'reports.export', 'reports.schedule', 'reports.view_financial', 'reports.view_all_branches'],
+    'Warehouse Manager': ['reports.view', 'reports.generate', 'reports.export', 'reports.view_financial', 'reports.view_all_branches'],
+    'Auditor': ['reports.view', 'reports.generate', 'reports.export', 'reports.view_financial', 'reports.view_all_branches'],
+    'Faculty Manager': ['reports.view', 'reports.generate', 'reports.export'],
+    'Department Manager': ['reports.view', 'reports.generate'],
+  }
+
+  for (const [role, perms] of Object.entries(ROLE_GRANTS)) {
+    const r = db.prepare('SELECT id FROM roles WHERE name = ?').get(role)
+    if (!r) continue
+    for (const p of perms) {
+      const pid = db.prepare('SELECT id FROM permissions WHERE name = ?').get(p)?.id
+      if (pid) db.prepare('INSERT OR IGNORE INTO role_permission (role_id, permission_id) VALUES (?, ?)').run(r.id, pid)
+    }
+  }
+}
 
 function ensureAppearanceModule(db) {
   const now = new Date().toISOString()
@@ -2110,6 +2195,9 @@ function prepareDatabase(db) {
 
   // Appearance module bootstrap — safe to run on every start (idempotent).
   ensureAppearanceModule(db)
+
+  // Advanced reporting bootstrap — safe to run on every start (idempotent).
+  ensureReportingModule(db)
 
   return db
 }
