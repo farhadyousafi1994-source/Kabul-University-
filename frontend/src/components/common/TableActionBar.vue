@@ -6,7 +6,7 @@
           v-if="a.show !== false"
           :icon="a.mdi ? `mdi ${a.icon}` : a.icon"
           :label="a.label"
-          :variant="variantFor(a)"
+          :intent="intentFor(a)"
           :disable="Boolean(a.disabled)"
           :loading="Boolean(a.loading)"
           :tooltip="a.tooltip || a.label"
@@ -38,9 +38,10 @@
  */
 import ActionButton from './ActionButton.vue'
 import ExportActions from './ExportActions.vue'
+import { DEFAULT_INTENT, resolveIntent } from 'src/config/actions'
 
 const props = defineProps({
-  /** Left-side actions: { key, icon, mdi?, label, color?, variant?, disabled?, loading?, show?, handler }. */
+  /** Left-side actions: { key, icon, mdi?, label, intent?, color?, variant?, disabled?, loading?, show?, handler }. */
   actions: { type: Array, default: () => [] },
   /** Current page rows — enables the Print / PDF / Excel group. */
   rows: { type: Array, default: null },
@@ -51,14 +52,20 @@ const props = defineProps({
 })
 
 /**
- * Legacy `color` values are mapped onto the four intents so pages that still
- * pass `color: 'primary'` / `'negative'` keep their meaning.
+ * Map whatever a page declared onto an action intent, so old call sites
+ * (`color: 'primary'`, `variant: 'danger'`) and new ones (`intent: 'excel'`)
+ * all render with the correct design-system colour.
+ *
+ * The action KEY alone is usually enough: `create`, `edit`, `delete`, `export`
+ * and friends are recognised names in `src/config/actions.js`.
  */
-function variantFor(a) {
-  if (a.variant) return a.variant
-  if (a.color === 'primary' || a.key === 'create' || a.key === 'add') return 'primary'
-  if (a.color === 'negative' || a.color === 'red') return 'danger'
-  return 'secondary'
+function intentFor(a) {
+  for (const candidate of [a.intent, a.variant, a.key, a.color]) {
+    if (!candidate) continue
+    const intent = resolveIntent(candidate)
+    if (intent !== DEFAULT_INTENT) return intent
+  }
+  return DEFAULT_INTENT
 }
 </script>
 

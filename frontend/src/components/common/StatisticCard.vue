@@ -87,8 +87,8 @@ const trendDirection = computed(() => {
   border: 1px solid var(--app-border)
   border-radius: var(--app-radius-lg)
   background: var(--app-card)
-  box-shadow: 0 1px 2px rgba(16, 24, 40, .04)
-  transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease
+  box-shadow: var(--app-shadow-xs)
+  transition: border-color var(--app-transition-fast), box-shadow var(--app-transition-fast), transform var(--app-transition-fast)
   font: inherit
   color: var(--app-text-primary)
 
@@ -97,8 +97,8 @@ const trendDirection = computed(() => {
 
     &:hover
       border-color: color-mix(in srgb, var(--tone) 45%, var(--app-border))
-      box-shadow: 0 4px 14px rgba(16, 24, 40, .08)
-      transform: translateY(-1px)
+      box-shadow: var(--app-shadow-md)
+      transform: translateY(-2px)
 
     &:focus-visible
       outline: 2px solid var(--tone)
@@ -126,7 +126,7 @@ const trendDirection = computed(() => {
     flex: 1
 
   &__label
-    font-size: 12px
+    font-size: var(--app-text-caption)
     font-weight: 600
     letter-spacing: .2px
     color: var(--app-text-secondary)
@@ -135,14 +135,14 @@ const trendDirection = computed(() => {
     text-overflow: ellipsis
 
   &__value
-    font-size: 22px
+    font-size: 1.375rem
     font-weight: 700
     line-height: 1.2
     font-variant-numeric: tabular-nums
     color: var(--app-text-primary)
 
   &__hint
-    font-size: 11px
+    font-size: var(--app-text-caption)
     color: var(--app-text-secondary)
 
   &__trend
@@ -179,9 +179,14 @@ const trendDirection = computed(() => {
 .stat-tile--negative
   --tone: var(--app-negative)
 .stat-tile--warning
-  --tone: #B7791F
+  --tone: var(--app-action-warning)
 .stat-tile--info
-  --tone: var(--q-secondary)
-.stat-tile--grey-7
-  --tone: var(--app-text-secondary)
+  --tone: var(--app-action-info)
+.stat-tile--edit
+  --tone: var(--app-action-edit)
+.stat-tile--view
+  --tone: var(--app-action-view)
+.stat-tile--grey-7,
+.stat-tile--neutral
+  --tone: var(--app-action-neutral)
 </style>

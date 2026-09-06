@@ -155,7 +155,7 @@ const vars = computed(() => {
     border-radius: calc(var(--tp-radius) + 2px)
     overflow: hidden
     background: var(--tp-bg)
-    box-shadow: var(--ku-shadow-sm)
+    box-shadow: var(--app-shadow-sm)
 
   &__topbar
     display: flex
@@ -163,7 +163,7 @@ const vars = computed(() => {
     gap: 6px
     padding: 7px 10px
     color: var(--tp-topbar-text)
-    background: linear-gradient(115deg, var(--tp-topbar-start) 0%, var(--tp-topbar-end) 100%)
+    background: var(--tp-topbar-start)
 
   &__topbar-icon
     opacity: .85

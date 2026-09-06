@@ -21,7 +21,9 @@ import '@quasar/extras/material-icons/material-icons.css'
 // MDI is needed for the shared table action bar (import / tune / excel / pdf icons)
 import '@quasar/extras/mdi-v7/mdi-v7.css'
 import '@quasar/extras/roboto-font/roboto-font.css'
+// Design system: tokens → components → app shell (order matters).
 import './css/theme.css'
+import './css/design-system.css'
 import './css/app.sass'
 
 // App
@@ -67,10 +69,16 @@ app.use(Quasar, {
   plugins: { Notify, Dialog, Loading, ClosePopup },
   config: {
     dark: Dark.isActive, // follow system preference; togglable from the layout
+    // Fallback brand palette. The theme store overwrites these as CSS custom
+    // properties on the first paint (see stores/theme.js → applyTheme).
     brand: {
-      primary: '#C8862D',
-      secondary: '#175A8C',
-      accent: '#0B1626',
+      primary: '#2563EB',
+      secondary: '#1D4ED8',
+      accent: '#6366F1',
+      positive: '#16A34A',
+      negative: '#DC2626',
+      warning: '#D97706',
+      info: '#0284C7',
     },
     notify: {
       position: 'top',

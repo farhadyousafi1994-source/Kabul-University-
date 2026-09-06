@@ -669,31 +669,31 @@ load()
   align-items: center
   gap: 4px
   padding: 8px 14px
-  border-radius: var(--ku-radius-card)
-  background: color-mix(in srgb, var(--q-primary) 9%, var(--ku-card-bg))
-  border: 1px solid color-mix(in srgb, var(--q-primary) 30%, transparent)
-  color: var(--ku-ink)
+  border-radius: var(--app-radius-lg)
+  background: color-mix(in srgb, var(--app-primary) 9%, var(--app-card))
+  border: 1px solid color-mix(in srgb, var(--app-primary) 28%, transparent)
+  color: var(--app-text-primary)
 
 .view-opt
-  color: var(--ku-ink-soft)
+  color: var(--app-text-secondary)
 
   &:hover
-    color: var(--q-primary)
-    background: color-mix(in srgb, var(--q-primary) 8%, transparent)
+    color: var(--app-primary)
+    background: color-mix(in srgb, var(--app-primary) 9%, transparent)
 
 .dialog-icon
-  background: var(--ku-gold-grad)
-  color: #fff
+  background: color-mix(in srgb, var(--app-primary) 12%, transparent)
+  color: var(--app-primary)
 
 // Fullscreen table surface
 .ku-table-fullscreen
   position: fixed
   inset: 0
   z-index: 3000
-  background: var(--ku-page-bg)
+  background: var(--app-background)
   overflow: auto
   padding: 16px
 
   .data-table
-    background: var(--ku-card-bg)
+    background: var(--app-card)
 </style>

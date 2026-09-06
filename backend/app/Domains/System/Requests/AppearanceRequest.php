@@ -45,6 +45,17 @@ class AppearanceRequest extends FormRequest
             'layout_preferences.header' => ['sometimes', 'nullable', Rule::in(AppearanceService::HEADER_MODES)],
             'layout_preferences.contentWidth' => ['sometimes', 'nullable', Rule::in(AppearanceService::CONTENT_WIDTHS)],
             'layout_preferences.dashboardDensity' => ['sometimes', 'nullable', Rule::in(AppearanceService::DENSITIES)],
+            'layout_preferences.sidebarPosition' => ['sometimes', 'nullable', Rule::in(AppearanceService::SIDEBAR_POSITIONS)],
+            'layout_preferences.cardStyle' => ['sometimes', 'nullable', Rule::in(AppearanceService::CARD_STYLES)],
+            'layout_preferences.navigation' => ['sometimes', 'nullable', Rule::in(AppearanceService::NAV_STYLES)],
+
+            // Language & Typography (Theme & Appearance → Language & Typography).
+            'layout_preferences.typography' => ['sometimes', 'nullable', 'array'],
+            'layout_preferences.typography.persianFont' => ['sometimes', 'nullable', Rule::in(AppearanceService::PERSIAN_FONTS)],
+            'layout_preferences.typography.arabicFont' => ['sometimes', 'nullable', Rule::in(AppearanceService::ARABIC_FONTS)],
+            'layout_preferences.typography.letterSpacing' => ['sometimes', 'nullable', Rule::in(AppearanceService::LETTER_SPACINGS)],
+            'layout_preferences.typography.numerals' => ['sometimes', 'nullable', Rule::in(AppearanceService::NUMERAL_SYSTEMS)],
+            'layout_preferences.typography.headingWeight' => ['sometimes', 'nullable', 'integer', Rule::in(AppearanceService::HEADING_WEIGHTS)],
             'accessibility_preferences' => ['sometimes', 'nullable', 'array'],
             'accessibility_preferences.highContrast' => ['sometimes', 'nullable', 'boolean'],
             'accessibility_preferences.reducedMotion' => ['sometimes', 'nullable', 'boolean'],
@@ -85,6 +96,12 @@ class AppearanceRequest extends FormRequest
             'table_density.in' => 'The selected table density is not supported.',
             'calendar_type.in' => 'The selected calendar is not supported.',
             'custom_colors.*.regex' => 'Custom colours must be valid hex values (e.g. #2E7D32).',
+            'layout_preferences.cardStyle.in' => 'The selected card style is not supported.',
+            'layout_preferences.navigation.in' => 'The selected navigation style is not supported.',
+            'layout_preferences.typography.persianFont.in' => 'The selected Farsi/Dari font is not available.',
+            'layout_preferences.typography.arabicFont.in' => 'The selected Arabic font is not available.',
+            'layout_preferences.typography.letterSpacing.in' => 'The selected letter spacing is not supported.',
+            'layout_preferences.typography.numerals.in' => 'The selected number format is not supported.',
         ];
     }
 

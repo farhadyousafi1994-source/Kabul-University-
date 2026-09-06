@@ -34,13 +34,42 @@ class AppearanceService
     public const CALENDARS = ['gregorian', 'solar'];
 
     /** @var list<string> */
-    public const FONT_FAMILIES = ['inter', 'roboto', 'poppins', 'open-sans', 'noto-sans', 'arial'];
+    public const FONT_FAMILIES = ['inter', 'roboto', 'poppins', 'open-sans', 'noto-sans', 'vazirmatn', 'arial', 'system'];
+
+    /**
+     * Farsi / Dari families offered in Theme & Appearance → Language &
+     * Typography. Vazirmatn is the default (see DEFAULT_TYPOGRAPHY).
+     *
+     * @var list<string>
+     */
+    public const PERSIAN_FONTS = ['vazirmatn', 'iransans', 'sahel', 'shabnam', 'samim', 'estedad', 'noto-naskh', 'system-fa'];
+
+    /** Arabic families — also the fallback used for Pashto. @var list<string> */
+    public const ARABIC_FONTS = ['noto-sans-arabic', 'noto-naskh', 'cairo', 'vazirmatn', 'system-ar'];
+
+    /** @var list<string> */
+    public const LETTER_SPACINGS = ['tight', 'normal', 'relaxed', 'wide'];
+
+    /** Digit rendering: Latin, Persian (۱۲۳) or Arabic-Indic (١٢٣). @var list<string> */
+    public const NUMERAL_SYSTEMS = ['auto', 'latin', 'persian', 'arabic'];
+
+    /** @var list<int> */
+    public const HEADING_WEIGHTS = [600, 700, 800];
+
+    /** Card surface treatment. @var list<string> */
+    public const CARD_STYLES = ['elevated', 'flat', 'outlined'];
+
+    /** Top navigation treatment. @var list<string> */
+    public const NAV_STYLES = ['solid', 'primary', 'light'];
+
+    /** Drawer side; `auto` follows the language direction. @var list<string> */
+    public const SIDEBAR_POSITIONS = ['auto', 'left', 'right'];
 
     /** @var list<int> */
     public const FONT_WEIGHTS = [300, 400, 500, 600, 700, 800];
 
     /** @var list<string> */
-    public const HEADER_MODES = ['fixed', 'static', 'sticky'];
+    public const HEADER_MODES = ['fixed', 'static', 'sticky', 'normal'];
 
     /** @var list<string> */
     public const CONTENT_WIDTHS = ['boxed', 'full'];

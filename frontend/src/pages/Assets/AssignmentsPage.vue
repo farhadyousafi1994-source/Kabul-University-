@@ -708,8 +708,8 @@ onMounted(load)
 
 <style lang="sass" scoped>
 .dialog-icon
-  background: var(--ku-gold-grad)
-  color: #fff
+  background: color-mix(in srgb, var(--app-primary) 12%, transparent)
+  color: var(--app-primary)
 
 .min-width-0
   min-width: 0

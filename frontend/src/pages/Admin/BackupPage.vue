@@ -404,9 +404,10 @@ onMounted(load)
   gap: 14px
   padding: 18px
   border-radius: 14px
-  color: #fff
-  background: linear-gradient(120deg, $primary 0%, #00695c 100%)
-  box-shadow: 0 6px 18px rgba(0, 0, 0, .10)
+  color: var(--app-text-primary)
+  background: var(--app-card)
+  border: 1px solid var(--app-border)
+  box-shadow: var(--app-shadow-sm)
 
   &__glow
     position: absolute

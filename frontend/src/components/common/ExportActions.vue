@@ -1,7 +1,7 @@
 <template>
   <div class="export-actions">
     <ActionButton
-      variant="secondary"
+      intent="print"
       icon="print"
       :label="t('common.print')"
       :tooltip="t('common.printTooltip')"
@@ -10,7 +10,7 @@
       @click="doPrint"
     />
     <ActionButton
-      variant="secondary"
+      intent="pdf"
       icon="picture_as_pdf"
       :label="t('common.pdf')"
       :tooltip="t('common.pdfTooltip')"
@@ -18,13 +18,15 @@
       :disable="isEmpty || busy"
       @click="doPdf"
     />
+    <!-- Excel is ALWAYS green with a spreadsheet icon (design-system rule). -->
     <ActionButton
-      variant="secondary"
-      icon="table_view"
+      intent="excel"
+      icon="mdi-microsoft-excel"
       :label="t('common.excel')"
       :tooltip="t('common.excelTooltip')"
       :loading="exceling"
       :disable="isEmpty || busy"
+      data-cy="export-excel"
       @click="doExcel"
     />
   </div>
@@ -32,10 +34,12 @@
 
 <script setup>
 /**
- * Print / PDF / Excel for the current table view, as three enterprise buttons
- * (the old circular icon buttons are gone). Each one owns its loading state and
- * is disabled while any export is running, so a double click can never start
- * two downloads of the same report.
+ * Print / PDF / Excel for the current table view, as three enterprise buttons.
+ *
+ * The colours come from the action-intent system, so the rule "Export to Excel
+ * is green with a spreadsheet icon" is enforced everywhere the component is
+ * used. Each button owns its loading state and is disabled while any export is
+ * running, so a double click can never start two downloads of the same report.
  */
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'

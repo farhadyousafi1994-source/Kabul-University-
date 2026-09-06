@@ -1,0 +1,764 @@
+/* ---------------------------------------------------------------------------
+   KU-AMS component layer — the reusable design system
+   ---------------------------------------------------------------------------
+   Everything here is built exclusively from the tokens declared in
+   `src/css/theme.css`. It gives the whole ERP ONE voice for:
+
+     · buttons (action-intent colour system)
+     · cards (surface, hover, module accents)
+     · tables & data grids
+     · forms & inputs
+     · badges & status chips
+     · dialogs, menus, tooltips
+     · typography utilities
+
+   Nothing in this file hardcodes a brand colour, so switching theme, mode
+   (light/dark) or direction (LTR/RTL) restyles every screen at once.
+   --------------------------------------------------------------------------- */
+
+/* ===========================================================================
+   1. TYPOGRAPHY UTILITIES
+   =========================================================================== */
+
+.app-page-title {
+  font-size: var(--app-text-page-title);
+  font-weight: var(--app-heading-weight);
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  color: var(--app-text-primary);
+  margin: 0;
+}
+
+.app-section-title {
+  font-size: var(--app-text-section-title);
+  font-weight: 650;
+  line-height: 1.35;
+  color: var(--app-text-primary);
+}
+
+.app-card-title {
+  font-size: var(--app-text-card-title);
+  font-weight: 650;
+  line-height: 1.35;
+  color: var(--app-text-primary);
+}
+
+.app-body {
+  font-size: var(--app-text-body);
+  color: var(--app-text-primary);
+}
+
+.app-small,
+.app-hint {
+  font-size: var(--app-text-small);
+  color: var(--app-text-secondary);
+}
+
+.app-caption {
+  font-size: var(--app-text-caption);
+  color: var(--app-text-secondary);
+}
+
+.app-label {
+  font-size: var(--app-text-small);
+  font-weight: 600;
+  color: var(--app-text-secondary);
+}
+
+.app-overline {
+  font-size: var(--app-text-caption);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--app-text-secondary);
+}
+
+/* ===========================================================================
+   2. BUTTON SYSTEM — action intents
+   ---------------------------------------------------------------------------
+   `.app-btn` gives every button the same height, padding, radius, typography,
+   icon spacing, transition and focus ring. The intent modifier only changes
+   the colour, which is always read from an `--app-action-*` token:
+
+     .app-btn--solid   filled    (save / create / delete / excel …)
+     .app-btn--soft    tinted    (edit / view / pdf …)
+     .app-btn--quiet   outlined  (cancel / print / secondary)
+     .app-btn--ghost   text only
+   =========================================================================== */
+
+.app-btn {
+  --btn-color: var(--app-action-neutral);
+  --btn-on-color: #ffffff;
+  min-height: var(--app-control-height);
+  padding: 0 14px;
+  border-radius: var(--app-radius);
+  font-size: var(--app-text-button);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  transition:
+    background-color var(--app-transition-fast),
+    border-color var(--app-transition-fast),
+    color var(--app-transition-fast),
+    box-shadow var(--app-transition-fast),
+    transform var(--app-transition-fast);
+}
+
+.app-btn .q-icon {
+  font-size: 18px;
+}
+
+.app-btn .q-btn__content {
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.app-btn--icon-only {
+  padding: 0 9px;
+  min-width: var(--app-control-height);
+}
+
+.app-btn:hover:not([disabled]):not(.disabled) {
+  transform: translateY(-1px);
+}
+
+.app-btn:active:not([disabled]):not(.disabled) {
+  transform: translateY(0);
+}
+
+.app-btn:focus-visible {
+  outline: 2px solid var(--btn-color);
+  outline-offset: 2px;
+}
+
+.app-btn[disabled],
+.app-btn.disabled {
+  opacity: 0.5 !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* -- emphasis ------------------------------------------------------------- */
+
+.app-btn--solid {
+  background: var(--btn-color) !important;
+  color: var(--btn-on-color) !important;
+  border: 1px solid transparent;
+  box-shadow: var(--app-shadow-xs);
+}
+
+.app-btn--solid:hover:not([disabled]):not(.disabled) {
+  background: color-mix(in srgb, var(--btn-color) 88%, #000) !important;
+  box-shadow: var(--app-shadow-sm);
+}
+
+.app-btn--soft {
+  background: color-mix(in srgb, var(--btn-color) 12%, transparent) !important;
+  color: var(--btn-color) !important;
+  border: 1px solid color-mix(in srgb, var(--btn-color) 24%, transparent);
+}
+
+.app-btn--soft:hover:not([disabled]):not(.disabled) {
+  background: color-mix(in srgb, var(--btn-color) 18%, transparent) !important;
+  border-color: color-mix(in srgb, var(--btn-color) 40%, transparent);
+}
+
+.app-btn--quiet {
+  background: var(--app-card) !important;
+  color: var(--app-text-primary) !important;
+  border: 1px solid var(--app-border);
+}
+
+.app-btn--quiet .q-icon {
+  color: var(--btn-color);
+}
+
+.app-btn--quiet:hover:not([disabled]):not(.disabled) {
+  background: var(--app-hover) !important;
+  border-color: var(--app-border-strong);
+}
+
+.app-btn--ghost {
+  background: transparent !important;
+  color: var(--btn-color) !important;
+  border: 1px solid transparent;
+}
+
+.app-btn--ghost:hover:not([disabled]):not(.disabled) {
+  background: color-mix(in srgb, var(--btn-color) 10%, transparent) !important;
+}
+
+/* -- intents -------------------------------------------------------------- */
+
+.app-btn--intent-primary { --btn-color: var(--app-action-primary); --btn-on-color: var(--app-on-primary); }
+.app-btn--intent-success { --btn-color: var(--app-action-success); }
+.app-btn--intent-excel   { --btn-color: var(--app-action-excel); }
+.app-btn--intent-edit    { --btn-color: var(--app-action-edit); }
+.app-btn--intent-view    { --btn-color: var(--app-action-view); }
+.app-btn--intent-info    { --btn-color: var(--app-action-info); }
+.app-btn--intent-warning { --btn-color: var(--app-action-warning); }
+.app-btn--intent-danger  { --btn-color: var(--app-action-danger); }
+.app-btn--intent-pdf     { --btn-color: var(--app-action-pdf); }
+.app-btn--intent-print   { --btn-color: var(--app-action-print); }
+.app-btn--intent-neutral { --btn-color: var(--app-action-neutral); }
+.app-btn--intent-cancel  { --btn-color: var(--app-action-cancel); }
+
+/* Loading state keeps the button width stable and the label readable. */
+.app-btn.q-btn--loading .q-btn__content {
+  opacity: 0;
+}
+
+/* Row-level icon actions inside tables */
+.app-row-action {
+  --btn-color: var(--app-action-neutral);
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  border-radius: var(--app-radius-sm);
+  color: var(--btn-color);
+  transition: background-color var(--app-transition-fast), color var(--app-transition-fast);
+}
+
+.app-row-action:hover {
+  background: color-mix(in srgb, var(--btn-color) 14%, transparent);
+}
+
+.app-row-action--edit { --btn-color: var(--app-action-edit); }
+.app-row-action--view { --btn-color: var(--app-action-view); }
+.app-row-action--delete { --btn-color: var(--app-action-danger); }
+.app-row-action--excel { --btn-color: var(--app-action-excel); }
+
+/* Quasar buttons that are NOT ActionButtons still inherit the shared voice. */
+.q-btn {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  transition:
+    background-color var(--app-transition-fast),
+    box-shadow var(--app-transition-fast),
+    transform var(--app-transition-fast);
+}
+
+.q-btn:not(.app-btn):not(.q-btn--round):hover:not([disabled]) {
+  transform: translateY(-1px);
+}
+
+.q-btn--round,
+.q-btn--fab {
+  box-shadow: var(--app-shadow-sm);
+}
+
+/* ===========================================================================
+   3. CARDS
+   =========================================================================== */
+
+.q-card,
+.app-card {
+  background: var(--app-card);
+  color: var(--app-text-primary);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  box-shadow: var(--app-shadow-sm);
+  transition:
+    box-shadow var(--app-transition),
+    border-color var(--app-transition),
+    transform var(--app-transition),
+    background-color var(--app-transition);
+}
+
+/* Card style preference (Appearance → Interface → Card style) */
+body.app-cards-flat .q-card,
+body.app-cards-flat .app-card,
+body.app-cards-flat .ku-card {
+  box-shadow: none;
+}
+
+body.app-cards-outlined .q-card,
+body.app-cards-outlined .app-card,
+body.app-cards-outlined .ku-card {
+  box-shadow: none;
+  border-color: var(--app-border-strong);
+}
+
+/* Interactive cards: light, elegant, fast hover — never bouncy. */
+.app-card--interactive,
+.app-card--hover,
+.stat-card,
+.kpi-card,
+a.q-card,
+.q-card.cursor-pointer {
+  cursor: pointer;
+}
+
+.app-card--interactive:hover,
+.app-card--hover:hover,
+.stat-card:hover,
+.kpi-card:hover,
+a.q-card:hover,
+.q-card.cursor-pointer:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--app-shadow-md);
+  border-color: color-mix(in srgb, var(--app-primary) 28%, var(--app-border));
+}
+
+.app-card__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px var(--app-card-padding);
+  border-bottom: 1px solid var(--app-border);
+}
+
+.app-card__body {
+  padding: var(--app-card-padding);
+}
+
+.app-card__title {
+  font-size: var(--app-text-card-title);
+  font-weight: 650;
+  color: var(--app-text-primary);
+}
+
+.app-card__hint {
+  font-size: var(--app-text-caption);
+  color: var(--app-text-secondary);
+  margin-top: 1px;
+}
+
+/* -- Module accents ------------------------------------------------------
+   Dashboard and module cards may carry a domain colour for fast recognition.
+   The accent only tints the icon tile, a hairline and the hover border — the
+   card surface itself stays neutral, so the UI never becomes noisy. */
+
+.app-accent {
+  --accent: var(--app-primary);
+}
+
+.app-accent-blue { --accent: #2563eb; }
+.app-accent-indigo { --accent: #4f46e5; }
+.app-accent-violet { --accent: #7c3aed; }
+.app-accent-purple { --accent: #9333ea; }
+.app-accent-cyan { --accent: #0891b2; }
+.app-accent-teal { --accent: #0d9488; }
+.app-accent-green { --accent: #16a34a; }
+.app-accent-emerald { --accent: #059669; }
+.app-accent-amber { --accent: #d97706; }
+.app-accent-orange { --accent: #ea580c; }
+.app-accent-rose { --accent: #e11d48; }
+.app-accent-slate { --accent: #64748b; }
+
+.app-icon-tile {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  border-radius: var(--app-radius);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--accent, var(--app-primary)) 12%, transparent);
+  color: var(--accent, var(--app-primary));
+  transition: background-color var(--app-transition-fast), color var(--app-transition-fast);
+}
+
+.app-icon-tile--lg {
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  border-radius: var(--app-radius-lg);
+}
+
+.app-icon-tile--sm {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: var(--app-radius-sm);
+}
+
+.app-card--accent {
+  position: relative;
+  overflow: hidden;
+}
+
+.app-card--accent::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  background: var(--accent, var(--app-primary));
+  opacity: 0.9;
+}
+
+.app-card--accent:hover {
+  border-color: color-mix(in srgb, var(--accent, var(--app-primary)) 34%, var(--app-border));
+}
+
+/* ===========================================================================
+   4. TABLES & DATA GRIDS
+   =========================================================================== */
+
+.data-table,
+.app-table {
+  border-radius: var(--app-radius-lg);
+  border: 1px solid var(--app-border);
+  box-shadow: var(--app-shadow-sm);
+  background: var(--app-card);
+  overflow-x: auto;
+}
+
+.data-table .q-table__card,
+.app-table .q-table__card {
+  border-radius: inherit;
+  box-shadow: none;
+  background: transparent;
+  color: var(--app-text-primary);
+}
+
+.data-table thead th,
+.app-table thead th {
+  background: color-mix(in srgb, var(--app-text-primary) 3%, var(--app-card));
+  color: var(--app-text-secondary);
+  font-size: var(--app-text-table-head);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.data-table tbody td,
+.app-table tbody td {
+  color: var(--app-text-primary);
+  font-size: var(--app-text-small);
+  border-bottom: 1px solid var(--app-border);
+}
+
+.data-table tbody tr,
+.app-table tbody tr {
+  transition: background-color var(--app-transition-fast);
+}
+
+.data-table tbody tr:hover,
+.app-table tbody tr:hover {
+  background: color-mix(in srgb, var(--app-primary) 5%, transparent);
+}
+
+.data-table tbody tr.selected,
+.app-table tbody tr.selected {
+  background: color-mix(in srgb, var(--app-primary) 9%, transparent);
+}
+
+.data-table .q-table__bottom,
+.app-table .q-table__bottom {
+  border-top: 1px solid var(--app-border);
+  color: var(--app-text-secondary);
+  font-size: var(--app-text-caption);
+}
+
+.data-table.q-table--fullscreen {
+  background: var(--app-card);
+  padding: 12px;
+}
+
+.data-table--comfortable tbody td,
+.data-table--comfortable thead th {
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+}
+
+.clickable-row {
+  cursor: pointer;
+}
+
+/* ===========================================================================
+   5. FORMS & INPUTS
+   =========================================================================== */
+
+.q-field--outlined .q-field__control {
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  transition: box-shadow var(--app-transition-fast), background-color var(--app-transition-fast);
+}
+
+.q-field--outlined .q-field__control:before {
+  border-color: var(--app-border-strong);
+  transition: border-color var(--app-transition-fast);
+}
+
+.q-field--outlined:not(.q-field--error):not(.q-field--disabled):hover .q-field__control:before {
+  border-color: color-mix(in srgb, var(--app-primary) 45%, var(--app-border-strong));
+}
+
+.q-field--outlined.q-field--focused .q-field__control {
+  box-shadow: var(--app-ring);
+}
+
+.q-field--outlined.q-field--focused .q-field__control:after {
+  border-width: 1.5px;
+}
+
+.q-field--error .q-field__control {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-negative) 14%, transparent);
+}
+
+.q-field__marginal,
+.q-field__bottom {
+  color: var(--app-text-secondary);
+}
+
+.q-field--disabled .q-field__control {
+  background: var(--app-hover);
+}
+
+/* Success state for validated inputs: <q-input class="app-field--valid"> */
+.app-field--valid .q-field__control:before {
+  border-color: var(--app-action-success) !important;
+}
+
+.q-toggle__inner--truthy .q-toggle__track,
+.q-checkbox__inner--truthy .q-checkbox__bg {
+  color: var(--app-primary);
+}
+
+/* ===========================================================================
+   6. BADGES, CHIPS & STATUS
+   =========================================================================== */
+
+.q-chip {
+  font-weight: 600;
+  font-size: var(--app-text-caption);
+}
+
+.q-badge {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.app-badge {
+  --badge-color: var(--app-action-neutral);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: var(--app-radius-pill);
+  font-size: var(--app-text-caption);
+  font-weight: 650;
+  line-height: 1.6;
+  background: color-mix(in srgb, var(--badge-color) 13%, transparent);
+  color: var(--badge-color);
+  border: 1px solid color-mix(in srgb, var(--badge-color) 22%, transparent);
+  white-space: nowrap;
+}
+
+.app-badge--success { --badge-color: var(--app-action-success); }
+.app-badge--warning { --badge-color: var(--app-action-warning); }
+.app-badge--danger  { --badge-color: var(--app-action-danger); }
+.app-badge--info    { --badge-color: var(--app-action-info); }
+.app-badge--edit    { --badge-color: var(--app-action-edit); }
+.app-badge--view    { --badge-color: var(--app-action-view); }
+.app-badge--neutral { --badge-color: var(--app-action-neutral); }
+.app-badge--primary { --badge-color: var(--app-primary); }
+
+.app-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* ===========================================================================
+   7. SURFACES: toolbars, panels, empty states
+   =========================================================================== */
+
+.ku-card,
+.app-panel {
+  background: var(--app-card);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.ku-toolbar {
+  background: var(--app-card);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  box-shadow: var(--app-shadow-xs);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.app-divider {
+  height: 1px;
+  background: var(--app-border);
+  border: 0;
+}
+
+/* ===========================================================================
+   8. DIALOGS, MENUS, TOOLTIPS
+   =========================================================================== */
+
+.q-dialog .q-card {
+  border-radius: var(--app-radius-lg);
+  box-shadow: var(--app-shadow-lg);
+  border: 1px solid var(--app-border);
+}
+
+.q-dialog .q-dialog-card {
+  min-width: 420px;
+}
+
+.q-dialog__title,
+.q-dialog .text-h6 {
+  font-size: var(--app-text-section-title);
+  font-weight: 650;
+}
+
+.q-menu,
+.q-tooltip {
+  border-radius: var(--app-radius);
+  box-shadow: var(--app-shadow-md);
+}
+
+.q-menu {
+  border: 1px solid var(--app-border);
+  background: var(--app-card);
+}
+
+.q-tooltip {
+  background: color-mix(in srgb, var(--app-text-primary) 92%, #000);
+  color: var(--app-card);
+  font-size: var(--app-text-caption);
+  font-weight: 500;
+  padding: 5px 9px;
+}
+
+.q-item {
+  border-radius: var(--app-radius-sm);
+  transition: background-color var(--app-transition-fast), color var(--app-transition-fast);
+}
+
+.q-menu .q-item.q-item--active,
+.q-menu .q-item--active {
+  color: var(--app-primary);
+  background: color-mix(in srgb, var(--app-primary) 10%, transparent);
+}
+
+/* ===========================================================================
+   9. NAVIGATION — top bar & sidebar
+   =========================================================================== */
+
+.ku-app-header {
+  background: var(--app-topbar) !important;
+  color: var(--app-topbar-text) !important;
+  border-bottom: 1px solid var(--app-topbar-border);
+  box-shadow: none !important;
+}
+
+.ku-app-header .q-btn,
+.ku-app-header .q-toolbar__title,
+.ku-app-header .q-icon {
+  color: var(--app-topbar-text);
+}
+
+.ku-app-header .q-btn:hover {
+  background: color-mix(in srgb, var(--app-topbar-text) 10%, transparent);
+}
+
+.ku-header-sub {
+  color: var(--app-topbar-muted);
+}
+
+/* Light navigation variant keeps the header on the app surface. */
+body.app-nav-light .ku-app-header {
+  border-bottom-color: var(--app-border);
+  box-shadow: var(--app-shadow-xs) !important;
+}
+
+.ku-drawer {
+  background: var(--app-sidebar-background);
+}
+
+.ku-drawer .q-drawer__content {
+  background: var(--app-sidebar-background);
+}
+
+.app-nav-item,
+.ku-nav__solo {
+  position: relative;
+}
+
+/* Active navigation indicator — subtle but unmistakable, RTL-safe. */
+.ku-nav__solo--active::before,
+.app-nav-item--active::before {
+  content: '';
+  position: absolute;
+  inset-block: 6px;
+  inset-inline-start: -8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--app-primary);
+}
+
+[dir='rtl'] .ku-nav__solo--active::before,
+[dir='rtl'] .app-nav-item--active::before {
+  border-radius: 3px 0 0 3px;
+}
+
+/* ===========================================================================
+   10. SCROLLBARS
+   =========================================================================== */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--app-text-secondary) 35%, transparent) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--app-text-secondary) 35%, transparent);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--app-text-secondary) 58%, transparent);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ===========================================================================
+   11. RESPONSIVE POLISH
+   =========================================================================== */
+
+@media (max-width: 1023px) {
+  .q-dialog .q-dialog-card {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 599px) {
+  .app-btn {
+    padding: 0 11px;
+  }
+
+  .q-table {
+    font-size: var(--app-text-caption);
+  }
+
+  .q-dialog .q-card {
+    width: 96vw !important;
+  }
+
+  .app-page-title {
+    font-size: 1.125rem;
+  }
+}

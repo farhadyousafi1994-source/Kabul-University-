@@ -1,5 +1,9 @@
 <template>
-  <div class="sb-group" :class="{ 'sb-group--open': expanded, 'sb-group--active': hasActiveChild }">
+  <div
+    class="sb-group"
+    :class="{ 'sb-group--open': expanded, 'sb-group--active': hasActiveChild }"
+    :style="{ '--sb-accent': accent }"
+  >
     <!-- Mini rail: the parent becomes a hover fly-out instead of an accordion -->
     <template v-if="mini">
       <button type="button" class="sb-group__rail" :class="{ 'is-active': hasActiveChild }" :aria-label="label">
@@ -80,6 +84,8 @@ const props = defineProps({
   /** [{ name (route name), title, icon }] */
   items: { type: Array, default: () => [] },
   expanded: { type: Boolean, default: false },
+  /** Module accent (MODULE_ACCENTS) used for the icon and active markers. */
+  accent: { type: String, default: 'var(--app-primary)' },
   mini: { type: Boolean, default: false },
 })
 
@@ -94,6 +100,9 @@ const hasActiveChild = computed(() => activeCount.value > 0)
 
 <style lang="sass" scoped>
 .sb-group
+  // Module hue (MODULE_ACCENTS), passed in by MainLayout. Everything below
+  // falls back to the theme primary when no accent is supplied.
+  --sb-accent: var(--app-primary)
   margin: 0 8px 2px
 
   &__header
@@ -107,16 +116,16 @@ const hasActiveChild = computed(() => activeCount.value > 0)
     border-radius: var(--app-radius)
     cursor: pointer
     font: inherit
-    font-size: 13px
+    font-size: var(--app-text-small)
     font-weight: 600
     color: var(--app-text-primary)
-    transition: background-color .14s ease, color .14s ease
+    transition: background-color var(--app-transition-fast), color var(--app-transition-fast)
 
     &:hover
       background: var(--app-hover)
 
     &:focus-visible
-      outline: 2px solid var(--q-primary)
+      outline: 2px solid var(--app-primary)
       outline-offset: -2px
 
   &__rail
@@ -133,15 +142,16 @@ const hasActiveChild = computed(() => activeCount.value > 0)
 
     &:hover
       background: var(--app-hover)
-      color: var(--q-primary)
+      color: var(--sb-accent)
 
     &.is-active
-      background: color-mix(in srgb, var(--q-primary) 12%, transparent)
-      color: var(--q-primary)
+      background: color-mix(in srgb, var(--sb-accent) 12%, transparent)
+      color: var(--sb-accent)
 
   &__icon
-    color: var(--app-text-secondary)
+    color: color-mix(in srgb, var(--sb-accent) 74%, var(--app-text-secondary))
     flex: 0 0 auto
+    transition: color var(--app-transition-fast)
 
   &__label
     flex: 1
@@ -163,9 +173,12 @@ const hasActiveChild = computed(() => activeCount.value > 0)
   &--open &__chevron
     transform: rotate(180deg)
 
-  &--active &__header,
-  &--active &__icon
-    color: var(--q-primary)
+  &--active &__header
+    color: var(--app-text-primary)
+
+  &--active &__icon,
+  &__header:hover &__icon
+    color: var(--sb-accent)
 
   &__items
     list-style: none
@@ -180,11 +193,11 @@ const hasActiveChild = computed(() => activeCount.value > 0)
   gap: 9px
   padding: 7px 10px
   border-radius: var(--app-radius)
-  font-size: 12.5px
+  font-size: var(--app-text-small)
   font-weight: 500
   color: var(--app-text-secondary)
   text-decoration: none
-  transition: background-color .14s ease, color .14s ease
+  transition: background-color var(--app-transition-fast), color var(--app-transition-fast)
 
   &:hover
     background: var(--app-hover)
@@ -201,9 +214,19 @@ const hasActiveChild = computed(() => activeCount.value > 0)
     white-space: nowrap
 
   &--active
-    background: color-mix(in srgb, var(--q-primary) 12%, transparent)
-    color: var(--q-primary)
+    position: relative
+    background: color-mix(in srgb, var(--sb-accent, var(--app-primary)) 11%, transparent)
+    color: var(--sb-accent, var(--app-primary))
     font-weight: 700
+
+    &::before
+      content: ''
+      position: absolute
+      inset-block: 6px
+      inset-inline-start: -14px
+      width: 2px
+      border-radius: 2px
+      background: var(--sb-accent, var(--app-primary))
 
 // Smooth expand / collapse
 .sb-collapse-enter-active,

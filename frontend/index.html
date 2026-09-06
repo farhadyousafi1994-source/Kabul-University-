@@ -4,19 +4,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="Kabul University Asset Management System" />
-    <meta name="theme-color" content="#1b5e20" />
+    <meta name="theme-color" content="#101828" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="format-detection" content="telephone=no" />
     <title>KU-AMS — Kabul University Asset Management</title>
-    <!-- Typography — the families offered by Appearance → Typography. Loaded
-         with display=swap so text paints immediately with the system stack. -->
+    <!-- Typography — the default families offered by
+         Appearance → Language & Typography. Loaded with display=swap so text
+         paints immediately with the system stack.
+         Vazirmatn (Farsi/Dari) and Noto Sans Arabic ship up-front so RTL users
+         get the right script font on the very first paint; the remaining
+         Persian families (Sahel, Shabnam, Samim, Estedad) are fetched on
+         demand by src/utils/webfonts.js when they are actually selected. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&family=Open+Sans:wght@400;600;700&family=Poppins:wght@400;500;600;700&family=Noto+Sans:wght@400;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&family=Open+Sans:wght@400;600;700&family=Poppins:wght@400;500;600;700&family=Noto+Sans:wght@400;600;700&family=Vazirmatn:wght@300;400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap"
     />
     <script>
       // Apply the saved direction before first paint so Dari/Pashto/Arabic
@@ -27,6 +33,13 @@
           var rtl = code === 'fa' || code === 'ps' || code === 'ar'
           document.documentElement.setAttribute('dir', rtl ? 'rtl' : 'ltr')
           if (code) document.documentElement.setAttribute('lang', code)
+          // Paint RTL text with the Persian/Dari stack straight away.
+          if (rtl) {
+            document.documentElement.style.setProperty(
+              '--app-font-family',
+              "'Vazirmatn', 'Segoe UI', Tahoma, 'Noto Sans Arabic', Arial, sans-serif"
+            )
+          }
         } catch (e) { /* localStorage unavailable */ }
       })()
     </script>

@@ -1,7 +1,7 @@
 <template>
   <q-layout view="hHh Lpr lFf">
     <!-- Header ---------------------------------------------------------->
-    <q-header elevated class="ku-app-header text-white" height-hint="60">
+    <q-header class="ku-app-header" height-hint="60">
       <q-toolbar>
         <q-btn flat dense round icon="menu" :aria-label="t('nav.sections.general')" @click="drawerOpen = !drawerOpen" />
         <q-toolbar-title class="row items-center no-wrap">
@@ -29,7 +29,7 @@
           </q-badge>
           <q-menu fit auto-close>
             <q-list style="min-width: 340px; max-height: 420px" class="scroll">
-              <q-item class="bg-grey-2">
+              <q-item class="app-menu-head">
                 <q-item-section>
                   <q-item-label class="text-subtitle2">{{ t('auth.notifications') }}</q-item-label>
                 </q-item-section>
@@ -70,7 +70,7 @@
           <q-avatar size="32px" class="ku-user-avatar">{{ authStore.initials }}</q-avatar>
           <q-menu auto-close>
             <q-list style="min-width: 220px">
-              <q-item class="bg-grey-2">
+              <q-item class="app-menu-head">
                 <q-item-section>
                   <q-item-label class="text-weight-bold">{{ authStore.fullName }}</q-item-label>
                   <q-item-label caption>{{ authStore.user?.email || authStore.user?.username }}</q-item-label>
@@ -119,11 +119,11 @@
         <!-- Brand block -->
         <div class="ku-drawer__brand row items-center no-wrap" :class="miniSidebar ? 'justify-center q-py-md' : 'q-pa-md'">
           <div class="ku-drawer__logo">
-            <q-icon name="account_balance" size="22px" />
+            <q-icon name="account_balance" size="20px" />
           </div>
           <div v-if="!miniSidebar" class="q-ml-sm min-width-0">
             <div class="text-subtitle2 text-weight-bold ellipsis">{{ t('common.universityName') }}</div>
-            <div class="text-caption text-grey-6 ellipsis">{{ t('common.appName') }}</div>
+            <div class="ku-drawer__sub ellipsis">{{ t('common.appName') }}</div>
           </div>
         </div>
         <q-separator />
@@ -140,6 +140,7 @@
               :to="{ name: group.items[0].name }"
               class="ku-nav__solo"
               :class="{ 'ku-nav__solo--active': route.name === group.items[0].name, 'ku-nav__solo--mini': miniSidebar }"
+              :style="{ '--nav-accent': moduleAccent(group.key) }"
             >
               <q-icon :name="group.items[0].icon" size="19px" />
               <span v-if="!miniSidebar" class="ku-nav__solo-label">{{ group.items[0].title }}</span>
@@ -151,6 +152,7 @@
               :label="group.label"
               :icon="group.icon"
               :items="group.items"
+              :accent="moduleAccent(group.key)"
               :mini="miniSidebar"
               :expanded="isExpanded(group.key)"
               @toggle="toggleGroup(group.key)"
@@ -244,6 +246,7 @@ import GlobalSearch from 'src/components/common/GlobalSearch.vue'
 import SidebarSearch from 'src/components/common/SidebarSearch.vue'
 import SidebarDropdown from 'src/components/common/SidebarDropdown.vue'
 import ChangePasswordDialog from 'src/components/auth/ChangePasswordDialog.vue'
+import { moduleAccent } from 'src/config/themes'
 
 const router = useRouter()
 const route = useRoute()
@@ -446,28 +449,46 @@ onMounted(() => {
   padding: 6px 0 14px
 
   &__solo
+    // `--nav-accent` is set inline from MODULE_ACCENTS so every module keeps a
+    // recognisable hue; it degrades to the theme primary for unknown sections.
+    --nav-accent: var(--app-primary)
+    position: relative
     display: flex
     align-items: center
     gap: 10px
-    margin: 0 8px 2px
+    margin: 0 10px 2px
     padding: 8px 10px
     border-radius: var(--app-radius)
-    font-size: 13px
+    font-size: var(--app-text-small)
     font-weight: 600
-    color: var(--app-text-primary)
+    color: var(--app-text-secondary)
     text-decoration: none
-    transition: background-color .14s ease, color .14s ease
+    transition: background-color var(--app-transition-fast), color var(--app-transition-fast)
+
+    .q-icon
+      color: color-mix(in srgb, var(--nav-accent) 78%, var(--app-text-secondary))
+      transition: color var(--app-transition-fast)
 
     &:hover
       background: var(--app-hover)
+      color: var(--app-text-primary)
       text-decoration: none
+
+      .q-icon
+        color: var(--nav-accent)
 
     &--mini
       justify-content: center
 
     &--active
-      background: color-mix(in srgb, var(--q-primary) 12%, transparent)
-      color: var(--q-primary)
+      background: color-mix(in srgb, var(--nav-accent) 12%, transparent)
+      color: var(--nav-accent)
+
+      .q-icon
+        color: var(--nav-accent)
+
+      &::before
+        background: var(--nav-accent)
 
   &__solo-label
     overflow: hidden
@@ -491,37 +512,46 @@ onMounted(() => {
   min-width: 0
 
 .ku-user-avatar
-  background: linear-gradient(160deg, #F3D48B 0%, #C8862D 100%)
-  color: #0B1626
-  font-weight: 800
-  box-shadow: 0 2px 8px rgba(200, 134, 45, .4)
+  background: color-mix(in srgb, var(--app-topbar-text) 16%, transparent)
+  border: 1px solid color-mix(in srgb, var(--app-topbar-text) 26%, transparent)
+  color: var(--app-topbar-text)
+  font-weight: 700
+  font-size: 12px
+  letter-spacing: .02em
+
+.app-menu-head
+  background: var(--app-hover)
 
 .ku-drawer
-  background: var(--ku-card-bg)
+  background: var(--app-sidebar-background)
 
   &__brand
-    border-bottom: 1px solid var(--ku-line)
+    border-bottom: 1px solid var(--app-border)
 
   &__logo
-    width: 38px
-    height: 38px
-    min-width: 38px
-    border-radius: 11px
+    width: 36px
+    height: 36px
+    min-width: 36px
+    border-radius: var(--app-radius)
     display: flex
     align-items: center
     justify-content: center
-    background: linear-gradient(160deg, #F3D48B 0%, #C8862D 100%)
-    color: #0B1626
-    box-shadow: 0 4px 12px rgba(200, 134, 45, .35)
+    background: var(--app-primary)
+    color: var(--app-on-primary)
+
+  &__sub
+    font-size: var(--app-text-caption)
+    color: var(--app-text-secondary)
 
 .ku-drawer--floating .q-drawer__content
   margin: 10px
   border-radius: var(--app-radius-lg)
   border: 1px solid var(--app-border)
   overflow: hidden
-  box-shadow: var(--ku-shadow-md)
+  box-shadow: var(--app-shadow-md)
 
 .ku-footer
-  background: var(--ku-card-bg)
-  color: var(--ku-ink-soft)
+  background: var(--app-card)
+  color: var(--app-text-secondary)
+  border-top: 1px solid var(--app-border)
 </style>

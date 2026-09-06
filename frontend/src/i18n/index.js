@@ -50,6 +50,7 @@ export const SUPPORTED_LANGUAGES = [
 
 import { deepMerge, extensions } from './extensions.js'
 import { uiExtensions } from './ui.extensions.js'
+import { appearanceExtensions } from './appearance.extensions.js'
 
 // Base bundles, then the additive keys introduced by the global CRUD /
 // notification layer and the Theme & Appearance center. `deepMerge` walks the
@@ -61,6 +62,10 @@ for (const [code, extra] of Object.entries(extensions)) {
 }
 // Page header / statistics cards / global + sidebar search / typography colours.
 for (const [code, extra] of Object.entries(uiExtensions)) {
+  if (messages[code]) deepMerge(messages[code], extra)
+}
+// Design-system redesign: language & typography settings, card / navigation style.
+for (const [code, extra] of Object.entries(appearanceExtensions)) {
   if (messages[code]) deepMerge(messages[code], extra)
 }
 
@@ -131,6 +136,13 @@ export function applyLocale(langCode, quasarInstance = null) {
     localStorage.setItem(STORAGE_KEY, langCode)
   } catch {
     // ignore
+  }
+
+  // Tell the appearance layer that the script changed, so the Farsi/Dari or
+  // Arabic font, the numeral system and the RTL metrics are re-applied without
+  // importing the theme store here (which would be a circular import).
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    window.dispatchEvent(new CustomEvent('app:locale-changed', { detail: { locale: langCode, dir: langConfig.dir } }))
   }
 
   return langConfig
