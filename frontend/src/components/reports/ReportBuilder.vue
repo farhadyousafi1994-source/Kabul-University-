@@ -518,7 +518,7 @@ function load(query) {
   draft.sortField = query.sort?.field || null
   draft.sortDirection = query.sort?.direction || 'desc'
 
-  const range = query.filters?.date_range
+  const range = query.dateRange || query.filters?.date_range
   draft.period = range?.preset || 'all_time'
   draft.from = range?.from || ''
   draft.to = range?.to || ''

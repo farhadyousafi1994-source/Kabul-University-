@@ -307,7 +307,7 @@ const exportMeta = computed(() => {
   if (!query) return []
   const rows = [
     { label: t('reports.preview.dataSource'), value: label(props.result.meta?.moduleLabelKey, query.module) },
-    { label: t('reports.preview.period'), value: periodLabel(query.filters?.date_range?.preset) },
+    { label: t('reports.preview.period'), value: periodLabel(query.dateRange?.preset || query.filters?.date_range?.preset) },
     { label: t('reports.result.generatedAt'), value: generatedAt.value },
     { label: t('reports.result.generatedBy'), value: generatedBy.value || '—' },
     { label: t('reports.result.table'), value: `${shownCount.value} / ${totalCount.value}` },

@@ -74,6 +74,19 @@ describe('validateQuery — allowlists', () => {
     expect(query.metrics.length + query.dimensions.length).toBeGreaterThan(0)
   })
 
+  it('keeps the chosen period inside `filters` so previews and saved reports agree', () => {
+    const query = validateQuery(baseQuery({ filters: { date_range: { preset: 'this_year' } } }), { can: allow })
+    expect(query.filters.date_range.preset).toBe('this_year')
+    expect(query.dateRange.preset).toBe('this_year')
+    expect(query.dateRange.from).toBeTruthy()
+
+    // …and the period is applied as two bound predicates, not as a filter id.
+    const { sql, params } = buildSql(query, { scope: null })
+    expect(sql.match(/date\(/g).length).toBeGreaterThanOrEqual(2)
+    expect(params).toContain(query.dateRange.from)
+    expect(params).toContain(query.dateRange.to)
+  })
+
   it('caps the row limit', () => {
     const query = validateQuery(baseQuery({ limit: 999999 }), { can: allow })
     expect(query.limit).toBeLessThanOrEqual(1000)

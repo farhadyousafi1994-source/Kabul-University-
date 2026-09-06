@@ -262,7 +262,13 @@ export function reportGeneratorRoutes(router) {
     ctx.db.prepare('UPDATE saved_reports SET last_run_at = ?, run_count = run_count + 1 WHERE id = ?')
       .run(new Date().toISOString(), row.id)
 
-    return ok('Report generated successfully.', { ...payload, saved_report: serialiseSaved(row) })
+    // Re-read so the client shows the new run count without a second request.
+    const fresh = ctx.db.prepare(
+      `SELECT sr.*, u.name AS created_by_name FROM saved_reports sr
+       LEFT JOIN users u ON u.id = sr.created_by WHERE sr.id = ?`,
+    ).get(row.id)
+
+    return ok('Report generated successfully.', { ...payload, saved_report: serialiseSaved(fresh || row) })
   }, { auth: true, permission: 'reports.generate|reports.view' })
 
   // ------------------------------------------------------------- schedules

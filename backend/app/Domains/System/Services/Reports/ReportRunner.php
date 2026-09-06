@@ -257,7 +257,7 @@ class ReportRunner
         $bindings = [];
         $needs = [];
 
-        $range = $query['filters']['date_range'] ?? null;
+        $range = $query['dateRange'] ?? $query['filters']['date_range'] ?? null;
         $dateExpr = $ds['dates'][$query['dateField']]['expr'] ?? null;
 
         if ($dateExpr && $range && ($range['from'] ?? null)) {

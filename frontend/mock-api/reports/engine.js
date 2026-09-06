@@ -270,7 +270,10 @@ export function validateQuery(raw, { can, now = new Date() } = {}) {
     dimensions: uniq(dimensions),
     fields: uniq(fields),
     dateField,
-    filters,
+    // The period is kept BOTH inside `filters` (so a saved report, a preview
+    // card and the builder all read it from one place) and as `dateRange`
+    // (already resolved to absolute boundaries for execution).
+    filters: { ...filters, date_range: dateRange },
     dateRange,
     sort,
     limit,
@@ -304,6 +307,9 @@ function whereFor(ds, query, scope) {
   const needs = []
 
   for (const [key, spec] of Object.entries(query.filters)) {
+    // The period travels inside `filters` too (so a saved report keeps it in
+    // one place) but it is applied below, against the active date column.
+    if (key === 'date_range') continue
     const def = ds.filters[key]
     needs.push(def)
     const col = def.expr

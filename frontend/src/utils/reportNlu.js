@@ -388,7 +388,10 @@ export function describeQuery(query, catalog) {
 
   const lines = [
     { labelKey: 'reports.preview.dataSource', valueKey: mod?.labelKey || query.module },
-    { labelKey: 'reports.preview.period', valueKey: `reports.periods.${camel(query.filters?.date_range?.preset || 'all_time')}` },
+    {
+      labelKey: 'reports.preview.period',
+      valueKey: `reports.periods.${camel(query.dateRange?.preset || query.filters?.date_range?.preset || 'all_time')}`,
+    },
   ]
 
   if (query.mode === 'aggregate') {
